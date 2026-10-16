@@ -646,7 +646,8 @@
       { id: "asset-precision-icons", mode: "tools", group: "WISHSTONE OVERRIDES", title: "Icon Precision Pass", summary: "Manual trim, pad, center, and organization pass.", touches: ["asset_pipeline\\outbox\\<job>\\precision generated", "asset_pipeline\\outbox\\<job>\\precision-manifest.json generated", "asset_pipeline\\outbox\\<job>\\precision-contact-sheet.png generated"], actionId: "assets-precision-icons", assetPrecision: true, details: "Advanced/manual tool. Wishstone Intake already runs precision for icon-like extracted assets.", tags: ["wishstone", "asset", "precision", "trim", "center", "icons", "organize", "padding"], risk: "green", advanced: true },
       { id: "find-memory", mode: "find", group: "ARK MEMORY", title: "Find ARK Memory", summary: "Search actual Mini ARK docs and SQLite memory.", touches: ["Local docs", "SQLite ledger", "No project files"], details: "Type into the search field. FIND queries the local bridge at /api/search and returns ARK docs/ledger results here.", tags: ["find", "search", "memory", "canon", "attribution", "moonstone", "lunar", "legacy"], risk: "green" },
       { id: "guide-add-conversation", mode: "guide", group: "GUIDE", title: "Add A Conversation", summary: "Ingest a normalized conversation JSON into review output.", touches: ["ARK database", "Review JSON", "Original conversation is read"], needsPath: true, pathPlaceholder: "C:\\path\\conversation.json", details: "Choose a normalized conversation export. Ingest stops at review output; it does not canonize candidates automatically.", tags: ["conversation", "ingest", "canon", "memory"], risk: "yellow" },
-      { id: "guide-scan", mode: "guide", group: "GUIDE", title: "Scan Files", summary: "Run a read-only scan from a path you provide.", touches: ["Mini ARK ledger", "No moves"], needsPath: true, pathPlaceholder: "R:\\", details: "Provide a root path. Scan reads files into the ledger; it does not move or delete anything.", tags: ["scan", "path", "files"], risk: "green" },
+      { id: "guide-assessment", mode: "guide", group: "GUIDE", title: "Filesystem Assessment", summary: "Retained metadata observations and placement evidence.", touches: ["Historical evidence", "Approved scope only"], actionId: "assessment-status", details: "Metadata only. Historical observations are not a current filesystem snapshot. Scope approval and deployment are required for new observations.", tags: ["scan", "assessment", "progress", "resume", "files"], risk: "green" },
+      { id: "guide-scan", mode: "guide", group: "GUIDE", title: "Legacy Content Hash Scan", summary: "Reads file contents for hashes; fixed 300-second timeout.", touches: ["Mini ARK ledger", "File contents"], needsPath: true, pathPlaceholder: "R:\\", details: "Not the bounded metadata assessment. A timeout may leave partial records and stale running status; automatic continuation is not supported here.", tags: ["scan", "path", "files"], risk: "yellow" },
       { id: "guide-wishstone", mode: "guide", group: "GUIDE", title: "Use Wishstone Assets", summary: "Token-aware asset intake doctrine, folders, and launch path.", touches: ["Navigator output", "No asset changes"], actionId: "wishstone-doctrine", details: "Shows how Wishstone copies source sheets into intake, detects or assigns reception tokens, writes outputs into mini_ark's natural asset folders, and keeps source movement approval-gated.", tags: ["wishstone", "asset", "doctrine", "source", "library", "approved", "inbox", "outbox", "token", "provisional token", "reception"], risk: "green" },
       { id: "guide-review-duplicates", mode: "guide", group: "GUIDE", title: "Review Duplicates", summary: "Run duplicate review from inside Navigator.", touches: ["Mini ARK ledger", "Navigator output"], actionId: "duplicates-r", details: "Runs duplicate review and shows the result here.", tags: ["duplicates", "review"], risk: "green" },
       { id: "guide-move-quarantine", mode: "guide", group: "GUIDE", title: "Move / Quarantine Files", summary: "Use proposals: review items, approve, preview apply, then execute.", touches: ["Proposal items", "Quarantine only after execute"], details: "Use Manage > Approvals below. The Navigator preserves the approve -> preview -> explicit apply gate.", tags: ["move", "quarantine", "cleanup", "approve", "apply"], risk: "red" },
@@ -745,6 +746,26 @@
       }, null, 2);
     }
     function showOutput(title, payload) {
+      if (payload.ok && String(payload.action || "").startsWith("assessment-")) {
+        const r = payload.assessment;
+        const b = payload.baseline;
+        live.textContent = r ? `Assessment #${r.id}: ${r.state}` : "Historical assessment evidence loaded.";
+        showDetailHtml(`<h2>Filesystem Assessment</h2>
+          <p>${esc(payload.readiness || "Metadata observations retained. No managed files changed.")}</p>
+          ${payload.approved_scope ? `<p>Approved scope: ${esc(payload.approved_scope)}</p>` : ""}
+          ${r ? `<h3>Assessment #${Number(r.id)}: ${esc(r.state)}</h3><p>${esc(r.scope)}</p>
+          <p>${Number(r.files)} files · ${Number(r.bytes).toLocaleString()} bytes observed</p>
+          <p>${Object.entries(r.directory_states).map(([s,n]) => `${Number(n)} ${esc(s.toLowerCase())}`).join(" · ")}</p>
+          <p>First: ${esc(r.first_file_observation || "No files observed")}<br>Latest: ${esc(r.last_file_observation || "No files observed")}</p>
+          <h3>Placement evidence</h3>${r.placement.map(p => `<p><strong>${esc(p.location)}: ${Number(p.count)} observations</strong><br>${esc(p.fact)}<br>${esc(p.inference)}</p>`).join("")}
+          <h3>Unresolved coverage</h3>${r.held.map(h => `<p>${esc(h.path)}: ${esc(h.reason)}</p>`).join("") || "<p>No held directories recorded.</p>"}
+          ${r.limitations.map(v => `<p>${esc(v)}</p>`).join("")}` : "<p>No bounded assessment retained.</p>"}
+          ${b ? `<h3>Earlier inventory: historical, partial</h3><p>${esc(b.scope)}: ${Number(b.retained_files)} retained files · ${Number(b.retained_bytes).toLocaleString()} bytes</p><p>${b.first_observation_utc ? `${esc(b.first_observation_utc)} to ${esc(b.last_observation_utc)} UTC` : "No retained observation timestamps"}</p><p>${esc(b.provenance)}</p>${b.branches.map(g => `<p><strong>${esc(g.relative_branch)}</strong>: ${Number(g.files)} files<br>${esc(g.rule_purpose || "No matching placement rule")}<br>${esc(g.assessment || "Placement not evaluated")}</p>`).join("")}${b.limitations.map(v => `<p>${esc(v)}</p>`).join("")}` : ""}
+          <div class="actions"><button data-run-action="assessment-status">Refresh Evidence</button>
+          <button data-run-action="assessment-continue" ${payload.can_continue ? "" : "disabled"}>${r ? "Continue Bounded Assessment" : "Start Bounded Assessment"}</button></div>
+          <details><summary>Exact evidence receipt</summary><pre>${esc(JSON.stringify(payload, null, 2))}</pre></details>`);
+        return;
+      }
       if (payload.ok && (payload.action === "patrol-status" || payload.patrol)) {
         const patrol = payload.patrol || payload;
         live.textContent = "Patrol evidence loaded. Shadow authority; Gate A remains open.";

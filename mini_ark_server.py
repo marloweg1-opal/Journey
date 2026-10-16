@@ -9,6 +9,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import secrets
+import stat
 import threading
 import binascii
 import json
@@ -25,6 +26,11 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 
 ROOT = Path(__file__).resolve().parent
+PUBLIC_STATIC_PATHS = frozenset({'/index.html'} | {
+    '/asset_pipeline/library/carebloomos/journey_ui_frames_page_1/journey_ui_frames/'
+    + name + '.png'
+    for name in ('frame_main', 'frame_panel', 'frame_card', 'frame_review', 'frame_nav')
+})
 DB_PATH = ROOT / "ark.sqlite"
 DOCS_ROOT = ROOT / "docs"
 ARK_CMD = ROOT / "ark.cmd"
@@ -34,6 +40,10 @@ ASSET_INBOX = ASSET_PIPELINE_ROOT / "inbox"
 ASSET_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
 DEFAULT_TIMEOUT_SECONDS = 120
 MEDIA_INVENTORY_LOCK = threading.Lock()
+# Trusted host integration only. Browser payloads cannot supply a policy, scope,
+# ledger, approval or limits. No production assessment grant is installed.
+ASSESSMENT_POLICY = None
+ASSESSMENT_LOCK = threading.Lock()
 PREVIEW_LOCK = threading.RLock()
 PREVIEW_RECEIPTS = {}
 DURABLE_DOC_PREFIXES = (
@@ -1436,7 +1446,59 @@ def patrol_status():
         conn.close()
 
 
+def assessment_action(action_id, payload):
+    from core import bounded_assessment as assessment
+    from core.process_lock import process_lock
+    from core.placement import load_placement_doctrine
+    policy = ASSESSMENT_POLICY
+    if payload:
+        return {'ok': False, 'error': 'Assessment accepts no browser-supplied scope, limits or authority'}, 400
+    if action_id == 'assessment-continue' and policy is None:
+        return {'ok': False, 'error': 'No approved assessment scope deployed. Historical evidence remains available.'}, 403
+    try:
+        # Read status never initializes configuration, schemas or a missing ledger.
+        if action_id == 'assessment-status':
+            conn = sqlite3.connect(DB_PATH.absolute().as_uri() + '?mode=ro', uri=True, timeout=1)
+            try:
+                deadline = time.monotonic() + 10
+                conn.set_progress_handler(lambda: int(time.monotonic() > deadline), 10000)
+                baseline = assessment.historical_baseline(conn, doctrine=load_placement_doctrine(ROOT))
+                present = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='assessment_runs'").fetchone()
+                latest = (conn.execute('SELECT id FROM assessment_runs WHERE root=? ORDER BY id DESC LIMIT 1', (str(Path(policy['scope']).absolute()),)).fetchone()
+                          if policy else conn.execute('SELECT id FROM assessment_runs ORDER BY id DESC LIMIT 1').fetchone()) if present else None
+                retained = assessment.report(conn, latest[0]) if latest else None
+                return {'ok': True, 'action': 'assessment-status', 'baseline': baseline,
+                        'assessment': retained, 'can_continue': policy is not None and (retained is None or retained['state'] == 'PENDING'),
+                        'approved_scope': policy['scope'] if policy else None,
+                        'readiness': 'Scope approval not deployed' if policy is None else 'Current authority rechecked on each batch'}, 200
+            finally:
+                conn.close()
+        if not ASSESSMENT_LOCK.acquire(blocking=False):
+            return {'ok': False, 'error': 'Assessment batch already active; refresh retained progress'}, 409
+        try:
+            # Existing lock is process-released on crash; serializes all retained
+            # progress writes without a new worker or scheduler.
+            with process_lock(str(DB_PATH) + '.assessment.lock'):
+                authorize = policy['authorize']
+                scope = policy['scope']
+                assessment.allowed(scope, authorize)
+                conn = sqlite3.connect(DB_PATH.absolute().as_uri() + '?mode=rw', uri=True, timeout=1)
+                try:
+                    run = assessment.start(conn, scope, load_placement_doctrine(ROOT), authorize)
+                    result = assessment.batch(conn, run, authorize)
+                    return {'ok': True, 'action': 'assessment-continue', 'assessment': result,
+                            'can_continue': result['state'] == 'PENDING'}, 200
+                finally:
+                    conn.close()
+        finally:
+            ASSESSMENT_LOCK.release()
+    except (OSError, ValueError, sqlite3.Error, RuntimeError) as exc:
+        return {'ok': False, 'error': str(exc)}, 409
+
+
 def run_action(action_id: str, payload: dict) -> tuple[dict, int]:
+    if action_id in {'assessment-status', 'assessment-continue'}:
+        return assessment_action(action_id, payload)
     if action_id == 'media-inventory-resume':
         if not (ROOT/'private'/'media_recovery'/'inventory-v2.sqlite').is_file():
             return {'ok':False,'error':'No registered continuation task'},409
@@ -1688,14 +1750,48 @@ def undo_operation_bridge(op_id: int, confirmed: bool) -> tuple[dict, int]:
 
 
 def _private_request_path(path):
+    # Preserve the existing application route; this guard restricts static files.
+    if urlparse(path).path == '/api/logs':
+        return False
     parts = unquote(urlparse(path).path).replace('\\', '/').lower().split('/')
-    return (any(part in {'private', '.git'} for part in parts)
-            or any(part.endswith(('.sqlite', '.sqlite-wal', '.sqlite-shm')) for part in parts))
+    # Reject Windows aliases before suffix checks (including NTFS streams).
+    if any(':' in part or '\x00' in part or part.endswith((' ', '.')) for part in parts):
+        return True
+    return (any(part in {'private', '.git', 'docs', 'logs', 'handoffs_inbox', 'config'} for part in parts)
+            or any(part.endswith(('.sqlite', '.sqlite-wal', '.sqlite-shm', '.sqlite-journal',
+                                  '.db', '.db-wal', '.db-shm', '.db-journal', '.md')) for part in parts)
+            or parts[-1] in {'config.json', 'asset-index.json'})
 
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
+
+    def send_head(self):
+        path = unquote(urlparse(self.path).path)
+        resource = '/index.html' if path == '/' else path
+        if _private_request_path(self.path) or resource not in PUBLIC_STATIC_PATHS:
+            return self.list_directory(None)
+        target = Path(self.directory) / resource.lstrip('/')
+        try:
+            # Check ancestors before touching children; never traverse a known link.
+            for part in (*reversed(target.parents), target):
+                info = part.lstat()
+                if stat.S_ISLNK(info.st_mode) or getattr(info, 'st_file_attributes', 0) & 0x400:
+                    return self.list_directory(None)
+            if not stat.S_ISREG(info.st_mode):
+                return self.list_directory(None)
+        except OSError:
+            return self.list_directory(None)
+        return super().send_head()
+
+    def list_directory(self, path):
+        # Directory names can disclose private work even when file reads deny.
+        self.send_response(403)
+        self.send_header('Content-Length', '0')
+        self.send_header('Cache-Control', 'no-store')
+        self.end_headers()
+        return None
 
     def do_GET(self):  # noqa: N802
         try:
@@ -1747,6 +1843,16 @@ class Handler(SimpleHTTPRequestHandler):
             return
         super().do_GET()
 
+    def _council_origin(self, post=False):
+        port = self.server.server_address[1]
+        host = self.headers.get('Host')
+        if host not in (f'127.0.0.1:{port}', f'localhost:{port}'):
+            return False
+        origin = self.headers.get('Origin')
+        return (self.client_address[0] in ('127.0.0.1', '::1')
+                and self.headers.get('Sec-Fetch-Site') not in ('cross-site', 'same-site')
+                and (origin == f'http://{host}' if post or origin else True))
+
     def do_POST(self):  # noqa: N802
         origin = self.headers.get("Origin")
         if origin and origin != f"http://{self.headers.get('Host')}":
@@ -1762,6 +1868,10 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _post(self):
         parsed = urlparse(self.path)
+        if parsed.path in ('/api/actions/assessment-status', '/api/actions/assessment-continue'):
+            if not self._council_origin(post=True):
+                _json_response(self, {'ok': False, 'error': 'Local Navigator origin required.'}, 403)
+                return
         payload = _read_json_body(self)
         if parsed.path.startswith("/api/actions/"):
             action_id = parsed.path.removeprefix("/api/actions/")
