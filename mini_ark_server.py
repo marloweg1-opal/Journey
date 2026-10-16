@@ -1497,6 +1497,18 @@ def assessment_action(action_id, payload):
 
 
 def run_action(action_id: str, payload: dict) -> tuple[dict, int]:
+    if action_id in {'work-policy', 'work-policy-preview'}:
+        from core.work_policy import inspect_store
+        expected = set() if action_id == 'work-policy' else {'intention'}
+        if type(payload) is not dict or set(payload) != expected:
+            return {'ok': False, 'error': 'Only a policy intention is accepted; no authority fields'}, 400
+        if action_id == 'work-policy-preview' and type(payload['intention']) is not str:
+            return {'ok': False, 'error': 'Policy intention must be text'}, 400
+        try:
+            result = inspect_store(DB_PATH, payload.get('intention'))
+            return {'ok': True, 'action': action_id, 'policy': result}, 200
+        except (OSError, sqlite3.Error, ValueError) as exc:
+            return {'ok': False, 'error': str(exc), 'policy_state': 'UNKNOWN'}, 409
     if action_id in {'assessment-status', 'assessment-continue'}:
         return assessment_action(action_id, payload)
     if action_id == 'media-inventory-resume':
@@ -1868,7 +1880,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _post(self):
         parsed = urlparse(self.path)
-        if parsed.path in ('/api/actions/assessment-status', '/api/actions/assessment-continue'):
+        if parsed.path in ('/api/actions/assessment-status', '/api/actions/assessment-continue',
+                           '/api/actions/work-policy', '/api/actions/work-policy-preview'):
             if not self._council_origin(post=True):
                 _json_response(self, {'ok': False, 'error': 'Local Navigator origin required.'}, 403)
                 return

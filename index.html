@@ -616,6 +616,7 @@
   </main>
   <script>
     const entries = [
+      { id: "work-policy", mode: "manage", group: "JOURNEY", title: "Work Policy", summary: "Persisted posture and pending work-mode requests.", touches: ["Read-only policy view"], actionId: "work-policy", details: "Modes never grant permissions. Unsupported requests remain pending, not active.", tags: ["policy", "mode", "pause", "focus"], risk: "green" },
       { id: "patrol-status", mode: "manage", group: "STEWARDSHIP", title: "Patrol Status", summary: "Coverage, review families, changes, and authority history.", touches: ["Mini ARK ledger"], actionId: "patrol-status", details: "Inspect recent bounded Shadow runs and scoped policy receipts.", tags: ["patrol", "authority", "coverage"], risk: "green" },
       { id: "recovery-status", mode: "manage", group: "STEWARDSHIP", title: "Recovery & Repair", summary: "Recovery evidence, validation coverage, and task authority.", touches: ["Local recovery evidence"], actionId: "recovery-status", details: "Originals remain unchanged. Recovery does not authorize retirement.", tags: ["recovery", "repair", "media"], risk: "green" },
       { id: "media-inventory-resume", mode: "manage", group: "STEWARDSHIP", title: "Continue Media Inventory", summary: "Next bounded inventory and hash batch.", touches: ["Registered sources: read only", "Private progress ledger"], actionId: "media-inventory-resume", details: "Resumes registered work only. Held files stay held. No repair, move, deletion, or semantic inspection.", tags: ["recovery", "inventory", "resume", "hash"], risk: "green" },
@@ -746,6 +747,28 @@
       }, null, 2);
     }
     function showOutput(title, payload) {
+      if (payload.ok && String(payload.action || "").startsWith("work-policy")) {
+        const preview = payload.policy;
+        const current = preview.current || preview;
+        live.textContent = `Persisted work policy: ${current.effective_mode}`;
+        showDetailHtml(`<h2>Work Policy</h2><p><strong>${esc(current.effective_mode)}</strong> · revision ${esc(current.posture.version ?? "unknown")}</p>
+          <p>Read at ${esc(current.observed_at)}. This is policy evidence, not worker activity.</p>
+          ${current.limitations.map(v => `<p>${esc(v)}</p>`).join("")}
+          ${preview.draft ? `<h3>Requested, not applied: ${esc(preview.state)}</h3><p>${esc(preview.draft.intention)}</p><p>${esc(preview.next_step)}</p>` : ""}
+          ${preview.recognized === false ? "<p>Request not recognized. No policy changed.</p>" : ""}
+          <form id="work-policy-form"><label for="work-policy-intention">Work-mode request</label>
+          <input id="work-policy-intention" maxlength="1000" required placeholder="Only help with duplicate detection and ask before every job">
+          <button type="submit">Review Request</button></form>
+          <button data-run-action="work-policy">Refresh Policy</button>
+          <details><summary>Policy and draft evidence</summary><pre>${esc(JSON.stringify(preview, null, 2))}</pre></details>`);
+        document.querySelector('#work-policy-form').onsubmit = async event => {
+          event.preventDefault();
+          const intention = document.querySelector('#work-policy-intention').value;
+          try { showOutput('Work Policy', await apiPost('/api/actions/work-policy-preview', {intention})); }
+          catch (error) { live.textContent = 'Policy unavailable; no change applied.'; }
+        };
+        return;
+      }
       if (payload.ok && String(payload.action || "").startsWith("assessment-")) {
         const r = payload.assessment;
         const b = payload.baseline;

@@ -56,6 +56,8 @@ def main():
         db = root/'fixture.sqlite'
         with closing(sqlite3.connect(db)) as conn:
             conn.executescript('CREATE TABLE scans(id,root_path,started_at,completed_at,status,files_scanned,last_committed_path); CREATE TABLE files(canonical_path,size_bytes,last_seen_at);')
+            from core.patrol_state import read_state
+            read_state(conn)
 
         class Handler(bridge.Handler):
             def log_message(self, *args):
@@ -104,6 +106,26 @@ const {chromium} = require(process.argv[1]);
     if(errors.length) throw new Error(errors.join('\n'));
     fs.writeFileSync(process.argv[3]+'/receipt.json',JSON.stringify({fixture:true,browser:'Brave',browser_version:browser.version(),browser_errors:errors,...receipt},null,2));
     console.log('Brave Navigator: start -> PENDING -> continue -> COMPLETE -> retained receipt; six files');
+    await page.locator('[data-select="manage"]').first().click();
+    await page.locator('[data-detail="work-policy"]').click();
+    await page.locator('[data-run-action="work-policy"]').last().click();
+    await page.locator('#work-policy-intention').fill('Only help with duplicate detection and ask before every job');
+    await page.getByRole('button',{name:'Review Request',exact:true}).click();
+    await page.getByRole('heading',{name:'Requested, not applied: UNSUPPORTED',exact:true}).waitFor();
+    const policyEvidence=await page.evaluate(async()=>{
+      const post=async(name,body)=>(await fetch('/api/actions/'+name,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+      const before=await post('work-policy',{});
+      if(before.policy.posture.paused) throw new Error('Draft changed policy');
+      const result=await post('patrol-control',{version:before.policy.posture.version,paused:true,reason:'Disposable fixture pause decision'});
+      if(!result.ok) throw new Error('Fixture pause failed');
+      return {before,after:await post('work-policy',{})};
+    });
+    await page.getByRole('button',{name:'Refresh Policy',exact:true}).click();
+    await page.locator('#detail strong').filter({hasText:/^Paused$/}).waitFor();
+    await page.screenshot({path:process.argv[3]+'/policy-mobile.png',fullPage:true});
+    fs.writeFileSync(process.argv[3]+'/policy.json',JSON.stringify({fixture:true,...policyEvidence},null,2));
+    if(errors.length) throw new Error(errors.join('\n'));
+    console.log('Brave policy: shared persisted posture -> unsupported combined draft -> unchanged policy -> fixture pause -> refreshed Paused');
   } finally { await browser.close(); }
 })().catch(e=>{console.error(e);process.exitCode=1});
 '''

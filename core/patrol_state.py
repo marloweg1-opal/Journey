@@ -1,8 +1,36 @@
 """Restart-persistent operator posture; never a managed-mutation grant."""
 import json
+import sqlite3
 
 DEFAULT = {'lifecycle': 'CONSTRUCTION', 'mode': 'Sweep-and-Build',
            'authority': 'Shadow/explicit approval', 'paused': False}
+
+
+def validated_state(row):
+    """One validator for operator displays and execution-time posture checks."""
+    try:
+        state = json.loads(row[1])
+        if (not isinstance(state, dict) or set(state) != set(DEFAULT)
+                or type(state.get('paused')) is not bool):
+            raise ValueError('Invalid Patrol control state')
+        if any(state.get(key) != DEFAULT[key] for key in ('lifecycle','mode','authority')):
+            raise ValueError('Unsupported Gate A posture; no authority expansion permitted')
+    except (ValueError, TypeError) as exc:
+        return {**DEFAULT, 'paused': True, 'version': row[0],
+                'state_integrity': 'REVIEW_REQUIRED', 'reason': str(exc)}
+    return {**state, 'version': row[0]}
+
+
+def read_snapshot(conn):
+    """Read only: a missing policy is unknown, never an implicit default grant."""
+    try:
+        row = conn.execute('SELECT id,state_json FROM patrol_control_events ORDER BY id DESC LIMIT 1').fetchone()
+        if row is not None:
+            return validated_state(row)
+    except sqlite3.Error:
+        pass
+    return {**DEFAULT, 'paused': True, 'version': None,
+            'state_integrity': 'UNKNOWN', 'reason': 'Persisted posture unavailable; no initialization performed'}
 
 
 def read_state(conn):
@@ -15,16 +43,7 @@ def read_state(conn):
                      (json.dumps(DEFAULT), 'Gate A initial posture'))
         conn.commit()
         return read_state(conn)
-    try:
-        state = json.loads(row[1])
-        if not isinstance(state, dict) or type(state.get('paused')) is not bool:
-            raise ValueError('Invalid Patrol control state')
-        if any(state.get(key) != DEFAULT[key] for key in ('lifecycle','mode','authority')):
-            raise ValueError('Unsupported Gate A posture; no authority expansion permitted')
-    except (ValueError, TypeError) as exc:
-        return {**DEFAULT, 'paused':True, 'version':row[0],
-                'state_integrity':'REVIEW_REQUIRED', 'reason':str(exc)}
-    return {**state, 'version': row[0]}
+    return validated_state(row)
 
 
 def update_state(conn, *, version, paused, reason):
