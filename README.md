@@ -1,6 +1,6 @@
 # Journey / Mini ARK
 
-**Journey** is a developing, local-first stewardship system for **HEXSEED**, the maintainer's custom Windows computer environment. **Mini ARK** remains the repository and implementation name; **Project ARK** is the broader architectural family, not a second name for this executable. Journey coordinates and assists rather than independently governing the computer.
+**Journey** is a developing, local-first stewardship system designed to help people understand, organize, and maintain their own computers through bounded observation, reviewable proposals, and human-controlled execution. **Mini ARK** remains the repository and implementation name; **Project ARK** is the broader architectural family, not a second name for this executable. Journey coordinates and assists rather than independently governing the computer.
 
 **The central distinction: capability is not authority.** Code may be able to inspect, propose, or prepare a change without permission to perform it. Gate A is the current, most restricted operating authority level: bounded observation and proposals are distinct from approval to mutate managed files. The existence of a feature in Git does **not** establish that it is deployed, enabled, or authorized on a live machine.
 
