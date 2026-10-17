@@ -1,42 +1,48 @@
 # Journey / Mini ARK
 
-Journey is the evolving identity of Mini ARK: a local HEXSEED companion for
-continuity, stewardship, coordination and reducing friction between Junior and
-the computer. Project ARK is the broader PMM/PWM and domain-ARK umbrella; Journey
-is its intended coordinator/gopher, not its entirety.
+**Journey** is a developing, local-first stewardship system for **HEXSEED**, the maintainer's custom Windows computer environment. **Mini ARK** remains the repository and implementation name; **Project ARK** is the broader architectural family, not a second name for this executable. Journey coordinates and assists rather than independently governing the computer.
 
-## Current status: 2026-09-29
+**The central distinction: capability is not authority.** Code may be able to inspect, propose, or prepare a change without permission to perform it. Gate A is the current, most restricted operating authority level: bounded observation and proposals are distinct from approval to mutate managed files. The existence of a feature in Git does **not** establish that it is deployed, enabled, or authorized on a live machine.
+
+## Start here (Windows)
+
+The repository targets Windows and uses PowerShell, Python, and local Windows paths. These are **source-level instructions**, not a clean-install certification. The examples below were inspected in the published code; they were **not run on the maintainer's machine for this README update**.
+
+```powershell
+cd C:\mini_ark
+.\ark.cmd brief
+```
+
+`brief` opens an existing ledger read-only and summarizes pending work. It reports a missing ledger rather than creating one. **Its output can include private work descriptions or local operational details. Do not paste raw output into public issues or documentation.**
+
+Additional commands are available, but have different effects:
+
+- `.\ark.cmd doctor` checks ledger health **and may migrate existing database schema**. It is not strictly read-only; review before running.
+- `powershell -ExecutionPolicy Bypass -File .\start_mini_ark.ps1` launches the local Navigator server (normally on loopback port 8788, if available). The bypass applies to that PowerShell process, not a permanent machine-wide setting. The server may create local runtime records.
+- `.\ark.cmd bootstrap` creates or initializes local configuration and ledger state. Do not use it as a harmless diagnostic.
+
+These commands assume the expected local working tree and dependencies exist. No actual local output is reproduced here. See [the operator handbook](docs/HANDBOOK.md) for fuller operational guidance.
+
+## Current published checkpoint
+
+The September 29 [public checkpoint](docs/JOURNEY_PUBLIC_CHECKPOINT.md) records the earlier custody and verifier milestone. The repository has since published further **code-level** increments, including bounded metadata assessment with resumable receipts and a shared read-only work-policy view with non-authorizing natural-language previews. See [shared work policy](docs/WORK_POLICY.md) for its precise verification and deployment limits.
 
 | State | Scope |
 |---|---|
-| Implemented and verified locally | Bounded discovery/reference evidence, privacy policy, source holds, inventory, journal and recovery protections; 288-test checkpoint |
-| Implemented but held | Operation-bound move verifier with test-only issuer; default production moves and legacy consolidation executors remain denied |
-| Active milestone | CareBloom coherent custody: ownership, custody, provenance, then finer classification |
-| Near-term | Exact eligible custody candidate and legitimate production evidence/approval source |
-| Future, not shipped | Broader observation depths, advanced judgment, capability expansion and reasoning council |
+| Published and locally tested | Bounded discovery and inventory, source holds, privacy and recovery contracts, journals, test-bound move verifier, bounded metadata assessment, and shared policy read/preview infrastructure |
+| Implemented but held or not established as deployed | Production managed moves, legacy consolidation and migration execution, and newly published Navigator/policy behavior pending separate controlled deployment |
+| Not yet active work modes | Enforced Observe, Ask First, Balanced and Focused execution restrictions; previews are not activation |
+| Future or separately gated | Broader learning campaigns, reusable stewardship routines, semantic providers, advanced reasoning and Council integration |
 
-Read [public checkpoint](docs/JOURNEY_PUBLIC_CHECKPOINT.md) and
-[forward architecture](docs/JOURNEY_FORWARD_ARCHITECTURE.md) before older operating
-guides. Historical descriptions below preserve development context, not current
-authority. No live managed move is claimed from the verifier integration.
+**Tests and publication do not confer authority.** The move verifier's fixture issuer is not a production approval mechanism. No live managed move is claimed. Gate changes and execution approval remain separate human-controlled decisions.
 
-**mini_ark** is a local-first **Archival Resonance Kernel** for continuity, canon, project memory, contextual retrieval, and human-centered AI collaboration.
+## What the code supports versus what Journey is building toward
 
-Built to help people and their tools remember what matters, connect what resonates, and keep moving without flattening the human at the center.
+**Present, at source level:** local CLI and Navigator components, bounded assessment and reporting, provenance-aware records, privacy/source-hold checks, and guarded proposal or verification paths. Each component's runtime availability and permissions must be checked independently.
+
+**Design direction, not a shipping promise:** sustained contextual continuity, recurring-pattern learning, richer retrieval and relationships, reusable routines, and coordinated advisory reasoning. Terms such as *resonance* describe intended connections across evidence and context, not proof that semantic matching is currently enabled.
 
 > **“Meatbags forever, sentient machines/programming that has discarded humanity as inherently necessary for its own continued meaning and existence... never.”**
-
-## What mini_ark does
-
-mini_ark is being developed as a persistent local intelligence layer that can:
-
-- ingest and organize conversational and project context
-- preserve decisions, principles, canon, and changing project state
-- retrieve relevant context when it becomes useful again
-- recognize recurring ideas, relationships, contradictions, and resonance
-- support continuity across people, AI collaborators, tools, and projects
-- provide shared infrastructure for systems such as **CareBloomOS**
-- remain inspectable, attributable, and locally controlled
 
 ## Why it exists
 
@@ -67,9 +73,9 @@ Attribution and provenance are part of the architecture, not cleanup work perfor
 
 mini_ark's guardrails are intentionally architected by the maintainer: human review, visible reports, dry runs, approval gates, quarantine before deletion, and local control are not afterthoughts.
 
-## Project status
+## Project status and historical context
 
-mini_ark is currently under active development.
+mini_ark is under active development. Sections below include earlier milestones and should be read alongside the current published checkpoint above; they do not independently establish current deployment or permission.
 
 Current work focuses on HEXSEED operational congruence, starting with CareBloom custody. Discover collectors, semantic providers and new persistent user-knowledge storage remain disabled.
 
@@ -86,7 +92,7 @@ See [Recovery and privacy contracts](docs/RECOVERY_AND_PERCEPTION_POLICY.md).
 
 Expect architecture changes, experiments, aggressively specific naming, and the occasional highly plausible piece of nonsense requiring verification.
 
-## Current MVP controls
+## Implementation surfaces and historical MVP controls
 
 The current local MVP includes:
 
