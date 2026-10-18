@@ -1,153 +1,27 @@
 {
-  "schema_version": 1,
-  "canonical_short_form": "HEXSEED is the persistent platform. Journey configures it. Functional kernels define what work exists. Expression profiles define how that work is understood and presented. CareBloomOS is the first mature profile, not the base ontology. All profiles are peer translations of the same underlying job-role architecture.",
-  "architecture_rule": "No expression profile is ontologically primary. CareBloom has historical precedence because it was developed first, but not architectural precedence.",
-  "source_of_truth_hierarchy": [
-    "What job needs to happen?",
-    "Which functional kernel owns that job?",
-    "Which expression profile is currently active or best suited?",
-    "How does that profile translate the kernel?",
-    "Which assets, terminology, interfaces, and behaviors implement it?"
-  ],
-  "system_levels": {
-    "foundation": "HEXSEED: persistent platform / body; identity, memory, continuity",
-    "configuration": "Journey / Mini ARK: configuration engine; sets, combines, adapts",
-    "function": "Functional kernels: shared by all profiles",
-    "expression": "Expression profiles: adapt to any world"
-  },
-  "visual_identity": {
-    "selected_hexseed_icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\HEXSEED_v4.ico",
-    "selection_note": "Selected as the canonical HEXSEED icon because it has the strongest small-size readability while preserving the hex, seed/crystal, and stable-core identity.",
-    "selected_mini_ark_icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\mini_ark.ico",
-    "future_journey_icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\journey.ico",
-    "mini_ark_journey_icon_policy": "Use mini_ark.ico for the active C:\\mini_ark implementation. Hold journey.ico for the future Journey identity and do not apply it until the deliberate Journey migration is approved.",
-    "selected_carebloomos_app_icon_source": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cAREBLOOM_BABY.png",
-    "selected_carebloomos_app_icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cAREBLOOM_BABY.ico",
-    "selected_carebloomos_app_icon_note": "Selected as the one CareBloomOS application icon. The bloom-within-bloom mark has the strongest standalone silhouette, says CareBloom without requiring a secondary glyph, communicates the recursive multi-domain system, and avoids over-specifying what the OS is currently doing. The PNG is the source art; the ICO is the Windows/application icon artifact.",
-    "carebloomos_icon_audition": {
-      "locked_choice_source": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cAREBLOOM_BABY.png",
-      "locked_choice": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cAREBLOOM_BABY.ico",
-      "nursery_assets": [
-        "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\CareBloomOS.ico",
-        "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\CareBloomOS_v1.ico",
-        "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\CareBloomOS_v2.ico"
-      ],
-      "nursery_policy": "Hold the other candidates briefly for genuine reuse opportunities. Do not build a permanent hierarchy around them; prune them if no real use appears."
-    },
-    "alternate_icons_reviewed": [
-      "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\HEXSEED_v6.ico",
-      "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\HEXSEED_custom_icon.ico"
-    ],
-    "carebloom_stone_icons": {
-      "moonstone": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\moonstone.ico",
-      "cloverstone": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cloverstone.ico",
-      "heartstone": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\heartstone.ico",
-      "cloudstone": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cloudstone.ico",
-      "wishstone": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\wishstone.ico",
-      "musicstone": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\musicstone.ico"
-    },
-    "carebloom_identity_policy": "Use cAREBLOOM_BABY.png as the selected CareBloomOS application icon. The other CareBloomOS icon candidates remain nursery assets only, not a canonical semantic hierarchy.",
-    "stone_icon_policy": "Folders or surfaces explicitly named for a CareBloom stone may use that stone's canonical icon. Filesystem application must be previewed first and should write only presentation metadata such as desktop.ini unless explicitly approved."
-  },
+  "schema_version": 2,
+  "canonical_short_form": "Journey owns stable functional kernels and safety contracts. External projects own their expression profiles.",
+  "architecture_rule": "No expression profile is ontologically primary. A profile may translate labels and presentation without changing authority, state, receipts or rollback behavior.",
   "functional_kernels": {
-    "integrate": {
-      "label": "INTEGRATE",
-      "job_role": "Systems Integrator / Orchestrator",
-      "basic_archetype": "Steward, Coordinator, Generalist",
-      "responsibility": "Hold the whole system together and coordinate specialized roles",
-      "verbs": ["integrate", "coordinate", "balance", "synthesize", "orchestrate"]
-    },
-    "sustain": {
-      "label": "SUSTAIN",
-      "job_role": "Continuity / Recovery Specialist",
-      "basic_archetype": "Healer, Custodian, Caregiver",
-      "responsibility": "Preserve wellbeing, continuity, recovery, and what should survive change",
-      "verbs": ["heal", "sustain", "stabilize", "preserve", "restore"]
-    },
-    "perceive": {
-      "label": "PERCEIVE",
-      "job_role": "Diagnostics / Intelligence Specialist",
-      "basic_archetype": "Seer, Scout, Analyst, Guardian",
-      "responsibility": "Detect hidden conditions, diagnose problems, anticipate risk, protect through awareness",
-      "verbs": ["inspect", "diagnose", "detect", "ward", "anticipate"]
-    },
-    "maintain": {
-      "label": "MAINTAIN",
-      "job_role": "Maintenance / Construction Specialist",
-      "basic_archetype": "Builder, Gardener, Craftsperson",
-      "responsibility": "Repair, grow, provision, clean, construct, and maintain resources",
-      "verbs": ["build", "repair", "grow", "clean", "provision"]
-    },
-    "regulate": {
-      "label": "REGULATE",
-      "job_role": "Environmental / Context Specialist",
-      "basic_archetype": "Weatherworker, Mediator, Atmosphere Keeper",
-      "responsibility": "Shape environmental conditions so the system can operate effectively",
-      "verbs": ["regulate", "adapt", "ventilate", "moderate", "condition"]
-    },
-    "route": {
-      "label": "ROUTE",
-      "job_role": "Access / Movement Specialist",
-      "basic_archetype": "Pathfinder, Courier, Navigator",
-      "responsibility": "Get people, information, resources, or processes where they need to go",
-      "verbs": ["route", "retrieve", "connect", "deliver", "traverse"]
-    },
-    "synchronize": {
-      "label": "SYNCHRONIZE",
-      "job_role": "Resonance / Timing Specialist",
-      "basic_archetype": "Bard, Conductor, Amplifier",
-      "responsibility": "Coordinate rhythm, signal, communication, tempo, and collective action",
-      "verbs": ["synchronize", "amplify", "harmonize", "signal", "modulate"]
-    }
+    "integrate": "Connect systems and preserve coherence.",
+    "sustain": "Protect continuity and ongoing support.",
+    "perceive": "Observe authorized state and surface evidence.",
+    "maintain": "Normalize, repair and reduce drift.",
+    "regulate": "Balance workload, conditions and resource use.",
+    "route": "Resolve ownership, destination and movement paths.",
+    "synchronize": "Coordinate timing, communication and shared state."
   },
-  "expression_profiles": {
-    "carebloom": {
-      "label": "CareBloom",
-      "specialty": "care, continuity, relational infrastructure, stewardship",
-      "kernel_translations": {
-        "integrate": "Corestone / Opalstone",
-        "sustain": "Heartstone",
-        "perceive": "Moonstone",
-        "maintain": "Cloverstone",
-        "regulate": "Cloudstone",
-        "route": "Wishstone",
-        "synchronize": "Musicstone"
-      }
-    },
-    "pokemon": {
-      "label": "Pokemon",
-      "specialty": "acquisition, capture, collection, categorization, development",
-      "kernel_translations": {
-        "integrate": "Prism Scale / Beautiful Scale",
-        "sustain": "Everstone",
-        "perceive": "Moon Stone",
-        "maintain": "Leaf Stone / Clover Sweet",
-        "regulate": "Water Stone / Ice Stone",
-        "route": "Thunder Stone",
-        "synchronize": "Fire Stone",
-        "journey": "Master Ball"
-      }
-    },
-    "magical": {
-      "label": "Magical",
-      "specialty": "transformation, activation, capability, power, becoming",
-      "kernel_translations": {}
-    },
-    "zodiac": {
-      "label": "Zodiac",
-      "specialty": "archetypal synthesis, patterns, correspondence, interpretation",
-      "kernel_translations": {}
-    },
-    "power_rangers": {
-      "label": "Power Rangers",
-      "specialty": "team configuration, heroic specialization, coordinated action",
-      "kernel_translations": {}
-    }
+  "default_profile": {
+    "id": "journey_default",
+    "label": "Journey",
+    "ownership": "this_repository",
+    "translation": "kernel labels remain unchanged"
   },
-  "metadata_pattern": {
-    "kernel": "KERNEL: SUSTAIN",
-    "profile": "PROFILE: POKEMON",
-    "expression": "EXPRESSION: EVERSTONE",
-    "function": "FUNCTION: CONTINUITY_MAINTENANCE"
+  "external_profile_examples": {
+    "carebloomos": {
+      "label": "CareBloomOS",
+      "ownership": "external_project",
+      "documentation": "examples/carebloom/README.md"
+    }
   }
 }

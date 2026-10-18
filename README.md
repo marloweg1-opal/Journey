@@ -1,106 +1,75 @@
-# Journey / Mini ARK
+# Journey
 
-Journey is the evolving identity of Mini ARK: a local HEXSEED companion for
-continuity, stewardship, coordination and reducing friction between Junior and
-the computer. Project ARK is the broader PMM/PWM and domain-ARK umbrella; Journey
-is its intended coordinator/gopher, not its entirety.
+**A human-governed local AI system that learns how you work while keeping every meaningful action visible, reviewable, and under your control.**
 
-## Current status: 2026-09-29
+Journey is being built to help a person and their computer maintain continuity across files, projects, conversations, tools, and time. It remembers where work came from, preserves decisions and relationships, and proposes useful next steps without quietly taking authority for itself.
 
-| State | Scope |
+![Journey — human-governed local AI](docs/images/journey-repository-preview.svg)
+
+> Journey is the public product identity. **Mini ARK** is its former name and remains in a few legacy filenames, commands, and the current Windows installation path while migration is completed safely.
+
+## Start here
+
+| If you want to… | Go here |
 |---|---|
-| Implemented and verified locally | Bounded discovery/reference evidence, privacy policy, source holds, inventory, journal and recovery protections; 288-test checkpoint |
-| Implemented but held | Operation-bound move verifier with test-only issuer; default production moves and legacy consolidation executors remain denied |
-| Active milestone | CareBloom coherent custody: ownership, custody, provenance, then finer classification |
-| Near-term | Exact eligible custody candidate and legitimate production evidence/approval source |
-| Future, not shipped | Broader observation depths, advanced judgment, capability expansion and reasoning council |
+| Understand Journey in plain language | [What Journey is](#what-journey-is) |
+| See what currently works | [Current state](#current-state) |
+| Operate the local installation | [Operator handbook](docs/HANDBOOK.md) |
+| Understand where the project is going | [Forward architecture](docs/JOURNEY_FORWARD_ARCHITECTURE.md) |
+| Review its safety and authority boundaries | [Project boundaries](docs/PROJECT_BOUNDARIES.md) |
+| Inspect the technical implementation | [Developer map](#developer-map) |
 
-Read [public checkpoint](docs/JOURNEY_PUBLIC_CHECKPOINT.md) and
-[forward architecture](docs/JOURNEY_FORWARD_ARCHITECTURE.md) before older operating
-guides. Historical descriptions below preserve development context, not current
-authority. No live managed move is claimed from the verifier integration.
+## What Journey is
 
-**mini_ark** is a local-first **Archival Resonance Kernel** for continuity, canon, project memory, contextual retrieval, and human-centered AI collaboration.
+Ordinary computer work becomes scattered. A decision may live in a chat, its source image in a downloads folder, its final version in a project directory, and the reason behind it only in someone's memory.
 
-Built to help people and their tools remember what matters, connect what resonates, and keep moving without flattening the human at the center.
+Journey is a local coordination layer for that problem. It is designed to:
 
-> **“Meatbags forever, sentient machines/programming that has discarded humanity as inherently necessary for its own continued meaning and existence... never.”**
+- preserve the origin, context, and history of work;
+- recognize which project or person something belongs to before classifying its file type;
+- reconnect useful information when it becomes relevant again;
+- propose organization and recovery actions for human review;
+- keep consequential actions attributable and reversible; and
+- support several projects without allowing one project's language to become the whole system.
 
-## What mini_ark does
+It is not a general autonomous agent and it is not a replacement for human judgment. Its operating principle is **orientation, not domination**.
 
-mini_ark is being developed as a persistent local intelligence layer that can:
+## What makes it different
 
-- ingest and organize conversational and project context
-- preserve decisions, principles, canon, and changing project state
-- retrieve relevant context when it becomes useful again
-- recognize recurring ideas, relationships, contradictions, and resonance
-- support continuity across people, AI collaborators, tools, and projects
-- provide shared infrastructure for systems such as **CareBloomOS**
-- remain inspectable, attributable, and locally controlled
+### Local first
 
-## Why it exists
+Private inventories, recovery evidence, and personal-media analysis remain on the local machine and are excluded from this repository.
 
-AI collaboration can be remarkably capable and remarkably forgetful.
+### Human governed
 
-Useful work gets scattered across conversations, files, notes, tools, revisions, and systems. Decisions get rediscovered. Context gets flattened. Important distinctions disappear.
+Journey separates observation, recommendation, approval, and execution. A successful test does not grant the system new authority.
 
-mini_ark is an attempt to build infrastructure around that problem.
+### Context before file type
 
-The goal is not simply a larger archive. It is an archive capable of preserving **continuity and relationship**.
+A PNG may be a family photograph, product artwork, evidence, or temporary output. Journey asks what it belongs to and why it matters before deciding where it goes.
 
-### Archival
-What happened? What was decided? Where did it come from?
+### Provenance is structural
 
-### Resonance
-What keeps recurring? What connects to this? What becomes relevant again here?
+Sources, decisions, receipts, and changes are meant to remain inspectable. Attribution is part of the architecture, not cleanup performed afterward.
 
-### Kernel
-What operational core can turn those relationships into useful behavior?
+## Current state
 
-## Human-centered by design
+Journey is an active prototype—not a finished consumer application.
 
-**People are the center. First and always.**
+| Status | Capability |
+|---|---|
+| Working locally | Bounded inventory, reference evidence, privacy rules, classification, journaling, recovery protection, and a Navigator control surface |
+| Approval gated | Proposed file operations, asset intake, exports, and undo workflows |
+| Deliberately held | Default production moves, semantic providers, broad background observation, and new persistent personal-knowledge storage |
+| Active milestone | Project-neutral custody: ownership, provenance, contextual classification, and reviewable placement |
 
-AI assistance should increase human capacity without flattening authorship, specificity, history, ambiguity, or the people whose work made the system possible.
+Gate A remains open. Journey has not been granted broad managed-file authority.
 
-Attribution and provenance are part of the architecture, not cleanup work performed afterward.
+For the evidence behind these statements, read the [public checkpoint](docs/JOURNEY_PUBLIC_CHECKPOINT.md).
 
-mini_ark's guardrails are intentionally architected by the maintainer: human review, visible reports, dry runs, approval gates, quarantine before deletion, and local control are not afterthoughts.
+## Using the current prototype
 
-## Project status
-
-mini_ark is currently under active development.
-
-Current work focuses on HEXSEED operational congruence, starting with CareBloom custody. Discover collectors, semantic providers and new persistent user-knowledge storage remain disabled.
-
-### Gate A stewardship checkpoint
-
-Gate A remains open; tests do not confer managed-file authority or Journey graduation.
-Recovery & Repair now has a derivative-only provider contract and structural media
-validation. Perception Policy supports inherited SEALED, LIMITED, and OPEN scopes
-with separate inspection, semantic-retention, and learning permissions. Semantic
-providers remain disabled. Personal-media inventories and recovery evidence are
-local-only under ignored `private/` storage and are not part of this repository.
-
-See [Recovery and privacy contracts](docs/RECOVERY_AND_PERCEPTION_POLICY.md).
-
-Expect architecture changes, experiments, aggressively specific naming, and the occasional highly plausible piece of nonsense requiring verification.
-
-## Current MVP controls
-
-The current local MVP includes:
-
-- a Python CLI with a Windows wrapper: `ark.py` and `ark.cmd`
-- a compact Navigator control surface: `index.html`
-- a Rainmeter Tender Console widget under `rainmeter/`
-- an operator handbook, user guide, and handoff docs under `docs/`
-- read-only inventory, diagnosis, reporting, and classification commands
-- approval-gated proposal/apply/undo workflows
-- Wishstone asset intake under `asset_pipeline/`, with source-copy intake, reviewable outbox jobs, approved exports, and reusable library sets
-- legacy CareBloomOS consolidation/archive planning (execution held)
-- user-profile migration planning and hierarchy reports (execution held)
-
-Typical local launch:
+The present installation still uses the legacy Windows path `C:\mini_ark` and command wrapper `ark.cmd`:
 
 ```powershell
 cd C:\mini_ark
@@ -109,26 +78,46 @@ cd C:\mini_ark
 powershell -ExecutionPolicy Bypass -File .\start_mini_ark.ps1
 ```
 
-Safety posture: generated local ledgers, logs, maps, cache files, and handoff review packets are excluded from the GitHub archive unless explicitly reviewed for release.
+These technical names will migrate incrementally so that renaming the product does not break a working local system.
 
-Start with [`docs/HANDBOOK.md`](docs/HANDBOOK.md) if you want to operate mini_ark directly.
+## Developer map
 
-Naming posture: `Mini ARK` remains the implementation name and `C:\mini_ark` remains the canonical working tree. `Journey` is the emerging product/system identity, not a parallel codebase or active rename. See [`docs/JOURNEY_NAMING_ARCHITECTURE.md`](docs/JOURNEY_NAMING_ARCHITECTURE.md) and [`config/naming_status.json`](config/naming_status.json).
+You do **not** need to read every file in this repository. These are the useful entry points:
 
-Wishstone's asset-pipeline doctrine lives in [`docs/WISHSTONE_ASSET_PIPELINE_DOCTRINE.md`](docs/WISHSTONE_ASSET_PIPELINE_DOCTRINE.md) and [`config/wishstone_asset_doctrine.json`](config/wishstone_asset_doctrine.json). Its source rule is simple: external source files are copied into intake and are not moved unless an explicit operator-approved export/apply step says so.
+| Path | Purpose |
+|---|---|
+| `README.md` | Public front door—the page you are reading |
+| `index.html` | Journey's compact Navigator interface |
+| `ark.py` | Command-line entry point |
+| `core/` | Classification, stewardship, receipts, policy, and recovery logic |
+| `config/` | Machine-readable policy and framework settings |
+| `asset_pipeline/` | Copy-first intake and reviewable asset processing |
+| `docs/` | Operator guidance, architecture, decisions, and boundaries |
+| `tests/` | Automated checks for implemented behavior and safety contracts |
+| `examples/` | External project profiles that use Journey without defining its core |
 
-## License
+## Journey, Project ARK, and external projects
 
-mini_ark is licensed under the **Mozilla Public License 2.0 (MPL-2.0)**.
+Journey is the local coordinator within the broader Project ARK vision. Project ARK may eventually contain higher-level mapping, memory, and domain systems; Journey is the component responsible for helping the computer remain oriented to the person, their work, and the authority it has actually been given.
 
-See [`LICENSE`](LICENSE) for the complete license terms.
+Domain projects remain separate. CareBloomOS, for example, was the first mature integration profile. Its small [mapping example](examples/carebloom/README.md) demonstrates how a project can translate Journey's stable functions without turning CareBloom terminology, artwork, or handoffs into Journey's base architecture.
 
-## Maintainer
+## Naming transition
 
-Created and maintained by **Junior Gilmore**
+| Name | Meaning now |
+|---|---|
+| **Journey** | Product and public repository identity |
+| **Mini ARK** / `mini_ark` | Former name retained only where immediate renaming could break local paths or integrations |
+| **Project ARK** | The broader future family of systems; not synonymous with Journey |
 
-Developed with material collaboration from **OpenAI / ChatGPT**, with AI assistance credited openly rather than absorbed into anonymous authorship.
+See the [naming architecture](docs/JOURNEY_NAMING_ARCHITECTURE.md) for migration rules.
+
+## License and authorship
+
+Journey is licensed under the [Mozilla Public License 2.0](LICENSE).
+
+Created and maintained by **Junior Gilmore**. Developed with material collaboration from **OpenAI / ChatGPT**, with AI assistance credited openly rather than absorbed into anonymous authorship.
 
 ---
 
-**mini_ark is the tender. Project ARK is the ship.**
+**Journey helps the system remain in relation without pretending that relation grants authority.**

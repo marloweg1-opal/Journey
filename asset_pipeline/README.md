@@ -45,18 +45,18 @@ Each successful job writes:
 ## Commands
 
 ```powershell
-python -m asset_pipeline inspect --recipe asset_pipeline\recipes\cloverstone_vlc_primary_controls.example.json
-python -m asset_pipeline run path\to\sheet.png --recipe asset_pipeline\recipes\cloverstone_vlc_primary_controls.example.json
+python -m asset_pipeline inspect --recipe asset_pipeline\recipes\media_controls.example.json
+python -m asset_pipeline run path\to\sheet.png --recipe asset_pipeline\recipes\media_controls.example.json
 python -m asset_pipeline run-inbox
-python -m asset_pipeline brief --job moonstone_care_rail_parts --slots "top_rail,bottom_rail,left_cap,right_cap,center_crest,tab_home,tab_carestone,tab_hex_drive,tab_signature" --columns 3 --cell-width 512 --cell-height 512 --gutter-x 48 --gutter-y 48 --margin-x 96 --margin-y 96 --style "Moonstone lunar crystal CareRail interface assets. No text."
-python -m asset_pipeline nine-slice path\to\frame.png --left 48 --top 44 --right 48 --bottom 44 --job moonstone_care_rail_frame
-python -m asset_pipeline treat path\to\asset.png --trim --padding 4 --tint "#c8ddff" --tint-strength 0.2 --shadow-blur 6 --shadow-offset-y 3 --job moonstone_treated_asset
-python -m asset_pipeline repair-icons carebloom_orb_icon_sheet_4x7__carebloom_orb_icon_sheet_4x7 --min-component-area 24
+python -m asset_pipeline brief --job navigation_panel_parts --slots "top_rail,bottom_rail,left_cap,right_cap,center_crest,tab_home,tab_tools,tab_review,tab_manage" --columns 3 --cell-width 512 --cell-height 512 --gutter-x 48 --gutter-y 48 --margin-x 96 --margin-y 96 --style "Dark navy navigation interface assets. No text."
+python -m asset_pipeline nine-slice path\to\frame.png --left 48 --top 44 --right 48 --bottom 44 --job navigation_panel_frame
+python -m asset_pipeline treat path\to\asset.png --trim --padding 4 --tint "#c8ddff" --tint-strength 0.2 --shadow-blur 6 --shadow-offset-y 3 --job navigation_treated_asset
+python -m asset_pipeline repair-icons project_orbit_icon_sheet_4x7__project_orbit_icon_sheet_4x7 --min-component-area 24
 python -m asset_pipeline repair-icons damaged_icon_job --reshape-candidate --max-fill-ratio 0.08
-python -m asset_pipeline normalize cloverstone_vlc_primary_controls
-python -m asset_pipeline verify cloverstone_vlc_primary_controls
-python -m asset_pipeline review-job cloverstone_vlc_primary_controls
-python -m asset_pipeline approve-job cloverstone_vlc_primary_controls --family cloverstone --label vlc_controls
+python -m asset_pipeline normalize media_controls
+python -m asset_pipeline verify media_controls
+python -m asset_pipeline review-job media_controls
+python -m asset_pipeline approve-job media_controls --family navigation --label media_controls
 ```
 
 Outputs stay in `asset_pipeline\outbox\<job>\` until Mini ARK routing proposes a destination and a human approves it.
@@ -90,14 +90,14 @@ Asset ARK chooses recipes from the sheet filename. Use this naming shape:
 
 Examples:
 
-- `carebloom_orb_icon_sheet_4x7.png`
-- `moonstone_care_rail_parts_sheet.png`
-- `cloverstone_vlc_primary_controls_sheet.png`
+- `project_orbit_icon_sheet_4x7.png`
+- `navigation_panel_parts_sheet.png`
+- `media_player_controls_sheet.png`
 
 Recipes should declare a matching glob or token set. For the orb icons, the active trigger is:
 
 ```text
-carebloom_orb_icon_sheet*.png
+project_orbit_icon_sheet*.png
 ```
 
 That means Mini ARK can infer the recipe from the name alone when the sheet lands in `asset_pipeline\inbox`.

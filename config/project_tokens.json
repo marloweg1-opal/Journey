@@ -1,25 +1,23 @@
 {
   "schema_version": 1,
   "doctrine": {
-    "summary": "HEXSEED tokens describe identity, capability ownership, routing, safety, and surface customization.",
-    "canonical_system_token": "corestone",
+    "summary": "Journey tokens describe identity, capability ownership, routing, safety and optional surface customization.",
+    "canonical_system_token": "journey",
     "identity_resolution": {
-      "opalstone": "corestone"
+      "mini_ark": "journey",
+      "mini ark": "journey"
     },
-    "identity_note": "Opalstone may describe the person/identity; Corestone is the CareBloom expression of the INTEGRATE kernel. Mini ARK/Journey is the connective configuration engine and should not resolve as a Corestone alias.",
-    "naming_identity_policy": "Mini ARK is the active implementation name. Journey is the emerging product/system identity and must not become a parallel codebase or casual rename before an approved migration.",
+    "identity_note": "Journey is the orchestration system. Domain profiles may rename or decorate capabilities without replacing Journey's identity.",
     "empty_folder_policy": "Never delete a folder solely because it is empty.",
-    "routing_policy": "Files live in their natural canonical home first; specificity is added through representations such as shortcuts, manifests, tags, and project views.",
-    "token_reception_policy": "Everything that enters Mini ARK either carries an existing token or receives a provisional token at reception. Source document names and filenames are primary token evidence because they often encode operator intent. Routing and placement follow token identity.",
-    "ambient_congruence_policy": "Corestone/HEXSEED should continuously pursue user-computer congruence by the least resistant, least disturbing path available. Always observe; auto-apply only safe, reversible, high-confidence, low-cost maintenance; throttle during active foreground or heavy compute; record receipts and preserve rollback for autonomous changes; ask only for ambiguity, judgment, destructive action, unclear ownership, or expensive/disruptive work.",
-    "resource_doctrine": "Corestone is always aware, not always busy. Foreground responsiveness wins; heavy compute makes stewardship throttle or sleep; idle and low-load periods allow deeper maintenance.",
+    "routing_policy": "Files live in their natural canonical home first; specificity is added through representations such as shortcuts, manifests, tags and project views.",
+    "token_reception_policy": "Every incoming item carries an existing token or receives a provisional token at reception. Routing follows verified identity evidence.",
+    "ambient_congruence_policy": "Always observe within granted scope; auto-apply only safe, reversible, high-confidence and low-cost maintenance; ask for ambiguity, judgment, destructive action, unclear ownership or expensive work.",
+    "resource_doctrine": "Foreground responsiveness wins; heavy compute makes stewardship throttle or pause; idle periods permit deeper maintenance.",
     "mutation_policy": "Detect and propose first; execute only through approved, reversible operations.",
-    "prompt_policy": "Do not create routine 'run organizer' prompts or buttons for housekeeping. Prompts are for real judgment, not ordinary maintenance.",
+    "prompt_policy": "Prompts are for real judgment, not routine housekeeping.",
     "auto_apply_policy": [
-      "deterministic naming normalization",
       "index and manifest updates",
       "verified routing with unambiguous destinations",
-      "broken-reference repair where destination is unambiguous",
       "non-destructive organizational maintenance",
       "report generation",
       "safe metadata normalization"
@@ -31,89 +29,20 @@
       "semantic merges",
       "system or app-managed path changes",
       "destructive dedupe",
-      "high-cost scans during active workload",
       "changes with unclear ownership or destination"
-    ],
-    "visual_identity_policy": "HEXSEED_v4.ico is the selected canonical HEXSEED identity icon. Expression profiles may provide profile-specific icons, but the foundation icon remains the stable HEXSEED mark unless explicitly changed."
+    ]
   },
   "visual_identity": {
-    "selected_hexseed_icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\HEXSEED_v4.ico",
-    "selection_note": "Chosen for practical icon readability and stable HEXSEED identity: outer hex, central seed/crystal, and clear silhouette at small sizes.",
     "selected_mini_ark_icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\mini_ark.ico",
     "future_journey_icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\journey.ico",
-    "mini_ark_journey_icon_policy": "Use mini_ark.ico for the active C:\\mini_ark implementation. Hold journey.ico for the future Journey identity and do not apply it until the deliberate Journey migration is approved.",
-    "selected_carebloomos_app_icon_source": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cAREBLOOM_BABY.png",
-    "selected_carebloomos_app_icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cAREBLOOM_BABY.ico",
-    "selected_carebloomos_app_icon_note": "Selected as the one CareBloomOS application icon. The bloom-within-bloom mark has the strongest standalone silhouette, says CareBloom without requiring a secondary glyph, communicates the recursive multi-domain system, and avoids over-specifying what the OS is currently doing. The PNG is the source art; the ICO is the Windows/application icon artifact.",
-    "carebloomos_icon_audition": {
-      "locked_choice_source": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cAREBLOOM_BABY.png",
-      "locked_choice": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cAREBLOOM_BABY.ico",
-      "nursery_assets": [
-        "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\CareBloomOS.ico",
-        "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\CareBloomOS_v1.ico",
-        "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\CareBloomOS_v2.ico"
-      ],
-      "nursery_policy": "Hold the other candidates briefly for genuine reuse opportunities. Do not build a permanent hierarchy around them; prune them if no real use appears."
-    },
-    "carebloom_stone_icons": {
-      "moonstone": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\moonstone.ico",
-      "cloverstone": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cloverstone.ico",
-      "heartstone": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\heartstone.ico",
-      "cloudstone": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cloudstone.ico",
-      "wishstone": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\wishstone.ico",
-      "musicstone": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\musicstone.ico"
-    },
-    "carebloom_identity_policy": "Use cAREBLOOM_BABY.png as the selected CareBloomOS application icon. The other CareBloomOS icon candidates remain nursery assets only, not a canonical semantic hierarchy.",
-    "stone_icon_policy": "Folders or surfaces explicitly named for a CareBloom stone may use that stone's canonical icon. Filesystem application must be previewed first and should write only presentation metadata such as desktop.ini unless explicitly approved."
+    "policy": "Expression profiles may provide presentation assets; those assets remain owned by their source projects."
   },
   "tokens": {
-    "corestone": {
-      "display_name": "Corestone",
-      "type": "system",
-      "aliases": [
-        "opalstone"
-      ],
-      "owns": [
-        "computer_user_congruency",
-        "capability_registry",
-        "stewardship_surface",
-        "audit",
-        "rollback"
-      ],
-      "routes": {},
-      "representations": {
-        "kernel": "integrate",
-        "expression_profile": "carebloom",
-        "role": "carebloom_integrator_expression"
-      },
-      "customization": {
-        "surface_label": "Corestone",
-        "icon": null,
-        "accent": "#8ee36f",
-        "wallpaper": null
-      }
-    },
     "journey": {
       "display_name": "Journey",
       "type": "configuration_engine",
-      "aliases": [
-        "mini_ark",
-        "mini ark",
-        "miniark",
-        "journey identity",
-        "mini ark future identity",
-        "adaptive local orchestration layer"
-      ],
-      "owns": [
-        "configuration_engine",
-        "expression_profile_selection",
-        "functional_kernel_translation",
-        "navigator_surface",
-        "continuity_across_manifestations",
-        "product_identity_planning",
-        "adaptive_local_orchestration_concept",
-        "future_release_naming"
-      ],
+      "aliases": ["mini_ark", "mini ark", "miniark", "adaptive local orchestration layer"],
+      "owns": ["configuration_engine", "functional_kernel_translation", "navigator_surface", "continuity", "stewardship", "audit", "rollback"],
       "routes": {
         "home": "C:\\mini_ark",
         "docs": "C:\\mini_ark\\docs",
@@ -122,32 +51,18 @@
       "representations": {
         "implementation": "Mini ARK",
         "canonical_working_tree": "C:\\mini_ark",
-        "role": "connective_orchestration_layer",
-        "status": "active_implementation_name_future_identity_planning"
+        "role": "human_centered_local_orchestration"
       },
       "customization": {
         "surface_label": "Journey",
-        "icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\mini_ark.ico",
-        "future_icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\journey.ico",
         "accent": "#7fd9d2"
       }
     },
-    "wishstone": {
-      "display_name": "Wishstone",
-      "type": "stone",
-      "aliases": [
-        "asset ark",
-        "asset_ark",
-        "wishstone intake"
-      ],
-      "owns": [
-        "acquisition",
-        "asset_intake",
-        "asset_routing",
-        "dedupe",
-        "provenance",
-        "project_representations"
-      ],
+    "asset_pipeline": {
+      "display_name": "Asset Pipeline",
+      "type": "capability",
+      "aliases": ["asset intake", "asset routing"],
+      "owns": ["asset_intake", "asset_routing", "provenance", "reviewable_exports"],
       "routes": {
         "inbox": "C:\\mini_ark\\asset_pipeline\\inbox",
         "outbox": "C:\\mini_ark\\asset_pipeline\\outbox",
@@ -156,154 +71,27 @@
       },
       "representations": {
         "canonical": "C:\\mini_ark\\asset_pipeline",
-        "surface": "Tools > Wishstone Intake",
+        "surface": "Tools > Asset Intake",
         "role": "asset_acquisition_and_routing"
       },
       "customization": {
-        "surface_label": "Wishstone Intake",
-        "icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\wishstone.ico",
-        "accent": "#f4c95d",
-        "default_group_mode": "keep_separate"
+        "surface_label": "Asset Intake",
+        "accent": "#f4c95d"
       }
     },
-    "cloverstone": {
-      "display_name": "Cloverstone",
-      "type": "stone",
-      "aliases": [
-        "clover",
-        "clover care"
-      ],
-      "owns": [
-        "naming",
-        "normalization",
-        "maintenance",
-        "folder_hygiene",
-        "cadence",
-        "drift_reports"
-      ],
+    "project_profile": {
+      "display_name": "Project Profile",
+      "type": "extension_contract",
+      "aliases": ["integration profile", "expression profile"],
+      "owns": ["project_routes", "project_tokens", "presentation_translation"],
       "routes": {},
-      "representations": {},
-      "customization": {
-        "icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cloverstone.ico",
-        "accent": "#58d46f"
-      }
-    },
-    "moonstone": {
-      "display_name": "Moonstone",
-      "type": "stone",
-      "aliases": [
-        "moon",
-        "hidden layer"
-      ],
-      "owns": [
-        "hidden_state",
-        "system_state",
-        "restoration",
-        "privacy",
-        "history"
-      ],
-      "routes": {},
-      "representations": {},
-      "customization": {
-        "icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\moonstone.ico",
-        "accent": "#9bb7ff"
-      }
-    },
-    "heartstone": {
-      "display_name": "Heartstone",
-      "type": "stone",
-      "aliases": [
-        "heart",
-        "protection layer"
-      ],
-      "owns": [
-        "protection",
-        "treatment",
-        "quarantine",
-        "containment",
-        "remediation"
-      ],
-      "routes": {},
-      "representations": {},
-      "customization": {
-        "icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\heartstone.ico",
-        "accent": "#ff7fa1"
-      }
-    },
-    "cloudstone": {
-      "display_name": "Cloudstone",
-      "type": "stone",
-      "aliases": [
-        "cloud",
-        "atmosphere layer",
-        "environment layer"
-      ],
-      "owns": [
-        "environment",
-        "atmosphere",
-        "comfort",
-        "conditions",
-        "regulation"
-      ],
-      "routes": {},
-      "representations": {},
-      "customization": {
-        "icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cloudstone.ico",
-        "accent": "#4db5ff"
-      }
-    },
-    "musicstone": {
-      "display_name": "Musicstone",
-      "type": "stone",
-      "aliases": [
-        "music",
-        "rhythm layer",
-        "audio layer"
-      ],
-      "owns": [
-        "audio",
-        "rhythm",
-        "resonance",
-        "communication",
-        "synchronization"
-      ],
-      "routes": {},
-      "representations": {},
-      "customization": {
-        "icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\musicstone.ico",
-        "accent": "#ff6b57"
-      }
-    },
-    "carebloomos": {
-      "display_name": "CareBloomOS",
-      "type": "project",
-      "aliases": [
-        "carebloom",
-        "carebloom os"
-      ],
-      "owns": [
-        "carestone_widgets",
-        "rainmeter_skins",
-        "wallpaper_engine_assets",
-        "care_rails"
-      ],
-      "routes": {
-        "project_root": "R:\\Projects\\CareBloomOS",
-        "active_source": "R:\\Projects\\CareBloomOS\\01_Active_Source\\CareBloomOS",
-        "media_root": "R:\\Media\\CareBloomOS"
-      },
       "representations": {
-        "canonical": "R:\\Projects\\CareBloomOS",
-        "active_source": "R:\\Projects\\CareBloomOS\\01_Active_Source\\CareBloomOS",
-        "media": "R:\\Media\\CareBloomOS",
-        "surface": "CareBloomOS project views may reference assets without becoming the source of truth",
-        "role": "carestone_project"
+        "role": "external_project_owned_extension",
+        "boundary": "Project-specific doctrine and assets remain in the owning project."
       },
       "customization": {
-        "surface_label": "CareBloomOS",
-        "icon": "C:\\HEXSEED\\10_ASSETS\\HEXSEED_ICONS\\ICO\\cAREBLOOM_BABY.ico",
-        "accent": "#c8b6ff",
-        "manifestation_profile": "carestone"
+        "surface_label": "Project Profile",
+        "accent": "#9fc4ff"
       }
     }
   },

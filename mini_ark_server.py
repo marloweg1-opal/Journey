@@ -26,11 +26,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 
 ROOT = Path(__file__).resolve().parent
-PUBLIC_STATIC_PATHS = frozenset({'/index.html'} | {
-    '/asset_pipeline/library/carebloomos/journey_ui_frames_page_1/journey_ui_frames/'
-    + name + '.png'
-    for name in ('frame_main', 'frame_panel', 'frame_card', 'frame_review', 'frame_nav')
-})
+PUBLIC_STATIC_PATHS = frozenset({'/index.html'})
 DB_PATH = ROOT / "ark.sqlite"
 DOCS_ROOT = ROOT / "docs"
 ARK_CMD = ROOT / "ark.cmd"
@@ -52,15 +48,13 @@ DURABLE_DOC_PREFIXES = (
     "HANDBOOK",
     "USER_GUIDE",
     "CODEX_HANDOFF",
-    "GITHUB_ARCHIVAL_PREP",
     "HEXSEED_EXPRESSION_FRAMEWORK",
     "JOURNEY_NAMING_ARCHITECTURE",
     "MINI_ARK_STATUS",
-    "MOONSTONE_HANDOFF",
     "R_DRIVE_DOCTRINE",
-    "SCOPE_AND_PROJECT_BLEED_AUDIT",
+    "PROJECT_BOUNDARIES",
     "STEWARDSHIP_RELEASE_CANDIDATE_HANDOFF",
-    "WISHSTONE_ASSET_PIPELINE_DOCTRINE",
+    "ASSET_PIPELINE_DOCTRINE",
 )
 
 SYSTEM_NOISE_PREFIXES = (
@@ -174,13 +168,13 @@ ACTION_DEFS = {
         "timeout": 60,
     },
     "name-preview": {
-        "title": "Cloverstone Name Preview",
+        "title": "Name Preview",
         "mode": "launch",
         "risk": "green",
         "timeout": 60,
     },
     "date-index": {
-        "title": "Cloverstone Date Index",
+        "title": "Date Index",
         "mode": "launch",
         "risk": "green",
         "timeout": 180,
@@ -192,11 +186,11 @@ ACTION_DEFS = {
         "command": [str(ARK_CMD), "photo-taxonomy"],
         "timeout": 60,
     },
-    "wishstone-doctrine": {
-        "title": "Wishstone Doctrine",
+    "asset-pipeline-doctrine": {
+        "title": "Asset Pipeline Doctrine",
         "mode": "manage",
         "risk": "green",
-        "builtin": "wishstone_doctrine",
+        "builtin": "asset_pipeline_doctrine",
     },
     "naming-status": {
         "title": "Naming Status",
@@ -230,20 +224,6 @@ ACTION_DEFS = {
         "command": ["git", "status", "-sb"],
         "timeout": 30,
     },
-    "carebloom-plan": {
-        "title": "CareBloom Consolidation Plan",
-        "mode": "launch",
-        "risk": "yellow",
-        "command": [str(ARK_CMD), "carebloom-consolidate"],
-        "timeout": 300,
-    },
-    "carebloom-archive-plan": {
-        "title": "CareBloomOS Archive Map",
-        "mode": "launch",
-        "risk": "yellow",
-        "command": [str(ARK_CMD), "carebloom-archive-map"],
-        "timeout": 300,
-    },
     "profile-migration-plan": {
         "title": "R Profile Migration Map",
         "mode": "launch",
@@ -266,7 +246,7 @@ ACTION_DEFS = {
         "timeout": 300,
     },
     "assets-intake": {
-        "title": "Wishstone Intake",
+        "title": "Asset Intake",
         "mode": "launch",
         "risk": "yellow",
         "timeout": 900,
@@ -1242,9 +1222,9 @@ def logs(limit: int = 20) -> dict:
     return {"logs": rows}
 
 
-def wishstone_doctrine() -> dict:
-    config_path = ROOT / "config" / "wishstone_asset_doctrine.json"
-    doc_path = DOCS_ROOT / "WISHSTONE_ASSET_PIPELINE_DOCTRINE.md"
+def asset_pipeline_doctrine() -> dict:
+    config_path = ROOT / "config" / "asset_pipeline_doctrine.json"
+    doc_path = DOCS_ROOT / "ASSET_PIPELINE_DOCTRINE.md"
     config = {}
     doc = ""
     if config_path.exists():
@@ -1635,8 +1615,8 @@ def run_action(action_id: str, payload: dict) -> tuple[dict, int]:
         return {"ok": False, "error": f"Unknown action: {action_id}"}, 404
     if action.get("builtin") == "logs":
         return {"ok": True, **logs()}, 200
-    if action.get("builtin") == "wishstone_doctrine":
-        return {"ok": True, "action": action_id, "title": action["title"], **wishstone_doctrine()}, 200
+    if action.get("builtin") == "asset_pipeline_doctrine":
+        return {"ok": True, "action": action_id, "title": action["title"], **asset_pipeline_doctrine()}, 200
     if action.get("builtin") == "naming_status":
         return {"ok": True, "action": action_id, "title": action["title"], **naming_status()}, 200
     if action.get("builtin") == "expression_framework":

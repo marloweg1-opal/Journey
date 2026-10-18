@@ -1,4 +1,4 @@
-"""Photo slideshow taxonomy for Corestone/Cloverstone."""
+"""Photo slideshow taxonomy for Journey."""
 
 from __future__ import annotations
 

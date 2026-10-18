@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "profile_id": "carebloomos",
-  "profile_version": "0.1",
+  "profile_id": "journey_default",
+  "profile_version": "1.0",
   "doctrine": {
     "summary": "Expression profiles bind visual assets, motion, typography, persona, and decorative language to stable semantic UI slots.",
     "law": "Semantic stability, expressive variation.",
@@ -12,7 +12,7 @@
     "primary_navigation": null,
     "content_surface": null,
     "modal_surface": null,
-    "care_rail": null,
+    "context_rail": null,
     "system_identity": null
   },
   "system_states": {
@@ -56,8 +56,8 @@
     "interrupted": null
   },
   "personas": {
-    "cloverstone": null,
-    "moonstone": null,
-    "corestone": null
+    "maintenance_guide": null,
+    "perception_guide": null,
+    "integration_guide": null
   }
 }

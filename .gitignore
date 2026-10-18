@@ -18,8 +18,6 @@ docs/*.csv
 docs/R_PROFILE_CLEANUP_*.json
 docs/R_PROFILE_MIGRATION_MAP_*.md
 docs/R_HIERARCHY_SCAN_*.md
-docs/CAREBLOOM_ARCHIVE_MAP_*.md
-docs/CAREBLOOM_CONSOLIDATION_PLAN_*.md
 docs/ARCHITECTURE_CORRECTION_PREP_*.md
 tests/fixtures/*.json
 

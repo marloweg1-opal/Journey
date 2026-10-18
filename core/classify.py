@@ -12,8 +12,8 @@ audio"; a PowerShell helper is operational infrastructure before it is
 an arbitrary text file.
 
 This module NEVER creates proposals or touches files. It only returns
-structured hints for inventory, Moonstone congruence, and later
-Cloverstone care flows.
+structured hints for inventory, placement congruence, and later
+maintenance flows.
 """
 
 import re

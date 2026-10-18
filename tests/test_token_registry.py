@@ -13,7 +13,7 @@ class TokenRegistryTests(unittest.TestCase):
 
             self.assertTrue(registry_path(root).exists())
             summary = token_summary(registry)
-            self.assertGreaterEqual(summary["token_count"], 6)
+            self.assertGreaterEqual(summary["token_count"], 3)
             self.assertIn("C:\\mini_ark\\asset_pipeline\\inbox", summary["reserved_roots"])
             policies = summary["policies"]
             self.assertIn("Always observe", policies["ambient_congruence_policy"])
@@ -27,18 +27,15 @@ class TokenRegistryTests(unittest.TestCase):
             registry = ensure_token_registry(Path(tmp))
 
             journey = resolve_token(registry, "mini_ark")
-            corestone = resolve_token(registry, "opalstone")
-            wishstone = resolve_token(registry, "asset ark")
-            carebloom = resolve_token(registry, "CareBloom")
+            asset_pipeline = resolve_token(registry, "asset intake")
+            project_profile = resolve_token(registry, "expression profile")
 
             self.assertIsNotNone(journey)
             self.assertEqual(journey[0], "journey")
-            self.assertIsNotNone(corestone)
-            self.assertEqual(corestone[0], "corestone")
-            self.assertIsNotNone(wishstone)
-            self.assertEqual(wishstone[0], "wishstone")
-            self.assertIsNotNone(carebloom)
-            self.assertEqual(carebloom[0], "carebloomos")
+            self.assertIsNotNone(asset_pipeline)
+            self.assertEqual(asset_pipeline[0], "asset_pipeline")
+            self.assertIsNotNone(project_profile)
+            self.assertEqual(project_profile[0], "project_profile")
 
     def test_route_summary_distinguishes_routes_from_representations(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -47,10 +44,10 @@ class TokenRegistryTests(unittest.TestCase):
 
             routed_ids = {token["id"] for token in summary["tokens"]}
             self.assertIn("journey", routed_ids)
-            self.assertIn("wishstone", routed_ids)
-            self.assertIn("carebloomos", routed_ids)
-            carebloom = next(token for token in summary["tokens"] if token["id"] == "carebloomos")
-            self.assertEqual(carebloom["representations"]["canonical"], "R:\\Projects\\CareBloomOS")
+            self.assertIn("asset_pipeline", routed_ids)
+            self.assertIn("project_profile", routed_ids)
+            project_profile = next(token for token in summary["tokens"] if token["id"] == "project_profile")
+            self.assertEqual(project_profile["representations"]["role"], "external_project_owned_extension")
             self.assertIn("source of truth", summary["rule"])
             self.assertIn("natural canonical home", summary["routing_policy"])
 

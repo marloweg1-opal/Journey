@@ -9,7 +9,7 @@ const memories = [
   {title:'USB Recovery', text:'PhotoRec recovery, media targets, corruption and duplicates.'},
   {title:'R:\\ migration planning', text:'Profile-source migration, quarantine, and staging decisions.'},
   {title:'Attribution canon', text:'Prominent, elegant, searchable provenance and credit architecture.'},
-  {title:'CareBloomOS', text:'Shared project infrastructure, canon, and consolidation work.'},
+  {title:'Project Profiles', text:'External projects can extend Journey without redefining its core.'},
 ];
 
 const tools = [

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">Journey — Human-governed local AI</title>
+  <desc id="description">Repository preview for Journey, showing a luminous green orientation path connecting evidence, context, review, and action beneath the words Human governed, Local first, Provenance intact.</desc>
+  <metadata>
+    Title: Journey Repository Preview
+    Created: 2026-10-18
+    Description: Public GitHub preview graphic for the Journey local AI system.
+    Authors: Junior Gilmore and OpenAI ChatGPT
+    Tags: Journey, local AI, human governance, provenance, Project ARK
+    Provenance: Authored as an SVG for the Journey repository identity transition.
+  </metadata>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07130f"/>
+      <stop offset="0.56" stop-color="#10261d"/>
+      <stop offset="1" stop-color="#07100e"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#c8ff9c" stop-opacity="0.48"/>
+      <stop offset="1" stop-color="#79dd96" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="path" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6edb8f"/>
+      <stop offset="0.5" stop-color="#d3f2ae"/>
+      <stop offset="1" stop-color="#d8b96e"/>
+    </linearGradient>
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" rx="30" fill="url(#background)"/>
+  <circle cx="1010" cy="95" r="240" fill="url(#glow)"/>
+  <circle cx="110" cy="620" r="270" fill="url(#glow)" opacity="0.45"/>
+
+  <g opacity="0.18" stroke="#b9e5bd" fill="none">
+    <path d="M0 112 C220 48 322 166 514 100 S868 29 1200 105"/>
+    <path d="M0 510 C244 430 360 568 603 482 S958 425 1200 496"/>
+  </g>
+
+  <text x="86" y="146" fill="#d8b96e" font-family="Segoe UI, Inter, sans-serif" font-size="22" font-weight="600" letter-spacing="5">PROJECT ARK • LOCAL ORIENTATION LAYER</text>
+  <text x="80" y="280" fill="#f3f6ed" font-family="Segoe UI, Inter, sans-serif" font-size="112" font-weight="700" letter-spacing="-4">Journey</text>
+  <text x="86" y="336" fill="#b8ccbe" font-family="Segoe UI, Inter, sans-serif" font-size="29">Human-governed local AI for continuity, context, and care.</text>
+
+  <g transform="translate(86 430)">
+    <path d="M18 26 H310 C350 26 355 78 397 78 H681 C726 78 728 26 773 26 H984" fill="none" stroke="url(#path)" stroke-width="4" filter="url(#softGlow)"/>
+    <g fill="#0b1712" stroke="#a9e99b" stroke-width="3">
+      <circle cx="18" cy="26" r="13"/><circle cx="310" cy="26" r="13"/>
+      <circle cx="397" cy="78" r="13"/><circle cx="681" cy="78" r="13"/>
+      <circle cx="773" cy="26" r="13"/><circle cx="984" cy="26" r="13"/>
+    </g>
+    <g fill="#dce8dc" font-family="Segoe UI, Inter, sans-serif" font-size="18" font-weight="600">
+      <text x="0" y="-8">EVIDENCE</text>
+      <text x="276" y="-8">CONTEXT</text>
+      <text x="365" y="119">REVIEW</text>
+      <text x="646" y="119">AUTHORITY</text>
+      <text x="742" y="-8">ACTION</text>
+      <text x="944" y="-8">RECEIPT</text>
+    </g>
+  </g>
+
+  <g transform="translate(86 574)" fill="#89a793" font-family="Segoe UI, Inter, sans-serif" font-size="18" letter-spacing="2">
+    <text x="0" y="0">HUMAN GOVERNED</text>
+    <circle cx="242" cy="-6" r="3" fill="#d8b96e"/>
+    <text x="266" y="0">LOCAL FIRST</text>
+    <circle cx="442" cy="-6" r="3" fill="#d8b96e"/>
+    <text x="466" y="0">PROVENANCE INTACT</text>
+  </g>
+</svg>
