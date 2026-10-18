@@ -1,4 +1,4 @@
-"""Cloverstone naming engine seam.
+"""Project-neutral naming engine seam.
 
 This module previews canonical names. It does not rename files; rename
 execution still belongs to proposal -> approval -> apply -> undo.
@@ -181,11 +181,11 @@ def metadata_advice(date_info: dict[str, Any], tokens: list[str], role_slug: str
     if date_info["status"] == "ambiguous":
         advice.append("Ambiguous filename date kept as provenance evidence, not canonical filename text.")
     if "download" in source_slug or "downloaded" in source_slug:
-        advice.append("Download/acquisition dates belong in Wishstone provenance unless they identify the artifact.")
+        advice.append("Download/acquisition dates belong in provenance unless they identify the artifact.")
     if len(tokens) > 2:
         advice.append("Extra project/stone associations should become representations or metadata, not filename sprawl.")
     if not role_slug:
-        advice.append("No explicit role supplied; Cloverstone used available filename/token evidence only.")
+        advice.append("No explicit role supplied; available filename/token evidence was used.")
     return advice
 
 

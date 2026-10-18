@@ -14,7 +14,7 @@ class ExpressionSlotTests(unittest.TestCase):
     def test_expression_slot_registry_preserves_semantic_states(self):
         registry = load_expression_slots(ROOT)
 
-        self.assertEqual(registry["profile_id"], "carebloomos")
+        self.assertEqual(registry["profile_id"], "journey_default")
         self.assertIn("Semantic stability", registry["doctrine"]["law"])
         self.assertIn("needs_review", registry["system_states"])
         self.assertIn("waiting_approval", registry["system_states"])

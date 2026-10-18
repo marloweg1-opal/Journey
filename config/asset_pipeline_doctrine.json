@@ -6,7 +6,7 @@
     "capability_reference": "C:\\mini_ark"
   },
   "doctrine": {
-    "summary": "Wishstone is mini_ark's local asset intake and routing capability. It copies source sheets into controlled intake, generates reviewable outputs, and exports approved assets into project-native folders.",
+    "summary": "The asset pipeline is mini_ark's local intake and routing capability. It copies source sheets into controlled intake, generates reviewable outputs, and exports approved assets into project-native folders.",
     "source_policy": "Do not move or rewrite source files outside C:\\mini_ark unless an explicit operator-approved apply/export step says so.",
     "intake_policy": "External source paths are copied into asset_pipeline\\inbox before processing. Inbox files are staging copies and may be archived after a successful run.",
     "token_policy": "Every incoming item either arrives with a token or receives a provisional token at reception. The source document name is primary token evidence. Routing and placement decisions are downstream of token identity.",
@@ -49,30 +49,23 @@
       "user-provided label",
       "prior registry knowledge"
     ],
-    "source_name_priority": "If the asset sheet or source document is named for carebloom, hexseed, moonstone, cloverstone, wishstone, or another known project/capability, treat that as intentional identity evidence before falling back to weaker inference.",
+    "source_name_priority": "If the asset sheet or source document names a known project or capability, treat that as intentional identity evidence before falling back to weaker inference.",
     "examples": {
-      "carebloom_orb_icon_sheet_4x7.png": [
-        "carebloom",
-        "carebloomos"
+      "project_orbit_icon_sheet_4x7.png": [
+        "project_orbit",
+        "icons"
       ],
-      "hexseed_professor_badge_sheet.png": [
-        "hexseed"
-      ],
-      "moonstone_care_rail_parts_sheet.png": [
-        "moonstone",
-        "care_rail"
-      ],
-      "cloverstone_vlc_controls_sheet.png": [
-        "cloverstone",
-        "vlc_controls"
+      "media_player_controls_sheet.png": [
+        "media_player",
+        "controls"
       ]
     },
     "missing_token_behavior": "Assign a reviewable provisional token instead of treating the item as anonymous.",
     "routing_dependency": "Destination logic follows token identity."
   },
   "navigator_surface": {
-    "primary_tool": "Tools > Wishstone Intake",
-    "history": "Tools > Wishstone Intake History",
+    "primary_tool": "Tools > Asset Intake",
+    "history": "Tools > Asset Intake History",
     "advanced_tools": [
       "Smart Asset Intake",
       "Batch Master Composer",

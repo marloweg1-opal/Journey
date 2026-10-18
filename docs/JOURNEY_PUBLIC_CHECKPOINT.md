@@ -46,10 +46,11 @@ local policy availability. Never publish private ledgers to make a checkout pass
 
 ## Active milestone
 
-CareBloom custody first. Next: an exact eligible outside-custody candidate and
-legitimate production action-evidence/approval source. Do not rearrange already
-custodied groups just to demonstrate action. Application-dependent material stays
-held individually. Do not infer retirement from age, location or missing references.
+Project-neutral custody first. Next: an exact eligible outside-custody candidate
+and legitimate production action-evidence/approval source. Do not rearrange
+already custodied groups just to demonstrate action. Application-dependent
+material stays held individually. Do not infer retirement from age, location or
+missing references.
 F: preservation and quarantine holds remain intact; their records are private.
 
 ## Publication boundary and history

@@ -1,84 +1,35 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "implementation_name": "Mini ARK",
   "implementation_slug": "mini_ark",
   "canonical_working_tree": "C:\\mini_ark",
-  "emerging_identity": "Journey",
+  "product_identity": "Journey",
   "higher_order_architecture": "Project ARK",
-  "current_decision": "Keep Mini ARK as the active implementation/development name. Treat Journey as emerging product/system identity planning until a deliberate release migration is approved.",
-  "expression_framework": {
-    "doc_path": "C:\\mini_ark\\docs\\HEXSEED_EXPRESSION_FRAMEWORK.md",
-    "config_path": "C:\\mini_ark\\config\\expression_framework.json",
-    "short_form": "HEXSEED is the persistent platform. Journey configures it. Functional kernels define what work exists. Expression profiles define how that work is understood and presented. CareBloomOS is the first mature profile, not the base ontology. All profiles are peer translations of the same underlying job-role architecture.",
-    "architecture_rule": "Reason from functional kernel to expression profile to profile-specific translation. Do not use Carestone as the base class for every other manifestation."
-  },
+  "current_decision": "Keep Mini ARK as the active implementation name and Journey as the product identity until a deliberate migration is approved.",
   "rename_status": "not_approved",
   "do_not_rename": [
     "C:\\mini_ark",
     "ark.py",
     "ark.cmd",
-    "Mini ARK CLI references",
     "database paths",
     "config keys",
     "module names",
     "scripts",
-    "service references",
-    "Rainmeter integration paths"
-  ],
-  "do_not_create_parallel": [
-    "C:\\journey",
-    "journey.py",
-    "Journey CLI",
-    "Project Journey"
+    "service references"
   ],
   "future_transition_requires": [
-    "naming audit",
-    "path dependency audit",
-    "config/schema compatibility review",
+    "naming and path dependency audit",
+    "config and schema compatibility review",
     "database migration review",
     "CLI compatibility and alias strategy",
-    "Rainmeter and CareBloomOS reference audit",
-    "scripts and shortcuts audit",
     "documentation audit",
-    "logs and receipts compatibility review",
-    "backward compatibility decisions"
+    "logs and receipts compatibility review"
   ],
-  "manifestation_rule": {
+  "expression_rule": {
     "principle": "Semantic stability, expressive variation.",
-    "identity_boundary": "CareBloom is the expression of the computer experience. Mini ARK/Journey is the connective orchestration layer beneath manifestations. Do not refer to Mini ARK/Journey by a component stone or manifestation alias just because that layer is visually prominent.",
-    "expression_sync_policy": "Mini ARK/Journey's visible interface should harmonize with the active HEXSEED manifestation through color, ornament, iconography, motion, sound, and light flavor language while preserving familiar controls, stable system meaning, and backend identity.",
-    "allowed_variation": [
-      "visual language",
-      "atmosphere",
-      "persona",
-      "ornamentation",
-      "animation",
-      "sounds",
-      "iconography",
-      "low-friction flavor language"
-    ],
-    "stability_requirement": "Manifestations should not require the user to relearn the computer.",
-    "familiar_terms_policy": "If a thematic substitution requires remembering a glossary, translating terminology, or stopping to ask what a familiar system location is called, preserve the familiar system term. Flavor can supplement it, not obscure it.",
-    "manifestation_alias_policy": "A manifestation may rename or reskin the surface expression of stones, but those aliases are not backend identity replacements.",
-    "carebloom_boundary": {
-      "carebloom": "experiential manifestation / expression layer",
-      "functional_kernels": "neutral job-role architecture beneath every expression",
-      "stones": "CareBloom expression of the neutral functional kernels",
-      "mini_ark": "current implementation of the connective orchestration layer",
-      "journey": "future identity of the connective orchestration layer",
-      "project_ark": "higher-order architecture"
-    },
-    "example_manifestation_aliases": {
-      "moonstone": "moonstone",
-      "music_stone": "firestone",
-      "cloverstone": "leafstone",
-      "cloudstone": "waterstone / icestone",
-      "wishstone": "thunderstone",
-      "heartstone": "friendship-like stone"
-    },
-    "decision_test": "Does this transformation increase delight without increasing cognitive friction?",
-    "if_yes": "Transform it.",
-    "if_no": "HEXSEED keeps the familiar form."
+    "identity_boundary": "Journey is the orchestration layer. External projects own their expression profiles.",
+    "allowed_variation": ["visual language", "atmosphere", "persona", "ornamentation", "animation", "sounds", "iconography"],
+    "stability_requirement": "Profiles must preserve familiar controls, capability meaning, authority state, evidence and rollback semantics."
   },
-  "architecture_summary": "Journey is the adaptive local orchestration layer that continuously reconciles HEXSEED with the user's evolving way of working. Mini ARK is the current implementation name. Project ARK remains the higher-order architecture."
+  "architecture_summary": "Journey is the adaptive local orchestration layer that reconciles HEXSEED with the user's evolving way of working. Mini ARK is the current implementation name."
 }

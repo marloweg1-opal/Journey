@@ -19,11 +19,9 @@
       --rose: #ff94c6;
       --blue: #9fc4ff;
       --violet: #d49cff;
-      --carebloom: url("asset_pipeline/library/carebloomos/journey_ui_frames_page_1/journey_ui_frames/frame_main.png");
-      --care-panel: url("asset_pipeline/library/carebloomos/journey_ui_frames_page_1/journey_ui_frames/frame_panel.png");
-      --care-card: url("asset_pipeline/library/carebloomos/journey_ui_frames_page_1/journey_ui_frames/frame_card.png");
-      --care-review: url("asset_pipeline/library/carebloomos/journey_ui_frames_page_1/journey_ui_frames/frame_review.png");
-      --care-nav: url("asset_pipeline/library/carebloomos/journey_ui_frames_page_1/journey_ui_frames/frame_nav.png");
+      --frame-panel: linear-gradient(145deg, rgba(28, 62, 101, 0.88), rgba(7, 24, 49, 0.94));
+      --frame-card: linear-gradient(145deg, rgba(21, 52, 87, 0.9), rgba(6, 21, 43, 0.96));
+      --frame-review: linear-gradient(145deg, rgba(34, 63, 98, 0.92), rgba(9, 28, 54, 0.97));
       font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     }
     * { box-sizing: border-box; }
@@ -165,7 +163,7 @@
       border: 1px solid rgba(153, 224, 255, 0.42);
       background:
         linear-gradient(rgba(4, 21, 45, 0.52), rgba(4, 21, 45, 0.68)),
-        var(--care-panel) center / cover no-repeat;
+        var(--frame-panel);
       box-shadow: inset 0 0 30px rgba(255,255,255,0.04), 0 12px 28px rgba(0, 0, 0, 0.22);
     }
     .quick strong { font-family: Georgia, "Times New Roman", serif; font-size: 24px; font-weight: 600; }
@@ -184,7 +182,7 @@
       padding: 13px;
       background:
         linear-gradient(rgba(5, 20, 43, 0.72), rgba(5, 20, 43, 0.78)),
-        var(--care-card) center / cover no-repeat;
+        var(--frame-card);
       min-height: 92px;
       display: grid;
       align-content: space-between;
@@ -213,7 +211,7 @@
       padding: 13px;
       background:
         linear-gradient(rgba(5, 20, 43, 0.7), rgba(5, 20, 43, 0.78)),
-        var(--care-review) center / cover no-repeat;
+        var(--frame-review);
     }
     .home-card h3,
     .workbench-card h3 { margin-bottom: 6px; }
@@ -256,7 +254,7 @@
       padding: 10px;
       background:
         linear-gradient(rgba(8, 28, 55, 0.68), rgba(8, 28, 55, 0.8)),
-        var(--care-card) center / cover no-repeat;
+        var(--frame-card);
     }
     .item p {
       margin-top: 4px;
@@ -517,20 +515,20 @@
     <section class="titlebar">
       <div>
         <h1>mini_ark Navigator</h1>
-        <p class="subtitle">CareBloomOS expression over Mini ARK / Journey controls</p>
+        <p class="subtitle">Human-centered local AI stewardship controls</p>
       </div>
       <button class="status-pill" type="button" data-select="manage" data-detail="status">
         <span class="status-dot"></span>
         Ready
       </button>
-      <div class="kernel-row" aria-label="CareBloom semantic slots">
-        <span class="kernel-chip heart"><strong>Heart</strong><span>Sustain</span></span>
-        <span class="kernel-chip music"><strong>Music</strong><span>Synchronize</span></span>
-        <span class="kernel-chip wish"><strong>Wish</strong><span>Route</span></span>
-        <span class="kernel-chip clover"><strong>Clover</strong><span>Maintain</span></span>
-        <span class="kernel-chip cloud"><strong>Cloud</strong><span>Regulate</span></span>
-        <span class="kernel-chip moon"><strong>Moon</strong><span>Perceive</span></span>
-        <span class="kernel-chip core"><strong>Core</strong><span>Integrate</span></span>
+      <div class="kernel-row" aria-label="Journey functional kernels">
+        <span class="kernel-chip heart"><strong>Sustain</strong><span>Continuity</span></span>
+        <span class="kernel-chip music"><strong>Synchronize</strong><span>Coordinate</span></span>
+        <span class="kernel-chip wish"><strong>Route</strong><span>Place</span></span>
+        <span class="kernel-chip clover"><strong>Maintain</strong><span>Repair</span></span>
+        <span class="kernel-chip cloud"><strong>Regulate</strong><span>Balance</span></span>
+        <span class="kernel-chip moon"><strong>Perceive</strong><span>Observe</span></span>
+        <span class="kernel-chip core"><strong>Integrate</strong><span>Connect</span></span>
       </div>
     </section>
     <section class="content">
@@ -549,7 +547,7 @@
           <div class="readout"><span>System</span><strong>Ready</strong><small>Local control</small></div>
           <div class="readout"><span>Proposals</span><strong>Loading</strong><small>Bridge status</small></div>
           <div class="readout"><span>Recent</span><strong>None</strong><small>No actions</small></div>
-          <div class="readout"><span>Expression</span><strong>CareBloom</strong><small>Semantic slots stable</small></div>
+          <div class="readout"><span>Authority</span><strong>Human-Gated</strong><small>Minimum necessary</small></div>
         </div>
         <div class="home-grid">
           <article class="home-card">
@@ -626,30 +624,28 @@
       { id: "inventory", mode: "tools", group: "FILE TOOLS", title: "Inventory Scan", summary: "Classifies files under R: using Mini ARK's doctrine map.", touches: ["Mini ARK report", "Mini ARK ledger", "No moves"], actionId: "inventory-r", details: "Runs read-only classification for R:. It writes an inventory report but does not move files.", tags: ["inventory", "scan", "files", "classify", "folder"], risk: "green" },
       { id: "duplicates", mode: "tools", group: "FILE TOOLS", title: "Duplicate Review", summary: "Checks duplicate ledger rows and case/path pressure.", touches: ["Mini ARK ledger", "Navigator output", "No project files"], actionId: "duplicates-r", details: "Runs duplicate review from the Navigator.", tags: ["duplicates", "dedupe", "case drift", "drive", "usb", "recovery"], risk: "green" },
       { id: "diagnose", mode: "tools", group: "FILE TOOLS", title: "Path Diagnostics", summary: "Distinguishes case-only path drift from genuine missing/moved files.", touches: ["Mini ARK ledger", "Navigator output", "No moves"], actionId: "diagnose-r", details: "Runs read-only path diagnostics for R:.", tags: ["diagnose", "case drift", "missing", "paths"], risk: "green" },
-      { id: "placement-check", mode: "tools", group: "FILE TOOLS", title: "Placement Check", summary: "Checks whether a file or folder belongs where it is and suggests the likely canonical home.", touches: ["C:\\mini_ark\\config\\canonical_placement.json", "Navigator output", "No file changes"], actionId: "placement-check", needsPath: true, pathPlaceholder: "R:\\Downloads2", details: "Read-only placement evaluator. It uses the canonical placement doctrine plus classification signals to return current placement, likely canonical placement, confidence, reason, dependencies status, and recommended action. Any actual move still goes through proposal, approval, preview, execute, receipt, and undo.", tags: ["placement", "belongs", "where things belong", "architecture", "cathedralroot", "runescript", "route", "canon", "downloads2", "en route", "carebloom", "rainmeter", "protected"], risk: "green" },
-      { id: "shadow-run", mode: "tools", group: "STEWARDSHIP", title: "Shadow Run", summary: "Runs Gate A stewardship reasoning over a bounded scope without moving, renaming, deleting, quarantining, or rewriting managed files.", touches: ["Mini ARK ledger", "Shadow reports", "No managed file changes"], actionId: "shadow-run", needsPath: true, pathPlaceholder: "R:\\Projects\\CareBloomOS", details: "Shadow Mode executes the real reasoning path through classification and placement evaluation, records findings/proposals in the Mini ARK ledger, writes summary/evidence reports, and stops before mutation. Use escalating scopes and inspect false positives before expanding.", tags: ["shadow", "gate a", "simulation", "stewardship", "review families", "estimated decisions", "no movement", "proof", "evidence", "journey"], risk: "green" },
-      { id: "name-preview", mode: "tools", group: "FILE TOOLS", title: "Cloverstone Name Preview", summary: "Suggests a canonical name from project, stone, role, and source filename without renaming anything.", touches: ["Navigator output", "No file changes"], actionId: "name-preview", needsPath: true, pathPlaceholder: "C:\\path\\to\\asset.png", details: "Preview-only naming seam. Cloverstone suggests a stable filename; actual rename still goes through proposal, approval, apply, and undo.", tags: ["cloverstone", "name", "naming", "rename", "preview", "canonical", "slug", "tokens"], risk: "green" },
-      { id: "carebloom", mode: "tools", group: "PLANNING TOOLS", title: "CareBloom Consolidation Plan", summary: "Builds a copy-first CareBloom asset consolidation plan.", touches: ["Plan reports", "No source deletion", "No reference edits"], actionId: "carebloom-plan", details: "Builds the consolidation plan and returns the report path here. Execution and reference updates stay separate.", tags: ["carebloom", "carebloomos", "rainmeter", "wallpaper", "assets", "consolidation"], risk: "yellow" },
-      { id: "archive-map", mode: "tools", group: "PLANNING TOOLS", title: "CareBloomOS Archive Map", summary: "Builds a RuneScript archive/deletion-review map.", touches: ["Plan reports", "No source deletion"], actionId: "carebloom-archive-plan", details: "Builds the archive map. Staging copied files is still a separate action.", tags: ["archive", "carebloomos", "deletion prep", "manifest", "runescript"], risk: "yellow" },
+      { id: "placement-check", mode: "tools", group: "FILE TOOLS", title: "Placement Check", summary: "Checks whether a file or folder belongs where it is and suggests the likely canonical home.", touches: ["C:\\mini_ark\\config\\canonical_placement.json", "Navigator output", "No file changes"], actionId: "placement-check", needsPath: true, pathPlaceholder: "R:\\Downloads2", details: "Read-only placement evaluator. It uses the canonical placement doctrine plus classification signals to return current placement, likely canonical placement, confidence, reason, dependencies status, and recommended action. Any actual move still goes through proposal, approval, preview, execute, receipt, and undo.", tags: ["placement", "belongs", "where things belong", "architecture", "cathedralroot", "runescript", "route", "canon", "downloads2", "en route", "protected"], risk: "green" },
+      { id: "shadow-run", mode: "tools", group: "STEWARDSHIP", title: "Shadow Run", summary: "Runs Gate A stewardship reasoning over a bounded scope without moving, renaming, deleting, quarantining, or rewriting managed files.", touches: ["Mini ARK ledger", "Shadow reports", "No managed file changes"], actionId: "shadow-run", needsPath: true, pathPlaceholder: "R:\\Projects\\ExampleProject", details: "Shadow Mode executes the real reasoning path through classification and placement evaluation, records findings/proposals in the Mini ARK ledger, writes summary/evidence reports, and stops before mutation. Use escalating scopes and inspect false positives before expanding.", tags: ["shadow", "gate a", "simulation", "stewardship", "review families", "estimated decisions", "no movement", "proof", "evidence", "journey"], risk: "green" },
+      { id: "name-preview", mode: "tools", group: "FILE TOOLS", title: "Name Preview", summary: "Suggests a canonical name from project, role, and source filename without renaming anything.", touches: ["Navigator output", "No file changes"], actionId: "name-preview", needsPath: true, pathPlaceholder: "C:\\path\\to\\asset.png", details: "Preview-only naming seam. Journey suggests a stable filename; actual rename still goes through proposal, approval, apply, and undo.", tags: ["name", "naming", "rename", "preview", "canonical", "slug", "tokens"], risk: "green" },
       { id: "migration", mode: "tools", group: "PLANNING TOOLS", title: "R Profile Migration Map", summary: "Maps old R: profile contents into staging destinations.", touches: ["Plan reports", "No source deletion"], actionId: "profile-migration-plan", details: "Builds the profile migration map. Cleanup remains approval-gated.", tags: ["migration", "quarantine", "profile", "users", "cleanup", "move"], risk: "yellow" },
       { id: "hierarchy", mode: "tools", group: "PLANNING TOOLS", title: "R: Hierarchy Scan", summary: "Scans R: top-level organization and suggests hierarchy lanes.", touches: ["Report output", "No moves"], actionId: "r-hierarchy-scan", details: "Runs hierarchy scan and returns the suggested structure here.", tags: ["hierarchy", "folder", "organization", "R:"], risk: "green" },
-      { id: "asset-intake", mode: "tools", group: "WISHSTONE", title: "Wishstone Intake", summary: "Drop one or many asset sheets; Wishstone copies sources into intake, reads source names for tokens, extracts, repairs, checks, and exports only approved sets.", touches: ["asset_pipeline\\inbox receives copies", "source document name read as token evidence", "token detected or provisional token assigned", "asset_pipeline\\outbox generated", "asset_pipeline\\approved generated when quality passes", "asset_pipeline\\library generated when family is set", "External source files are not moved"], actionId: "assets-intake", assetIntake: true, pathPlaceholder: "C:\\path\\to\\sheet-1.png\nC:\\path\\to\\sheet-2.png", details: "This is the normal Wishstone behavior. Give it asset sheets and it runs the standard intake/routing pipeline end-to-end. Reception is token-aware: source document names like carebloom, hexseed, moonstone, or cloverstone are treated as intentional token evidence. An item keeps its existing token when present or receives a provisional token when missing. Path-based intake copies external files into mini_ark first; it does not move the original source. Imperfect results are held for review instead of approved as adequate.", tags: ["wishstone", "asset", "ark", "intake", "extract", "repair", "precision", "review", "approve", "library", "batch", "doctrine", "source", "source document", "asset sheet name", "filename", "token", "provisional token", "reception", "carebloom", "hexseed", "moonstone", "cloverstone"], risk: "yellow" },
-      { id: "asset-job-index", mode: "tools", group: "WISHSTONE", title: "Wishstone Intake History", summary: "Shows intake jobs, stages, asset counts, and contact sheets without exposing internal source jobs.", touches: ["asset_pipeline\\outbox read", "No asset changes"], builtin: "assetJobs", details: "Use this when you need to inspect current Wishstone jobs or grab a job name.", tags: ["wishstone", "asset", "jobs", "outbox", "manifest", "contact sheet", "review"], risk: "green" },
-      { id: "asset-smart-intake", mode: "tools", group: "WISHSTONE OVERRIDES", title: "Smart Asset Intake", summary: "Manual extraction-only pass for debugging detection.", touches: ["asset_pipeline\\inbox generated", "asset_pipeline\\recipes\\<job>.json generated", "asset_pipeline\\outbox\\<job> generated"], actionId: "assets-auto-deconstruct", assetAuto: true, pathPlaceholder: "C:\\path\\to\\asset-sheet.png", details: "Advanced/manual tool. Use only when you want to test detection without the full Wishstone pipeline.", tags: ["wishstone", "asset", "smart", "auto", "detect", "intake", "deconstruct", "recipe", "friendly"], risk: "yellow", advanced: true },
-      { id: "asset-compose-master", mode: "tools", group: "WISHSTONE OVERRIDES", title: "Batch Master Composer", summary: "Manual compose-only pass for building a recipe-bound master sheet.", touches: ["asset_pipeline\\inbox generated", "asset_pipeline\\outbox\\<job> generated", "asset_pipeline\\outbox\\<job>\\master-sheet.png generated"], actionId: "assets-compose-master", assetCompose: true, pathPlaceholder: "C:\\path\\to\\sheet-1.png\nC:\\path\\to\\sheet-2.png", details: "Advanced/manual tool. Wishstone Intake already uses this when multiple sheets arrive.", tags: ["wishstone", "asset", "batch", "multiple", "compose", "master", "sprite sheet", "vlc", "combine", "atlas"], risk: "yellow", advanced: true },
-      { id: "asset-inbox-deconstruct", mode: "tools", group: "WISHSTONE OVERRIDES", title: "Asset Sheet Deconstructor", summary: "Manual recipe-based deconstruction.", touches: ["asset_pipeline\\inbox read", "asset_pipeline\\outbox generated", "asset_pipeline\\outbox\\<job>\\groups generated", "asset_pipeline\\logs generated"], actionId: "assets-deconstruct-inbox", assetUpload: true, pathPlaceholder: "C:\\path\\to\\master-sheet.png", details: "Advanced/manual tool for recipe-bound sheets. Wishstone Intake is the normal flow.", tags: ["wishstone", "asset", "assets", "inbox", "deconstruct", "master sheet", "sprite sheet", "atlas", "grouped files", "vlc", "care rail", "proof", "carebloom"], risk: "yellow", advanced: true },
-      { id: "asset-brief", mode: "tools", group: "WISHSTONE OVERRIDES", title: "Recipe-Bound ImageGen Brief", summary: "Creates an ImageGen prompt and matching extraction recipe before the sheet is generated.", touches: ["asset_pipeline\\recipes\\<job>.json generated", "asset_pipeline\\outbox\\<job>__imagegen_brief generated"], actionId: "assets-brief", assetBrief: true, details: "Advanced prep tool for engineering future asset sheets.", tags: ["wishstone", "asset", "imagegen", "recipe", "brief", "sprite sheet", "texture atlas", "prompt", "slots"], risk: "green", advanced: true },
-      { id: "asset-nine-slice", mode: "tools", group: "WISHSTONE OVERRIDES", title: "9-Slice Builder", summary: "Manual 9-slice extraction for frame or panel images.", touches: ["asset_pipeline\\outbox\\<job>\\nine_slice generated", "asset_pipeline\\outbox\\<job>\\manifest.json generated"], actionId: "assets-nine-slice", assetNineSlice: true, pathPlaceholder: "C:\\path\\to\\frame.png", details: "Advanced/manual tool for geometry-sensitive rails and frames. Insets are protected border distances from each edge; leave them blank for an estimated first pass.", tags: ["wishstone", "asset", "nine slice", "9 slice", "frame", "rail", "panel", "care rail", "resize"], risk: "yellow", advanced: true },
-      { id: "asset-treatment", mode: "tools", group: "WISHSTONE OVERRIDES", title: "Asset Treatment Bench", summary: "Manual treatment variants with trim, padding, fit, tint, and shadow.", touches: ["asset_pipeline\\outbox\\<job>\\treated generated", "asset_pipeline\\outbox\\<job>\\manifest.json generated"], actionId: "assets-treat", assetTreat: true, pathPlaceholder: "C:\\path\\to\\asset.png", details: "Advanced/manual prep for specific one-off variants.", tags: ["wishstone", "asset", "treat", "normalize", "crop", "trim", "padding", "tint", "shadow", "photoshop"], risk: "yellow", advanced: true },
-      { id: "asset-review-job", mode: "tools", group: "WISHSTONE OVERRIDES", title: "Asset Job Review", summary: "Manual quality review for an outbox job.", touches: ["asset_pipeline\\outbox read", "No asset changes"], actionId: "assets-review-job", assetReview: true, details: "Advanced/manual tool. Wishstone Intake already reviews before approval.", tags: ["wishstone", "asset", "review", "quality", "duplicates", "discernment", "approve"], risk: "green", advanced: true },
-      { id: "asset-approve-job", mode: "tools", group: "WISHSTONE OVERRIDES", title: "Approve Asset Job", summary: "Manual approval/export for a specific job.", touches: ["asset_pipeline\\approved generated", "asset_pipeline\\library generated when family is set"], actionId: "assets-approve-job", assetApprove: true, details: "Advanced/manual tool. Wishstone Intake auto-approves only near-perfect sets.", tags: ["wishstone", "asset", "approve", "export", "library", "route"], risk: "yellow", advanced: true },
-      { id: "asset-repair-icons", mode: "tools", group: "WISHSTONE OVERRIDES", title: "Asset Repair Pass", summary: "Manual alpha-fragment repair pass.", touches: ["asset_pipeline\\outbox\\<job>\\repaired generated", "asset_pipeline\\outbox\\<job>\\repair-manifest.json generated", "asset_pipeline\\outbox\\<job>\\repair-contact-sheet.png generated"], actionId: "assets-repair-icons", assetRepair: true, details: "Advanced/manual tool. Wishstone Intake already repairs before precision/review.", tags: ["wishstone", "asset", "repair", "cleanup", "background removal", "alpha", "fragments", "edge", "reshape"], risk: "green", advanced: true },
-      { id: "asset-precision-icons", mode: "tools", group: "WISHSTONE OVERRIDES", title: "Icon Precision Pass", summary: "Manual trim, pad, center, and organization pass.", touches: ["asset_pipeline\\outbox\\<job>\\precision generated", "asset_pipeline\\outbox\\<job>\\precision-manifest.json generated", "asset_pipeline\\outbox\\<job>\\precision-contact-sheet.png generated"], actionId: "assets-precision-icons", assetPrecision: true, details: "Advanced/manual tool. Wishstone Intake already runs precision for icon-like extracted assets.", tags: ["wishstone", "asset", "precision", "trim", "center", "icons", "organize", "padding"], risk: "green", advanced: true },
-      { id: "find-memory", mode: "find", group: "ARK MEMORY", title: "Find ARK Memory", summary: "Search actual Mini ARK docs and SQLite memory.", touches: ["Local docs", "SQLite ledger", "No project files"], details: "Type into the search field. FIND queries the local bridge at /api/search and returns ARK docs/ledger results here.", tags: ["find", "search", "memory", "canon", "attribution", "moonstone", "lunar", "legacy"], risk: "green" },
+      { id: "asset-intake", mode: "tools", group: "ASSET PIPELINE", title: "Asset Intake", summary: "Drop one or many asset sheets; Journey copies sources into intake, reads source names for tokens, extracts, repairs, checks, and exports only approved sets.", touches: ["asset_pipeline\\inbox receives copies", "source document name read as token evidence", "token detected or provisional token assigned", "asset_pipeline\\outbox generated", "asset_pipeline\\approved generated when quality passes", "asset_pipeline\\library generated when family is set", "External source files are not moved"], actionId: "assets-intake", assetIntake: true, pathPlaceholder: "C:\\path\\to\\sheet-1.png\nC:\\path\\to\\sheet-2.png", details: "Give the pipeline asset sheets and it runs the standard intake/routing workflow end-to-end. Source names are treated as intentional token evidence. An item keeps its existing token when present or receives a provisional token when missing. Path-based intake copies external files into mini_ark first; it does not move the original source. Imperfect results are held for review instead of approved as adequate.", tags: ["asset", "ark", "intake", "extract", "repair", "precision", "review", "approve", "library", "batch", "doctrine", "source", "source document", "asset sheet name", "filename", "token", "provisional token", "reception"], risk: "yellow" },
+      { id: "asset-job-index", mode: "tools", group: "ASSET PIPELINE", title: "Asset Intake History", summary: "Shows intake jobs, stages, asset counts, and contact sheets without exposing internal source jobs.", touches: ["asset_pipeline\\outbox read", "No asset changes"], builtin: "assetJobs", details: "Use this when you need to inspect current asset jobs or grab a job name.", tags: ["asset", "jobs", "outbox", "manifest", "contact sheet", "review"], risk: "green" },
+      { id: "asset-smart-intake", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Smart Asset Intake", summary: "Manual extraction-only pass for debugging detection.", touches: ["asset_pipeline\\inbox generated", "asset_pipeline\\recipes\\<job>.json generated", "asset_pipeline\\outbox\\<job> generated"], actionId: "assets-auto-deconstruct", assetAuto: true, pathPlaceholder: "C:\\path\\to\\asset-sheet.png", details: "Advanced/manual tool for testing detection without running the full pipeline.", tags: ["asset", "smart", "auto", "detect", "intake", "deconstruct", "recipe"], risk: "yellow", advanced: true },
+      { id: "asset-compose-master", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Batch Master Composer", summary: "Manual compose-only pass for building a recipe-bound master sheet.", touches: ["asset_pipeline\\inbox generated", "asset_pipeline\\outbox\\<job> generated", "asset_pipeline\\outbox\\<job>\\master-sheet.png generated"], actionId: "assets-compose-master", assetCompose: true, pathPlaceholder: "C:\\path\\to\\sheet-1.png\nC:\\path\\to\\sheet-2.png", details: "Advanced/manual tool. Asset Intake already uses this when multiple sheets arrive.", tags: ["asset", "batch", "multiple", "compose", "master", "sprite sheet", "atlas"], risk: "yellow", advanced: true },
+      { id: "asset-inbox-deconstruct", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Asset Sheet Deconstructor", summary: "Manual recipe-based deconstruction.", touches: ["asset_pipeline\\inbox read", "asset_pipeline\\outbox generated", "asset_pipeline\\outbox\\<job>\\groups generated", "asset_pipeline\\logs generated"], actionId: "assets-deconstruct-inbox", assetUpload: true, pathPlaceholder: "C:\\path\\to\\master-sheet.png", details: "Advanced/manual tool for recipe-bound sheets. Asset Intake is the normal flow.", tags: ["asset", "assets", "inbox", "deconstruct", "master sheet", "sprite sheet", "atlas", "grouped files", "proof"], risk: "yellow", advanced: true },
+      { id: "asset-brief", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Recipe-Bound ImageGen Brief", summary: "Creates an ImageGen prompt and matching extraction recipe before the sheet is generated.", touches: ["asset_pipeline\\recipes\\<job>.json generated", "asset_pipeline\\outbox\\<job>__imagegen_brief generated"], actionId: "assets-brief", assetBrief: true, details: "Advanced prep tool for engineering future asset sheets.", tags: ["asset", "imagegen", "recipe", "brief", "sprite sheet", "texture atlas", "prompt", "slots"], risk: "green", advanced: true },
+      { id: "asset-nine-slice", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "9-Slice Builder", summary: "Manual 9-slice extraction for frame or panel images.", touches: ["asset_pipeline\\outbox\\<job>\\nine_slice generated", "asset_pipeline\\outbox\\<job>\\manifest.json generated"], actionId: "assets-nine-slice", assetNineSlice: true, pathPlaceholder: "C:\\path\\to\\frame.png", details: "Advanced/manual tool for geometry-sensitive rails and frames. Insets are protected border distances from each edge; leave them blank for an estimated first pass.", tags: ["asset", "nine slice", "9 slice", "frame", "rail", "panel", "resize"], risk: "yellow", advanced: true },
+      { id: "asset-treatment", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Asset Treatment Bench", summary: "Manual treatment variants with trim, padding, fit, tint, and shadow.", touches: ["asset_pipeline\\outbox\\<job>\\treated generated", "asset_pipeline\\outbox\\<job>\\manifest.json generated"], actionId: "assets-treat", assetTreat: true, pathPlaceholder: "C:\\path\\to\\asset.png", details: "Advanced/manual prep for specific one-off variants.", tags: ["asset", "treat", "normalize", "crop", "trim", "padding", "tint", "shadow"], risk: "yellow", advanced: true },
+      { id: "asset-review-job", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Asset Job Review", summary: "Manual quality review for an outbox job.", touches: ["asset_pipeline\\outbox read", "No asset changes"], actionId: "assets-review-job", assetReview: true, details: "Advanced/manual tool. Asset Intake already reviews before approval.", tags: ["asset", "review", "quality", "duplicates", "approve"], risk: "green", advanced: true },
+      { id: "asset-approve-job", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Approve Asset Job", summary: "Manual approval/export for a specific job.", touches: ["asset_pipeline\\approved generated", "asset_pipeline\\library generated when family is set"], actionId: "assets-approve-job", assetApprove: true, details: "Advanced/manual tool. Asset Intake auto-approves only near-perfect sets.", tags: ["asset", "approve", "export", "library", "route"], risk: "yellow", advanced: true },
+      { id: "asset-repair-icons", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Asset Repair Pass", summary: "Manual alpha-fragment repair pass.", touches: ["asset_pipeline\\outbox\\<job>\\repaired generated", "asset_pipeline\\outbox\\<job>\\repair-manifest.json generated", "asset_pipeline\\outbox\\<job>\\repair-contact-sheet.png generated"], actionId: "assets-repair-icons", assetRepair: true, details: "Advanced/manual tool. Asset Intake already repairs before precision/review.", tags: ["asset", "repair", "cleanup", "background removal", "alpha", "fragments", "edge", "reshape"], risk: "green", advanced: true },
+      { id: "asset-precision-icons", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Icon Precision Pass", summary: "Manual trim, pad, center, and organization pass.", touches: ["asset_pipeline\\outbox\\<job>\\precision generated", "asset_pipeline\\outbox\\<job>\\precision-manifest.json generated", "asset_pipeline\\outbox\\<job>\\precision-contact-sheet.png generated"], actionId: "assets-precision-icons", assetPrecision: true, details: "Advanced/manual tool. Asset Intake already runs precision for icon-like extracted assets.", tags: ["asset", "precision", "trim", "center", "icons", "organize", "padding"], risk: "green", advanced: true },
+      { id: "find-memory", mode: "find", group: "ARK MEMORY", title: "Find ARK Memory", summary: "Search actual Mini ARK docs and SQLite memory.", touches: ["Local docs", "SQLite ledger", "No project files"], details: "Type into the search field. FIND queries the local bridge at /api/search and returns ARK docs/ledger results here.", tags: ["find", "search", "memory", "canon", "attribution", "legacy"], risk: "green" },
       { id: "guide-add-conversation", mode: "guide", group: "GUIDE", title: "Add A Conversation", summary: "Ingest a normalized conversation JSON into review output.", touches: ["ARK database", "Review JSON", "Original conversation is read"], needsPath: true, pathPlaceholder: "C:\\path\\conversation.json", details: "Choose a normalized conversation export. Ingest stops at review output; it does not canonize candidates automatically.", tags: ["conversation", "ingest", "canon", "memory"], risk: "yellow" },
       { id: "guide-assessment", mode: "guide", group: "GUIDE", title: "Filesystem Assessment", summary: "Retained metadata observations and placement evidence.", touches: ["Historical evidence", "Approved scope only"], actionId: "assessment-status", details: "Metadata only. Historical observations are not a current filesystem snapshot. Scope approval and deployment are required for new observations.", tags: ["scan", "assessment", "progress", "resume", "files"], risk: "green" },
       { id: "guide-scan", mode: "guide", group: "GUIDE", title: "Legacy Content Hash Scan", summary: "Reads file contents for hashes; fixed 300-second timeout.", touches: ["Mini ARK ledger", "File contents"], needsPath: true, pathPlaceholder: "R:\\", details: "Not the bounded metadata assessment. A timeout may leave partial records and stale running status; automatic continuation is not supported here.", tags: ["scan", "path", "files"], risk: "yellow" },
-      { id: "guide-wishstone", mode: "guide", group: "GUIDE", title: "Use Wishstone Assets", summary: "Token-aware asset intake doctrine, folders, and launch path.", touches: ["Navigator output", "No asset changes"], actionId: "wishstone-doctrine", details: "Shows how Wishstone copies source sheets into intake, detects or assigns reception tokens, writes outputs into mini_ark's natural asset folders, and keeps source movement approval-gated.", tags: ["wishstone", "asset", "doctrine", "source", "library", "approved", "inbox", "outbox", "token", "provisional token", "reception"], risk: "green" },
+      { id: "guide-asset-pipeline", mode: "guide", group: "GUIDE", title: "Use the Asset Pipeline", summary: "Token-aware asset intake doctrine, folders, and launch path.", touches: ["Navigator output", "No asset changes"], actionId: "asset-pipeline-doctrine", details: "Shows how Journey copies source sheets into intake, detects or assigns reception tokens, writes outputs into natural asset folders, and keeps source movement approval-gated.", tags: ["asset", "pipeline", "doctrine", "source", "library", "approved", "inbox", "outbox", "token", "provisional token", "reception"], risk: "green" },
       { id: "guide-review-duplicates", mode: "guide", group: "GUIDE", title: "Review Duplicates", summary: "Run duplicate review from inside Navigator.", touches: ["Mini ARK ledger", "Navigator output"], actionId: "duplicates-r", details: "Runs duplicate review and shows the result here.", tags: ["duplicates", "review"], risk: "green" },
       { id: "guide-move-quarantine", mode: "guide", group: "GUIDE", title: "Move / Quarantine Files", summary: "Use proposals: review items, approve, preview apply, then execute.", touches: ["Proposal items", "Quarantine only after execute"], details: "Use Manage > Approvals below. The Navigator preserves the approve -> preview -> explicit apply gate.", tags: ["move", "quarantine", "cleanup", "approve", "apply"], risk: "red" },
       { id: "undo", mode: "guide", group: "GUIDE", title: "Undo Operation", summary: "Reverse a completed operation by OP id.", touches: ["Prior operation paths", "Mini ARK ledger"], needsOpId: true, details: "Enter an operation id. Undo still requires explicit confirmation in the Navigator.", tags: ["undo", "rollback", "reverse"], risk: "red" },
@@ -657,14 +653,14 @@
       { id: "tests", mode: "manage", group: "MANAGE", title: "Test Suite", summary: "Runs standard Mini ARK tests.", touches: ["Test runtime output", "No project files"], actionId: "tests", details: "Runs tests and returns output here.", tags: ["test", "tests", "validation", "22"], risk: "green" },
       { id: "git", mode: "manage", group: "MANAGE", title: "Git State", summary: "Shows local branch and uncommitted state.", touches: ["Git metadata read", "No push"], actionId: "git-status", details: "Runs git status only. No commit or push.", tags: ["github", "git", "archive", "commit", "push"], risk: "green" },
       { id: "logs", mode: "manage", group: "MANAGE", title: "Logs", summary: "Lists Mini ARK runtime logs.", touches: ["C:\\mini_ark\\logs"], actionId: "logs", details: "Returns recent local log files here.", tags: ["logs", "server", "runtime"], risk: "green" },
-      { id: "naming-status", mode: "manage", group: "MANAGE", title: "Naming Status", summary: "Shows the Mini ARK / Journey naming boundary, CareBloom expression boundary, manifestation tone sync, migration guardrails, and manifestation rule.", touches: ["C:\\mini_ark\\config\\naming_status.json", "C:\\mini_ark\\docs\\JOURNEY_NAMING_ARCHITECTURE.md", "Navigator output"], actionId: "naming-status", details: "Use this to check the current naming decision and manifestation rule: Mini ARK remains the implementation name; Journey is emerging identity language; CareBloom is the expression layer; Mini ARK/Journey is the connective orchestration layer beneath manifestations; the Navigator should harmonize with the active HEXSEED tone while preserving familiar controls and backend identity; manifestation aliases are not backend identity replacements; no codebase rename is approved yet.", tags: ["journey", "mini ark", "naming", "identity", "rename", "migration", "architecture", "project ark", "manifestation", "semantic stability", "expressive variation", "expression sync", "tone sync", "active hexseed manifestation", "professor hexseed", "downloads", "cognitive friction", "delight", "carebloom", "expression layer", "connective layer", "manifestation aliases", "carestones", "pokemon", "magical transformation", "firestone", "leafstone", "waterstone", "icestone", "thunderstone"], risk: "green" },
-      { id: "expression-framework", mode: "manage", group: "MANAGE", title: "Expression Framework", summary: "Shows neutral functional kernels, expression profiles, and profile-specific translations.", touches: ["C:\\mini_ark\\config\\expression_framework.json", "C:\\mini_ark\\docs\\HEXSEED_EXPRESSION_FRAMEWORK.md", "Navigator output"], actionId: "expression-framework", details: "Use this when deciding whether something is a functional kernel, an expression profile, or a surface translation. It keeps CareBloom from becoming the default ontology while still preserving CareBloom as the first mature profile.", tags: ["expression framework", "functional kernels", "kernel", "profile", "expression profile", "carebloom", "pokemon", "magical", "zodiac", "power rangers", "integrate", "sustain", "perceive", "maintain", "regulate", "route", "synchronize", "carestone", "everstone", "thunder stone", "master ball"], risk: "green" },
-      { id: "token-registry", mode: "manage", group: "MANAGE", title: "Token Registry", summary: "Shows HEXSEED identities, aliases, owned capabilities, routes, and surface customization hints.", touches: ["C:\\mini_ark\\config\\project_tokens.json", "Navigator output", "No project files"], actionId: "token-registry", details: "Creates the registry if needed, then shows what Mini ARK knows about Journey, kernels, stones, projects, routes, and customization tokens.", tags: ["tokens", "registry", "hexseed", "journey", "corestone", "opalstone", "mini ark", "wishstone", "project", "identity", "routing", "customization"], risk: "green" },
-      { id: "route-registry", mode: "manage", group: "MANAGE", title: "Project Routes", summary: "Shows canonical roots and project representations so views, shortcuts, and source-of-truth paths stay distinct.", touches: ["C:\\mini_ark\\config\\project_tokens.json", "Navigator output", "No project files"], actionId: "route-registry", details: "Reads the token registry and reports which paths are canonical routes versus representations. This is the next layer for routing Wishstone assets without turning every visible folder into a source of truth.", tags: ["routes", "routing", "project", "representations", "canonical", "source of truth", "wishstone", "carebloomos"], risk: "green" },
+      { id: "naming-status", mode: "manage", group: "MANAGE", title: "Naming Status", summary: "Shows the Mini ARK / Journey identity boundary and migration guardrails.", touches: ["C:\\mini_ark\\config\\naming_status.json", "C:\\mini_ark\\docs\\JOURNEY_NAMING_ARCHITECTURE.md", "Navigator output"], actionId: "naming-status", details: "Mini ARK remains the implementation name while Journey is the product identity. Project profiles may change presentation without replacing backend identity.", tags: ["journey", "mini ark", "naming", "identity", "migration", "architecture", "project profile"], risk: "green" },
+      { id: "expression-framework", mode: "manage", group: "MANAGE", title: "Expression Framework", summary: "Shows neutral functional kernels, expression profiles, and profile-specific translations.", touches: ["C:\\mini_ark\\config\\expression_framework.json", "C:\\mini_ark\\docs\\HEXSEED_EXPRESSION_FRAMEWORK.md", "Navigator output"], actionId: "expression-framework", details: "Use this when deciding whether something is a functional kernel, an expression profile, or a surface translation. No integration profile becomes Journey's base ontology.", tags: ["expression framework", "functional kernels", "kernel", "profile", "expression profile", "integrate", "sustain", "perceive", "maintain", "regulate", "route", "synchronize"], risk: "green" },
+      { id: "token-registry", mode: "manage", group: "MANAGE", title: "Token Registry", summary: "Shows identities, aliases, owned capabilities, routes, and surface customization hints.", touches: ["C:\\mini_ark\\config\\project_tokens.json", "Navigator output", "No project files"], actionId: "token-registry", details: "Creates the registry if needed, then shows what Journey knows about its capabilities, projects, routes, and customization tokens.", tags: ["tokens", "registry", "journey", "mini ark", "project", "identity", "routing", "customization"], risk: "green" },
+      { id: "route-registry", mode: "manage", group: "MANAGE", title: "Project Routes", summary: "Shows canonical roots and project representations so views, shortcuts, and source-of-truth paths stay distinct.", touches: ["C:\\mini_ark\\config\\project_tokens.json", "Navigator output", "No project files"], actionId: "route-registry", details: "Reads the token registry and reports which paths are canonical routes versus representations without turning every visible folder into a source of truth.", tags: ["routes", "routing", "project", "representations", "canonical", "source of truth", "asset pipeline"], risk: "green" },
       { id: "placement-doctrine", mode: "manage", group: "MANAGE", title: "Placement Doctrine", summary: "Shows the machine-readable CathedralRoot/RuneScript placement grammar Mini ARK uses to decide where things belong.", touches: ["C:\\mini_ark\\config\\canonical_placement.json", "Navigator output", "No project files"], actionId: "placement-doctrine", details: "Lists canonical locations, domains, owners, purposes, allowed/disallowed content, lifecycle, canonicality, protection level, aliases, related destinations, and reasoning notes.", tags: ["placement", "doctrine", "cathedralroot", "runescript", "where things belong", "canonical location", "architecture", "congruence"], risk: "green" },
       { id: "stewardship-contract", mode: "manage", group: "MANAGE", title: "Stewardship Contract", summary: "Shows the reliability substrate Mini ARK must obey before broad physical convergence.", touches: ["C:\\mini_ark\\config\\stewardship_contract.json", "Navigator output", "No project files"], actionId: "stewardship-contract", details: "Reports identity layers, finding/proposal/operation/event separation, operation states, commit phases, policy precedence, protected default posture, shadow mode, and graduation gates.", tags: ["contract", "stewardship", "reliability", "shadow mode", "operation state", "identity", "paths are not identity", "policy precedence", "crash recovery", "journey gate"], risk: "green" },
-      { id: "expression-slots", mode: "manage", group: "MANAGE", title: "Expression Slots", summary: "Shows the semantic UI slot registry CareBloomOS and future manifestations can skin without changing system meaning.", touches: ["C:\\mini_ark\\config\\expression_slot_registry.json", "Navigator output", "No project files"], actionId: "expression-slots", details: "Reports stable slots for shell, system states, review, architecture, operations, and personas. This is the visual-pipeline contract, not final artwork.", tags: ["expression", "slots", "carebloomos", "semantic stability", "expressive variation", "visual pipeline", "manifestation", "journey", "ui contract"], risk: "green" },
-      { id: "wishstone-doctrine", mode: "manage", group: "MANAGE", title: "Wishstone Doctrine", summary: "Shows mini_ark's token-aware asset-pipeline source policy, source-name token priority, natural folders, and approval boundaries.", touches: ["C:\\mini_ark\\config\\wishstone_asset_doctrine.json", "C:\\mini_ark\\docs\\WISHSTONE_ASSET_PIPELINE_DOCTRINE.md", "Navigator output"], actionId: "wishstone-doctrine", details: "Use this when you want the project-native asset routing rules without opening docs manually. It returns the doctrine, token-reception policy, source document naming priority, and folder map inside Navigator.", tags: ["wishstone", "asset", "doctrine", "routing", "inbox", "outbox", "approved", "library", "source policy", "source document", "asset sheet name", "filename", "token", "provisional token", "reception", "carebloom", "hexseed"], risk: "green" },
+      { id: "expression-slots", mode: "manage", group: "MANAGE", title: "Expression Slots", summary: "Shows semantic UI slots that project profiles can skin without changing system meaning.", touches: ["C:\\mini_ark\\config\\expression_slot_registry.json", "Navigator output", "No project files"], actionId: "expression-slots", details: "Reports stable slots for shell, system states, review, architecture, operations, and personas. This is the visual-pipeline contract, not final artwork.", tags: ["expression", "slots", "semantic stability", "expressive variation", "visual pipeline", "manifestation", "journey", "ui contract"], risk: "green" },
+      { id: "asset-pipeline-doctrine", mode: "manage", group: "MANAGE", title: "Asset Pipeline Doctrine", summary: "Shows mini_ark's token-aware asset-pipeline source policy, source-name token priority, natural folders, and approval boundaries.", touches: ["C:\\mini_ark\\config\\asset_pipeline_doctrine.json", "C:\\mini_ark\\docs\\ASSET_PIPELINE_DOCTRINE.md", "Navigator output"], actionId: "asset-pipeline-doctrine", details: "Use this when you want project-native asset routing rules without opening docs manually. It returns the doctrine, token-reception policy, source document naming priority, and folder map inside Navigator.", tags: ["asset", "pipeline", "doctrine", "routing", "inbox", "outbox", "approved", "library", "source policy", "source document", "asset sheet name", "filename", "token", "provisional token", "reception"], risk: "green" },
       { id: "receipts", mode: "manage", group: "MANAGE", title: "Operation Receipts", summary: "Shows recent journaled operations, before/after snapshots, status, and undo commands.", touches: ["Mini ARK ledger", "Navigator output", "No project files"], actionId: "receipts", details: "Reads the action journal and returns the receipts that prove what changed and whether an undo path is available.", tags: ["receipts", "rollback", "undo", "operation", "journal", "audit", "transaction"], risk: "green" },
       { id: "approvals", mode: "manage", group: "MANAGE", title: "Approvals", summary: "Review pending/approved proposals and run gated apply flow.", touches: ["Mini ARK ledger", "Filesystem only after explicit apply"], builtin: "approvals", details: "Loads real proposals. Each proposal can list items, approve, preview, then explicitly apply.", tags: ["approval", "approve", "proposal", "apply", "review"], risk: "yellow" },
       { id: "manage-undo", mode: "manage", group: "MANAGE", title: "Undo Controls", summary: "Reverse a completed operation by OP id.", touches: ["Prior operation paths", "Mini ARK ledger"], needsOpId: true, details: "Enter an operation id. Undo requires explicit confirmation in the Navigator.", tags: ["undo", "rollback", "reverse", "operation"], risk: "red" },
@@ -687,7 +683,7 @@
     function outputStamp() {
       return new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
     }
-    function copyButton(text, label = "Copy Corestone Output") {
+    function copyButton(text, label = "Copy Journey Output") {
       const id = `output-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       outputCopies.set(id, String(text ?? ""));
       return `<div class="output-toolbar"><button type="button" data-copy-output="${esc(id)}">${esc(label)}</button></div>`;
@@ -888,11 +884,11 @@
             <div class="dropzone" data-intake-dropzone>Drop asset sheets here</div>
             <div class="asset-controls">
               <input type="file" data-intake-file accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff" multiple>
-              <button type="button" data-run-intake-path>Run Wishstone</button>
+              <button type="button" data-run-intake-path>Run Asset Intake</button>
             </div>
             <textarea class="asset-paths" data-intake-path-input placeholder="${esc(item.pathPlaceholder || "C:\\path\\to\\sheet-1.png\nC:\\path\\to\\sheet-2.png")}"></textarea>
             <div class="mini-form-grid">
-              <input data-intake-family placeholder="Library family, e.g. cloverstone">
+              <input data-intake-family placeholder="Library family, e.g. navigation">
               <input data-intake-label placeholder="Set label, e.g. vlc_buttons">
             </div>
             <div class="intent-toggle">
@@ -985,7 +981,7 @@
       if (item.assetBrief) {
         return `
           <div class="mini-form" data-brief-form>
-            <input data-brief-job placeholder="Job name, e.g. moonstone_care_rail_parts">
+            <input data-brief-job placeholder="Job name, e.g. navigation_panel_parts">
             <input data-brief-slots placeholder="Slots, comma-separated: top_rail,bottom_rail,center_crest,tab_home">
             <div class="mini-form-grid">
               <input data-brief-columns type="number" min="1" value="3" placeholder="Columns">
@@ -1004,7 +1000,7 @@
               <input data-brief-safe-zone-height type="number" min="1" placeholder="Safe H">
               <input data-brief-background value="transparent" placeholder="Background">
             </div>
-            <input data-brief-style placeholder="Style brief, e.g. Moonstone lunar crystal CareRail parts. No text.">
+            <input data-brief-style placeholder="Style brief, e.g. dark navy navigation panel parts. No text.">
             <button type="button" data-run-brief>Build Brief + Recipe</button>
           </div>
         `;
@@ -1097,7 +1093,7 @@
           <div class="mini-form" data-approve-form>
             <input data-approve-job placeholder="Outbox job name">
             <div class="mini-form-grid">
-              <input data-approve-family placeholder="Library family, e.g. cloverstone">
+              <input data-approve-family placeholder="Library family, e.g. navigation">
               <input data-approve-label placeholder="Set label, e.g. vlc_buttons">
             </div>
             <button type="button" data-run-asset-approve>Approve + Export</button>
@@ -1356,13 +1352,13 @@
         live.textContent = "Asset sheet required.";
         return;
       }
-      live.textContent = `Running Wishstone on ${uploads.length} sheet${uploads.length === 1 ? "" : "s"}...`;
+      live.textContent = `Running asset intake on ${uploads.length} sheet${uploads.length === 1 ? "" : "s"}...`;
       detail.querySelectorAll(".output, .result-card").forEach((node) => node.remove());
       const payload = await apiPost("/api/actions/assets-intake", {
         files: uploads,
         ...intakeOptions()
       });
-      showOutput("Wishstone Intake", payload);
+      showOutput("Asset Intake", payload);
     }
     async function runIntakePath() {
       const input = detail.querySelector("[data-intake-path-input]");
@@ -1372,13 +1368,13 @@
         live.textContent = "Paste at least one asset sheet path.";
         return;
       }
-      live.textContent = `Running Wishstone on ${paths.length} sheet${paths.length === 1 ? "" : "s"}...`;
+      live.textContent = `Running asset intake on ${paths.length} sheet${paths.length === 1 ? "" : "s"}...`;
       detail.querySelectorAll(".output, .result-card").forEach((node) => node.remove());
       const payload = await apiPost("/api/actions/assets-intake", {
         paths,
         ...intakeOptions()
       });
-      showOutput("Wishstone Intake", payload);
+      showOutput("Asset Intake", payload);
     }
     function fieldValue(selector) {
       return detail.querySelector(selector)?.value?.trim() || "";
@@ -1527,7 +1523,7 @@
           <div class="readout"><span>System</span><strong>${esc(state)}</strong><small>DB: ${esc(db)}</small></div>
           <div class="readout"><span>Proposals</span><strong>${esc(pending)} pending</strong><small>${esc(approved)} approved</small></div>
           <div class="readout"><span>Recent</span><strong>${esc(recent?.action_type || "None")}</strong><small>${recent ? `OP-${String(recent.id).padStart(6, "0")}` : "No actions"}</small></div>
-          <div class="readout"><span>Expression</span><strong>CareBloom</strong><small>Semantic slots stable</small></div>
+          <div class="readout"><span>Authority</span><strong>Human-Gated</strong><small>Minimum necessary</small></div>
         </div>
         <div class="home-grid">
           <article class="home-card">
@@ -1793,7 +1789,7 @@
         return;
       }
       if (event.target.closest("[data-run-intake-path]")) {
-        runIntakePath().catch((error) => showOutput("Wishstone Intake", { ok: false, error: error.error || error.message || error }));
+        runIntakePath().catch((error) => showOutput("Asset Intake", { ok: false, error: error.error || error.message || error }));
         return;
       }
       if (event.target.closest("[data-run-nine-slice]")) {
@@ -1836,7 +1832,7 @@
       if (copyOutput) {
         const text = outputCopies.get(copyOutput.dataset.copyOutput || "") || "";
         copyTextToClipboard(text)
-          .then(() => { live.textContent = "Corestone output copied."; })
+          .then(() => { live.textContent = "Journey output copied."; })
           .catch(() => { live.textContent = "Copy blocked by browser permissions."; });
         return;
       }
@@ -1880,7 +1876,7 @@
       if (input) runAssetUpload(input.files?.[0]).catch((error) => showOutput("Asset Sheet Deconstructor", { ok: false, error: error.error || error.message || error }));
       if (autoInput) runAutoUpload(autoInput.files?.[0]).catch((error) => showOutput("Smart Asset Intake", { ok: false, error: error.error || error.message || error }));
       if (composeInput) runComposeUpload(composeInput.files).catch((error) => showOutput("Batch Master Composer", { ok: false, error: error.error || error.message || error }));
-      if (intakeInput) runIntakeUpload(intakeInput.files).catch((error) => showOutput("Wishstone Intake", { ok: false, error: error.error || error.message || error }));
+      if (intakeInput) runIntakeUpload(intakeInput.files).catch((error) => showOutput("Asset Intake", { ok: false, error: error.error || error.message || error }));
       if (input) input.value = "";
       if (autoInput) autoInput.value = "";
       if (composeInput) composeInput.value = "";
@@ -1929,7 +1925,7 @@
       }
       if (intakeZone) {
         intakeZone.classList.remove("dragover");
-        runIntakeUpload(event.dataTransfer?.files).catch((error) => showOutput("Wishstone Intake", { ok: false, error: error.error || error.message || error }));
+        runIntakeUpload(event.dataTransfer?.files).catch((error) => showOutput("Asset Intake", { ok: false, error: error.error || error.message || error }));
       }
     });
     search.addEventListener("input", () => runSearch(search.value));

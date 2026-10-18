@@ -38,7 +38,6 @@ from core import casefix
 from core import classify
 from core import conversation_ingest
 from core import renaming
-from core import carebloom_consolidation
 from core import profile_migration
 from core import naming
 from core import date_index
@@ -893,7 +892,7 @@ def cmd_receipts(args):
     receipts = list_receipts(conn, limit=args.limit)
     conn.close()
 
-    print("[SUCCESS] Corestone operation receipts")
+    print("[SUCCESS] Journey operation receipts")
     if not receipts:
         print("  No operations have been journaled yet.")
         return
@@ -1057,102 +1056,6 @@ def cmd_propose_media_organization(args):
     conn.close()
 
 
-def cmd_carebloom_consolidate(args):
-    canonical_root = args.canonical_root
-    docs_root = str(Path(__file__).parent / "docs")
-    source_roots = args.source_root or carebloom_consolidation.DEFAULT_SOURCE_ROOTS
-    dependency_roots = args.dependency_root or carebloom_consolidation.DEFAULT_DEPENDENCY_ROOTS
-
-    if args.plan:
-        plan_path = args.plan
-    else:
-        print("[STARTING] Building CareBloom consolidation plan")
-        print("  Policy: copy first, verify, update refs only when requested, leave originals in place.")
-        plan = carebloom_consolidation.build_plan(
-            source_roots=source_roots,
-            dependency_roots=dependency_roots,
-            canonical_root=canonical_root,
-            docs_root=docs_root,
-            limit=args.limit,
-        )
-        plan_path = plan["json_path"]
-        print(f"[SUCCESS] Plan written: {plan['markdown_path']}")
-        print(f"  JSON: {plan['json_path']}")
-        print(f"  Assets: {plan['asset_count']}")
-        print(f"  Assets with dependency refs: {plan['dependent_asset_count']}")
-        print(f"  Dependency refs: {plan['dependency_reference_count']}")
-
-    if not args.execute:
-        print("")
-        print("Plan only. To execute copy-first consolidation:")
-        print(f"  .\\ark.cmd carebloom-consolidate --plan \"{plan_path}\" --execute")
-        print("")
-        print("To also update known text references after verified copies:")
-        print(f"  .\\ark.cmd carebloom-consolidate --plan \"{plan_path}\" --execute --update-refs")
-        return
-
-    print("[STARTING] Executing CareBloom consolidation")
-    result = carebloom_consolidation.execute_plan(plan_path, update_refs=args.update_refs)
-    print(f"[SUCCESS] Result written: {result['result_path']}")
-    print(f"  Copied: {result['copied_count']}")
-    print(f"  Reference updates: {result['reference_update_count']}")
-    print(f"  Failed: {result['failed_count']}")
-    print("  Originals left in place: yes")
-    if result["failed"]:
-        print("  Failures:")
-        for failure in result["failed"][:20]:
-            print(f"    - {failure['source']}: {failure['reason']}")
-
-
-def cmd_carebloom_archive_map(args):
-    docs_root = str(Path(__file__).parent / "docs")
-    source_roots = args.source_root or carebloom_consolidation.DEFAULT_SOURCE_ROOTS
-    dependency_roots = args.dependency_root or carebloom_consolidation.DEFAULT_DEPENDENCY_ROOTS
-
-    if args.plan:
-        plan_path = args.plan
-    else:
-        print("[STARTING] Building CareBloomOS archive/deletion-prep map")
-        print("  Policy: copy first, dependency hold, deletion-prep only, originals stay in place.")
-        plan = carebloom_consolidation.build_archive_map(
-            source_roots=source_roots,
-            dependency_roots=dependency_roots,
-            target_root=args.target_root,
-            docs_root=docs_root,
-            older_than_days=args.older_than_days,
-            limit=args.limit,
-        )
-        plan_path = plan["json_path"]
-        print(f"[SUCCESS] Map written: {plan['markdown_path']}")
-        print(f"  JSON: {plan['json_path']}")
-        print(f"  CSV: {plan['csv_path']}")
-        print(f"  Assets mapped: {plan['asset_count']}")
-        print(f"  Dependency hold: {plan['dependent_hold_count']}")
-        print(f"  Active recent non-dependent: {plan['active_recent_nondependent_count']}")
-        print(f"  Deletion-prep candidates: {plan['deletion_prep_count']}")
-
-    if not args.execute:
-        print("")
-        print("Map only. To stage the mapped structure with copied files:")
-        print(f"  .\\ark.cmd carebloom-archive-map --plan \"{plan_path}\" --execute")
-        return
-
-    print("[STARTING] Staging CareBloomOS archive structure")
-    result = carebloom_consolidation.execute_archive_map(plan_path)
-    print(f"[SUCCESS] Result written: {result['result_path']}")
-    print(f"  Target root: {result['target_root']}")
-    print(f"  Copied/verified: {result['copied_count']}")
-    print(f"  Failed: {result['failed_count']}")
-    print(f"  Deletion-prep candidates staged: {result['deletion_prep_count']}")
-    print(f"  Dependency hold staged: {result['dependent_hold_count']}")
-    print("  Originals left in place: yes")
-    print("  Files deleted: 0")
-    if result["failed"]:
-        print("  Failures:")
-        for failure in result["failed"][:20]:
-            print(f"    - {failure['source']}: {failure['reason']}")
-
-
 def cmd_profile_migration_map(args):
     docs_root = str(Path(__file__).parent / "docs")
     profile_roots = args.profile_root or profile_migration.DEFAULT_PROFILE_ROOTS
@@ -1230,7 +1133,7 @@ def cmd_tokens(args):
         return
 
     summary = token_summary(registry)
-    print("[SUCCESS] Corestone token registry ready")
+    print("[SUCCESS] Journey token registry ready")
     print(f"  Registry: {registry_path(root)}")
     print(f"  Tokens: {summary['token_count']}")
     print("")
@@ -1257,7 +1160,7 @@ def cmd_routes(args):
     root = Path(__file__).parent
     registry = ensure_token_registry(root)
     summary = route_summary(registry)
-    print("[SUCCESS] Corestone routing registry ready")
+    print("[SUCCESS] Journey routing registry ready")
     print(f"  Registry: {registry_path(root)}")
     print(f"  Routed tokens: {summary['routed_token_count']}")
     print(f"  Rule: {summary['rule']}")
@@ -1446,7 +1349,7 @@ def main():
     policy_p.add_argument("--retire-portals", action="store_true")
     policy_p.set_defaults(func=cmd_patrol_policy)
     shadow_p = sub.add_parser("shadow", aliases=["sh", "patrol"], help="One bounded Shadow patrol with change comparison")
-    shadow_p.add_argument("--scope", required=True, help="Ledger scope to simulate, e.g. R:\\Projects\\CareBloomOS")
+    shadow_p.add_argument("--scope", required=True, help="Ledger scope to simulate, e.g. R:\\Projects\\ExampleProject")
     shadow_p.add_argument("--limit", type=int, default=500, help="Maximum files; bounded at 5000 (0 uses default 500)")
     shadow_p.add_argument("--no-verify-current", action="store_true", help="Skip current filesystem stat checks for instability")
     shadow_p.add_argument("--json", action="store_true", help="Print structured JSON summary")
@@ -1477,7 +1380,7 @@ def main():
     rename_p = sub.add_parser("propose-rename", aliases=["pren"], help="Propose a batch rename: ordered file list + template with {n} auto-increment")
     rename_p.add_argument("files", nargs="*", help="File paths to rename, in order")
     rename_p.add_argument("--list-file", default=None, help="Text file, one path per line, instead of passing paths directly")
-    rename_p.add_argument("--template", required=True, help="e.g. 'heartstone_care_rail_v{n}' -- extension is preserved automatically")
+    rename_p.add_argument("--template", required=True, help="e.g. 'navigation_panel_v{n}' -- extension is preserved automatically")
     rename_p.add_argument("--start", type=int, default=1)
     rename_p.add_argument("--pad", type=int, default=2, help="Zero-pad width, e.g. 2 -> v01, v02...")
     rename_p.add_argument("--dest-dir", default=None, help="Rename into this folder instead of in-place")
@@ -1563,12 +1466,12 @@ def main():
     receipts_p = sub.add_parser("receipts", aliases=["rcpt"], help="Show recent operation receipts and undo commands")
     receipts_p.add_argument("--limit", type=int, default=10)
     receipts_p.set_defaults(func=cmd_receipts)
-    name_p = sub.add_parser("name-preview", aliases=["np"], help="Preview Cloverstone canonical names without renaming files")
+    name_p = sub.add_parser("name-preview", aliases=["np"], help="Preview canonical names without renaming files")
     name_p.add_argument("paths", nargs="+")
     name_p.add_argument("--role", default=None, help="Optional role token, e.g. care rail, wallpaper, vlc button")
-    name_p.add_argument("--project", default=None, help="Optional project/stone token, e.g. carebloomos, wishstone")
+    name_p.add_argument("--project", default=None, help="Optional project or capability token")
     name_p.set_defaults(func=cmd_name_preview)
-    date_p = sub.add_parser("date-index", aliases=["di"], help="Save Cloverstone date/provenance records for files without modifying them")
+    date_p = sub.add_parser("date-index", aliases=["di"], help="Save date/provenance records for files without modifying them")
     date_p.add_argument("path")
     date_p.add_argument("--recursive", action="store_true")
     date_p.add_argument("--limit", type=int, default=200)
@@ -1598,42 +1501,6 @@ def main():
     media_p.add_argument("--exclude", action="append", default=[],
                           help="Folder name to skip entirely, e.g. --exclude \"all stars\" (repeatable)")
     media_p.set_defaults(func=cmd_propose_media_organization)
-
-    carebloom_p = sub.add_parser("carebloom-consolidate", aliases=["cbc"],
-                                  help="Plan or execute copy-first CareBloom asset consolidation without stopping Rainmeter/Wallpaper")
-    carebloom_p.add_argument("--canonical-root", default=r"R:\Projects\CareBloomOS\99_Consolidated_Assets",
-                             help="Destination root for consolidated CareBloom assets")
-    carebloom_p.add_argument("--source-root", action="append", default=None,
-                             help="CareBloom source root to scan; repeatable. Defaults to known roots.")
-    carebloom_p.add_argument("--dependency-root", action="append", default=None,
-                             help="Text config/runtime root to scan for source references; repeatable.")
-    carebloom_p.add_argument("--limit", type=int, default=None,
-                             help="Limit assets for a small MVP test plan")
-    carebloom_p.add_argument("--plan", default=None,
-                             help="Existing JSON plan to execute")
-    carebloom_p.add_argument("--execute", action="store_true",
-                             help="Execute copy-first consolidation from the generated or supplied plan")
-    carebloom_p.add_argument("--update-refs", action="store_true",
-                             help="After verified copies, update known text references to copied locations")
-    carebloom_p.set_defaults(func=cmd_carebloom_consolidate)
-
-    cb_archive_p = sub.add_parser("carebloom-archive-map", aliases=["cbam"],
-                                  help="Map/stage CareBloomOS assets into RuneScript project architecture and deletion-prep buckets")
-    cb_archive_p.add_argument("--target-root", default=r"R:\Projects\CareBloomOS",
-                              help="Target RuneScript project architecture root")
-    cb_archive_p.add_argument("--source-root", action="append", default=None,
-                              help="CareBloom source root to map; repeatable. Defaults to known roots.")
-    cb_archive_p.add_argument("--dependency-root", action="append", default=None,
-                              help="Text config/runtime root to scan for dependencies; repeatable.")
-    cb_archive_p.add_argument("--older-than-days", type=int, default=60,
-                              help="Non-dependent assets older than this are staged as deletion-prep candidates")
-    cb_archive_p.add_argument("--limit", type=int, default=None,
-                              help="Limit assets for a small MVP test map")
-    cb_archive_p.add_argument("--plan", default=None,
-                              help="Existing JSON map to execute")
-    cb_archive_p.add_argument("--execute", action="store_true",
-                              help="Stage mapped files by copying/verifying into the target architecture")
-    cb_archive_p.set_defaults(func=cmd_carebloom_archive_map)
 
     profile_p = sub.add_parser("profile-migration-map", aliases=["pmm"],
                                help="Map/stage old R: user-profile contents into classified ARK destinations")

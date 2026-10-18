@@ -1,4 +1,4 @@
-"""Operation receipt summaries for Corestone."""
+"""Operation receipt summaries for Journey."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Cloverstone date index.
+"""Project-neutral date index.
 
 Records relevant date data for files without rewriting the files.
 """
@@ -58,7 +58,7 @@ def build_date_index(root_value: str, docs_root: str, recursive: bool = False, l
     docs = Path(docs_root)
     docs.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_path = docs / f"CLOVERSTONE_DATE_INDEX_{stamp}.json"
+    output_path = docs / f"DATE_INDEX_{stamp}.json"
     payload = {
         "status": "indexed",
         "root": str(root),

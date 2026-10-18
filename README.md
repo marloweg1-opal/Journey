@@ -5,13 +5,13 @@ continuity, stewardship, coordination and reducing friction between Junior and
 the computer. Project ARK is the broader PMM/PWM and domain-ARK umbrella; Journey
 is its intended coordinator/gopher, not its entirety.
 
-## Current status: 2026-09-29
+## Current status
 
 | State | Scope |
 |---|---|
-| Implemented and verified locally | Bounded discovery/reference evidence, privacy policy, source holds, inventory, journal and recovery protections; 288-test checkpoint |
+| Implemented and verified locally | Bounded discovery/reference evidence, privacy policy, source holds, inventory, journal and recovery protections |
 | Implemented but held | Operation-bound move verifier with test-only issuer; default production moves and legacy consolidation executors remain denied |
-| Active milestone | CareBloom coherent custody: ownership, custody, provenance, then finer classification |
+| Active milestone | Generic project custody: ownership, provenance, contextual classification and reviewable placement |
 | Near-term | Exact eligible custody candidate and legitimate production evidence/approval source |
 | Future, not shipped | Broader observation depths, advanced judgment, capability expansion and reasoning council |
 
@@ -35,7 +35,7 @@ mini_ark is being developed as a persistent local intelligence layer that can:
 - retrieve relevant context when it becomes useful again
 - recognize recurring ideas, relationships, contradictions, and resonance
 - support continuity across people, AI collaborators, tools, and projects
-- provide shared infrastructure for systems such as **CareBloomOS**
+- provide shared infrastructure for multiple projects and expression profiles
 - remain inspectable, attributable, and locally controlled
 
 ## Why it exists
@@ -71,7 +71,7 @@ mini_ark's guardrails are intentionally architected by the maintainer: human rev
 
 mini_ark is currently under active development.
 
-Current work focuses on HEXSEED operational congruence, starting with CareBloom custody. Discover collectors, semantic providers and new persistent user-knowledge storage remain disabled.
+Current work focuses on HEXSEED operational congruence through project-neutral custody and stewardship contracts. Discover collectors, semantic providers and new persistent user-knowledge storage remain disabled.
 
 ### Gate A stewardship checkpoint
 
@@ -96,8 +96,7 @@ The current local MVP includes:
 - an operator handbook, user guide, and handoff docs under `docs/`
 - read-only inventory, diagnosis, reporting, and classification commands
 - approval-gated proposal/apply/undo workflows
-- Wishstone asset intake under `asset_pipeline/`, with source-copy intake, reviewable outbox jobs, approved exports, and reusable library sets
-- legacy CareBloomOS consolidation/archive planning (execution held)
+- project-neutral asset intake under `asset_pipeline/`, with source-copy intake, reviewable outbox jobs, approved exports, and reusable library sets
 - user-profile migration planning and hierarchy reports (execution held)
 
 Typical local launch:
@@ -115,7 +114,15 @@ Start with [`docs/HANDBOOK.md`](docs/HANDBOOK.md) if you want to operate mini_ar
 
 Naming posture: `Mini ARK` remains the implementation name and `C:\mini_ark` remains the canonical working tree. `Journey` is the emerging product/system identity, not a parallel codebase or active rename. See [`docs/JOURNEY_NAMING_ARCHITECTURE.md`](docs/JOURNEY_NAMING_ARCHITECTURE.md) and [`config/naming_status.json`](config/naming_status.json).
 
-Wishstone's asset-pipeline doctrine lives in [`docs/WISHSTONE_ASSET_PIPELINE_DOCTRINE.md`](docs/WISHSTONE_ASSET_PIPELINE_DOCTRINE.md) and [`config/wishstone_asset_doctrine.json`](config/wishstone_asset_doctrine.json). Its source rule is simple: external source files are copied into intake and are not moved unless an explicit operator-approved export/apply step says so.
+The asset-pipeline doctrine lives in [`docs/ASSET_PIPELINE_DOCTRINE.md`](docs/ASSET_PIPELINE_DOCTRINE.md) and [`config/asset_pipeline_doctrine.json`](config/asset_pipeline_doctrine.json). Its source rule is simple: external source files are copied into intake and are not moved unless an explicit operator-approved export/apply step says so.
+
+## Integration profiles
+
+Journey's architecture is project-neutral. Domain-specific terminology, artwork,
+handoffs and cleanup scripts belong to the projects that own them. CareBloomOS was
+the first mature integration profile and remains a documented example of how a
+project can translate Journey's stable functional kernels without becoming the
+base ontology or taking over this repository.
 
 ## License
 

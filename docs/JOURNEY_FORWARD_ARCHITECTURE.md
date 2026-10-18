@@ -115,11 +115,10 @@ and explicitly governed. No providers or transmissions are enabled by this plan.
 
 ## Present objective
 
-HEXSEED operational congruence supports CareBloom, Welfare Witchcraft, Project
-ARK and future work without constant filesystem cognitive overhead. CareBloom
-comes first: identify ownership -> establish custody -> preserve provenance ->
-refine classification later. Perfect classification is not required before safe
-custody. LEAVE protects individually blocked material, not a desired endpoint
-when safe stewardship is possible. Holds must not block unrelated eligible work.
-Implement new infrastructure only for observed needs, not because this roadmap
-exists. Junior governs; Journey tends.
+HEXSEED operational congruence supports multiple projects without constant
+filesystem cognitive overhead. The sequence is generic: identify ownership ->
+establish custody -> preserve provenance -> refine classification later. Perfect
+classification is not required before safe custody. LEAVE protects individually
+blocked material, not a desired endpoint when safe stewardship is possible.
+Holds must not block unrelated eligible work. Implement new infrastructure only
+for observed needs, not because this roadmap exists. Junior governs; Journey tends.

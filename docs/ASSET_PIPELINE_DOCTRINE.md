@@ -1,6 +1,6 @@
-# Wishstone Asset Pipeline Doctrine
+# Asset Pipeline Doctrine
 
-Wishstone is mini_ark's local asset intake and routing capability.
+The asset pipeline is mini_ark's local asset intake and routing capability.
 
 It uses `C:\mini_ark` as both the capability reference and the project home. Outputs should therefore land in mini_ark's natural asset folders unless a later approved export targets another project.
 
@@ -14,11 +14,11 @@ Token policy:
 
 Every incoming item either arrives with a token or receives a provisional token at reception.
 
-The source document name is primary token evidence. If the asset sheet or document is named for `carebloom`, `hexseed`, `moonstone`, `cloverstone`, `wishstone`, or another known project/capability, Wishstone should treat that as intentional identity evidence.
+The source document name is primary token evidence. If an asset sheet or document names a known project or capability, the pipeline treats that as intentional identity evidence.
 
 Tokens may also come from manifests, folder context, metadata, known project routes, user-provided family/label values, or prior registry knowledge.
 
-If no confident token exists, Wishstone should assign a reviewable provisional token instead of pretending the item is anonymous.
+If no confident token exists, the pipeline assigns a reviewable provisional token instead of pretending the item is anonymous.
 
 Routing and placement decisions should follow token identity. Destination logic is downstream of token recognition, not a replacement for it.
 
@@ -70,21 +70,19 @@ The family/label pair is a token expression. It should clarify identity, capabil
 Examples:
 
 ```text
-carebloom_orb_icon_sheet_4x7.png      -> carebloom / carebloomos token evidence
-hexseed_professor_badge_sheet.png     -> hexseed token evidence
-moonstone_care_rail_parts_sheet.png   -> moonstone + care rail token evidence
-cloverstone_vlc_controls_sheet.png    -> cloverstone + vlc controls token evidence
+project_orbit_icon_sheet_4x7.png      -> project_orbit + icons token evidence
+media_player_controls_sheet.png       -> media_player + controls token evidence
 ```
 
 The document name should not be discarded as mere source trivia. It is often the operator's first routing instruction.
 
 ## Navigator Surface
 
-Use `Tools > Wishstone Intake` for the normal path. It accepts dropped files, selected files, or pasted local paths and returns the job result in Navigator.
+Use `Tools > Asset Intake` for the normal path. It accepts dropped files, selected files, or pasted local paths and returns the job result in Navigator.
 
-Use `Tools > Wishstone Intake History` to inspect outbox jobs and find job names for review, repair, precision, or approval.
+Use `Tools > Asset Intake History` to inspect outbox jobs and find job names for review, repair, precision, or approval.
 
-The advanced Wishstone tools exist for narrower operations:
+The advanced asset tools exist for narrower operations:
 
 - Smart Asset Intake
 - Batch Master Composer
@@ -99,7 +97,7 @@ The advanced Wishstone tools exist for narrower operations:
 
 ## Non-Automatic Actions
 
-Wishstone does not automatically perform:
+The asset pipeline does not automatically perform:
 
 - deletion
 - destructive dedupe
