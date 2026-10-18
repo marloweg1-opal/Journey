@@ -5,8 +5,8 @@
   "canonical_working_tree": "C:\\mini_ark",
   "product_identity": "Journey",
   "higher_order_architecture": "Project ARK",
-  "current_decision": "Keep Mini ARK as the active implementation name and Journey as the product identity until a deliberate migration is approved.",
-  "rename_status": "not_approved",
+  "current_decision": "Use Journey as the public product and repository identity. Retain Mini ARK only as a compatibility name for technical paths and integrations until each dependency is deliberately migrated.",
+  "rename_status": "public_identity_approved_technical_migration_pending",
   "do_not_rename": [
     "C:\\mini_ark",
     "ark.py",
@@ -31,5 +31,5 @@
     "allowed_variation": ["visual language", "atmosphere", "persona", "ornamentation", "animation", "sounds", "iconography"],
     "stability_requirement": "Profiles must preserve familiar controls, capability meaning, authority state, evidence and rollback semantics."
   },
-  "architecture_summary": "Journey is the adaptive local orchestration layer that reconciles HEXSEED with the user's evolving way of working. Mini ARK is the current implementation name."
+  "architecture_summary": "Journey is the adaptive local orchestration layer that reconciles HEXSEED with the user's evolving way of working. Mini ARK is its former product name and current compatibility identifier."
 }

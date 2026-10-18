@@ -1,12 +1,15 @@
 # Journey Naming Architecture
 
-Mini ARK is the active implementation and repository name.
+Journey is the product, system, and public repository identity.
 
-Journey is the product and system identity.
+Mini ARK is the former product name and remains a compatibility identifier in
+the current working-tree path, command wrapper, scripts, and selected module
+surfaces.
 
-The two names refer to one codebase. A deliberate migration may eventually
-rename the working tree and package surfaces, but no parallel Journey codebase
-should be created.
+The two names refer to one codebase. Public naming changes first; technical
+paths migrate only after their dependencies are audited. No parallel Journey
+codebase should be created and no working local path should be renamed merely
+for cosmetic consistency.
 
 ## Naming boundary
 
