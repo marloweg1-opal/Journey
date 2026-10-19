@@ -21,3 +21,20 @@ class LegacyExecutionHoldTests(unittest.TestCase):
 
     def test_profile_staging_stops_before_plan_access(self):
         self.assert_held(profile_migration.execute_profile_migration_map)
+
+    def test_powershell_profile_cleanup_holds_execute_before_plan_access(self):
+        script_path = Path(__file__).resolve().parents[1] / 'cleanup_r_user_profiles.ps1'
+        script = script_path.read_text(encoding='utf-8')
+
+        kill_switch = script.index('$KillSwitch =')
+        execution_hold = script.index('if ($Execute) {')
+        stage_access = script.index('if (-not (Test-Path -LiteralPath $StageResult')
+        first_mutation = script.index('New-Item -ItemType Directory -Force -Path $MoveRoot')
+
+        self.assertLess(kill_switch, execution_hold)
+        self.assertLess(execution_hold, stage_access)
+        self.assertLess(execution_hold, first_mutation)
+        self.assertIn('exit 3', script[execution_hold:stage_access])
+        self.assertIn('RESULT: HELD. No files were moved or removed.', script)
+        self.assertIn('RESULT: PREVIEW COMPLETE. No files were moved or removed.', script)
+        self.assertNotIn('cleanup_r_user_profiles.ps1 -Execute', script)
