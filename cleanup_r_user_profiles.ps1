@@ -8,6 +8,17 @@ param(
 $ErrorActionPreference = "Stop"
 $Stamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$KillSwitch = Join-Path $Root "ARK_EXECUTION_DISABLED.flag"
+if ($Execute -and (Test-Path -LiteralPath $KillSwitch -PathType Leaf)) {
+  Write-Host "[BLOCKED] Emergency stop is active. -Execute refused. Nothing was changed." -ForegroundColor Red
+  Write-Host "RESULT: BLOCKED. No files were moved or removed."
+  exit 2
+}
+if ($Execute) {
+  Write-Host "[HELD] -Execute is disabled for this script. Nothing was changed." -ForegroundColor Yellow
+  Write-Host "RESULT: HELD. No files were moved or removed."
+  exit 3
+}
 $Docs = Join-Path $Root "docs"
 $MoveRoot = Join-Path $QuarantineRoot "R_Profile_Source_Removals_$Stamp"
 $ReportPath = Join-Path $Docs "R_PROFILE_CLEANUP_$Stamp.json"
@@ -178,6 +189,6 @@ Write-Host "  Failed: $($report.failed_count)"
 Write-Host "  Files deleted: 0"
 if (-not $Execute) {
   Write-Host ""
-  Write-Host "Preview only. To move verified originals out of profile roots:"
-  Write-Host "  .\cleanup_r_user_profiles.ps1 -Execute -RemoveEmptyDirs"
+  Write-Host "Preview only. Execution is HELD for this legacy cleanup script."
 }
+Write-Host "RESULT: PREVIEW COMPLETE. No files were moved or removed."
