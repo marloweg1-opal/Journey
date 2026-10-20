@@ -106,6 +106,20 @@ powershell -ExecutionPolicy Bypass -File .\start_mini_ark.ps1
 
 These technical names will migrate incrementally so that renaming the product does not break a working local system.
 
+### Add Journey to your Windows desktop
+
+Open the Journey folder and double-click `install_journey_shortcut.cmd`. It
+creates a desktop shortcut named **Journey** using the crystal crest icon.
+Double-clicking that shortcut starts the local Navigator and opens it in your
+browser.
+
+The shortcut points back to this Journey folder, so keep the folder where it
+is after installation. To remove only the shortcut, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install_journey_shortcut.ps1 -Remove
+```
+
 ## Developer map
 
 You do **not** need to read every file in this repository. These are the useful entry points:

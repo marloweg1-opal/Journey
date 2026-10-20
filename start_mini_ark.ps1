@@ -14,18 +14,18 @@ try {
   $running = Invoke-RestMethod -Uri "http://127.0.0.1:$PreferredPort/api/status" -TimeoutSec 2
   if ($running.db -and $running.state) {
     $existingUrl = "http://127.0.0.1:$PreferredPort/"
-    Write-Host "Mini ARK is already running: $existingUrl"
+    Write-Host "Journey is already running: $existingUrl"
     if ($Open) { Start-Process $existingUrl }
     return
   }
 } catch { }
 
 if (-not (Test-Path -LiteralPath $indexPath)) {
-  throw "Mini ARK cockpit not found: $indexPath"
+  throw "Journey Navigator not found: $indexPath"
 }
 
 if (-not (Test-Path -LiteralPath $serverPath)) {
-  throw "Mini ARK server not found: $serverPath"
+  throw "Journey server not found: $serverPath"
 }
 
 function Test-PortAvailable {
@@ -83,10 +83,10 @@ try {
   } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $runtimeRoot 'mini_ark_server.json') -Encoding UTF8
   $logWritten = $true
 } catch {
-  Write-Warning "Mini ARK started, but the server log could not be written: $($_.Exception.Message)"
+  Write-Warning "Journey started, but the server log could not be written: $($_.Exception.Message)"
 }
 
-Write-Host "Mini ARK is running."
+Write-Host "Journey is running."
 Write-Host "URL: $url"
 Write-Host "Root: $miniArkRoot"
 Write-Host "ProcessId: $($process.Id)"
