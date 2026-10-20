@@ -1,0 +1,2 @@
+# Asset pipeline and structural photo validation; no AI providers.
+Pillow>=10,<13

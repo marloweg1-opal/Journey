@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "profile_id": "journey_default",
+  "profile_version": "1.0",
+  "doctrine": {
+    "summary": "Expression profiles bind visual assets, motion, typography, persona, and decorative language to stable semantic UI slots.",
+    "law": "Semantic stability, expressive variation.",
+    "semantic_contract": "Expression may transform surface presentation but must not rename or obscure capability identity, risk classification, approval state, filesystem path, operation state, proof, undo semantics, or canonical retrieval terminology."
+  },
+  "shell": {
+    "world_background": null,
+    "primary_navigation": null,
+    "content_surface": null,
+    "modal_surface": null,
+    "context_rail": null,
+    "system_identity": null
+  },
+  "system_states": {
+    "ready": null,
+    "needs_review": null,
+    "safe_care_available": null,
+    "waiting_approval": null,
+    "work_in_progress": null,
+    "completed": null,
+    "failed": null,
+    "recovery_required": null
+  },
+  "review": {
+    "finding_card": null,
+    "review_family": null,
+    "file_preview": null,
+    "comparison_view": null,
+    "source_path": null,
+    "destination_path": null,
+    "dependency_state": null,
+    "confidence_state": null,
+    "risk_state": null,
+    "approval_controls": null
+  },
+  "architecture": {
+    "cathedral_root": null,
+    "runescript": null,
+    "canonical_home": null,
+    "legacy_path": null,
+    "in_transit": null,
+    "protected_runtime": null,
+    "placement_flow": null
+  },
+  "operations": {
+    "preview": null,
+    "executing": null,
+    "verifying": null,
+    "receipt": null,
+    "undo_available": null,
+    "rollback": null,
+    "interrupted": null
+  },
+  "personas": {
+    "maintenance_guide": null,
+    "perception_guide": null,
+    "integration_guide": null
+  }
+}

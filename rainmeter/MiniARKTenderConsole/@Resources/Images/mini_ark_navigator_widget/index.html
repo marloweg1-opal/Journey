@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>mini_ark Navigator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="stage">
+    <section class="navigator" id="navigator" aria-label="mini_ark Navigator">
+      <div class="constellation constellation-a" aria-hidden="true"></div>
+      <div class="constellation constellation-b" aria-hidden="true"></div>
+
+      <header class="top-shell">
+        <div class="zodiac-strip" aria-label="Zodiac navigation motif">
+          <img src="assets/zodiac/aries.png" alt="Aries">
+          <img src="assets/zodiac/taurus.png" alt="Taurus">
+          <img src="assets/zodiac/gemini.png" alt="Gemini">
+          <img src="assets/zodiac/cancer.png" alt="Cancer">
+          <img src="assets/zodiac/leo.png" alt="Leo">
+          <img src="assets/zodiac/virgo.png" alt="Virgo">
+          <button class="crest-home" id="homeButton" title="Return home" aria-label="Return home">
+            <img src="assets/central_crystal_crest.png" alt="">
+          </button>
+          <img src="assets/zodiac/libra.png" alt="Libra">
+          <img src="assets/zodiac/scorpio.png" alt="Scorpio">
+          <img src="assets/zodiac/sagittarius.png" alt="Sagittarius">
+          <img src="assets/zodiac/capricorn.png" alt="Capricorn">
+          <img src="assets/zodiac/aquarius.png" alt="Aquarius">
+          <img src="assets/zodiac/pisces.png" alt="Pisces">
+        </div>
+
+        <div class="identity-row">
+          <div class="identity">
+            <div class="eyebrow">LOCAL-FIRST • DEFENDER BUILD</div>
+            <h1>mini_ark <span>Navigator</span></h1>
+            <p>Archival Resonance Kernel</p>
+          </div>
+
+          <button class="status-jewel" id="statusJewel" type="button" aria-expanded="false">
+            <span class="jewel"></span>
+            <span><strong>READY</strong><small>System online</small></span>
+          </button>
+        </div>
+
+        <form class="summon" id="searchForm">
+          <span class="search-glyph">⌕</span>
+          <input id="searchInput" autocomplete="off"
+                 placeholder="Summon protocol… search ARK, tools, guides"
+                 aria-label="Search ARK, tools, and guides">
+          <kbd>Ctrl</kbd><span>+</span><kbd>Alt</kbd><span>+</span><kbd>A</kbd>
+        </form>
+      </header>
+
+      <section class="home-view" id="homeView">
+        <div class="command-grid" aria-label="Primary commands">
+          <button class="command-card find" data-mode="find">
+            <span class="facet"></span>
+            <img src="assets/find_crystal_art.png" alt="" class="crystal-art">
+            <span class="command-copy">
+              <strong>FIND</strong>
+              <small>Memory & Context</small>
+              <em>Search across ARK memory, canon, files, and tools.</em>
+            </span>
+          </button>
+
+          <button class="command-card launch" data-mode="launch">
+            <span class="facet"></span>
+            <img src="assets/launch_crystal_art.png" alt="" class="crystal-art">
+            <span class="command-copy">
+              <strong>LAUNCH</strong>
+              <small>Tools & Workflows</small>
+              <em>Invoke mini_ark tools without memorizing commands.</em>
+            </span>
+          </button>
+
+          <button class="command-card guide" data-mode="guide">
+            <span class="facet"></span>
+            <img src="assets/guide_crystal_art.png" alt="" class="crystal-art">
+            <span class="command-copy">
+              <strong>GUIDE</strong>
+              <small>Tasks & How-Tos</small>
+              <em>Task-based help that terminates in action.</em>
+            </span>
+          </button>
+
+          <button class="command-card manage" data-mode="manage">
+            <span class="facet"></span>
+            <img src="assets/manage_crystal_art.png" alt="" class="crystal-art">
+            <span class="command-copy">
+              <strong>MANAGE</strong>
+              <small>System & Core</small>
+              <em>Config, ledgers, approvals, undo, tests, and Git.</em>
+            </span>
+          </button>
+        </div>
+
+        <div class="instrument-row">
+          <article class="instrument recent">
+            <div class="instrument-label">RECENT ACTION</div>
+            <div class="instrument-main">
+              <span class="mini-gem blue"></span>
+              <div>
+                <strong>R: profile cleanup</strong>
+                <p>4,987 verified profile-source originals moved to quarantine.</p>
+                <small>Permanent deletion: none.</small>
+              </div>
+              <span class="badge done">DONE ✓</span>
+            </div>
+          </article>
+
+          <article class="instrument health">
+            <div class="instrument-label">SYSTEM</div>
+            <div class="health-grid">
+              <span>Tests <strong>22/22</strong></span>
+              <span>Git <strong>synced</strong></span>
+              <span>Environment <strong>local</strong></span>
+            </div>
+            <button class="text-button" data-copy=".\ark.cmd doctor">Copy health check</button>
+          </article>
+
+          <article class="instrument principle">
+            <div class="instrument-label">ARK PRINCIPLE</div>
+            <blockquote>“Meatbags forever… never.”</blockquote>
+          </article>
+        </div>
+      </section>
+
+      <section class="mode-shell" id="modeShell" hidden>
+        <div class="mode-heading">
+          <button class="back-button" id="backButton">← Home</button>
+          <div>
+            <div class="mode-kicker" id="modeKicker">COMMAND MODE</div>
+            <h2 id="modeTitle">Find</h2>
+          </div>
+          <div class="mode-orbit" aria-hidden="true"><span></span><i></i></div>
+        </div>
+        <div id="modeContent"></div>
+      </section>
+
+      <footer class="footer-strip">
+        <span>C:\mini_ark</span>
+        <span class="footer-status"><i></i> Kernel integrity: secure</span>
+        <span>Ctrl + Alt + A focuses search</span>
+      </footer>
+
+      <aside class="status-popover" id="statusPopover" hidden>
+        <strong>System ready</strong>
+        <span>22/22 tests passing</span>
+        <span>origin/main tracking</span>
+        <span>local validation</span>
+      </aside>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+<script src="app.js"></script>
+</body>
+</html>

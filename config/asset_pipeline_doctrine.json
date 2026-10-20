@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "project": {
+    "name": "mini_ark",
+    "root": "C:\\mini_ark",
+    "capability_reference": "C:\\mini_ark"
+  },
+  "doctrine": {
+    "summary": "The asset pipeline is mini_ark's local intake and routing capability. It copies source sheets into controlled intake, generates reviewable outputs, and exports approved assets into project-native folders.",
+    "source_policy": "Do not move or rewrite source files outside C:\\mini_ark unless an explicit operator-approved apply/export step says so.",
+    "intake_policy": "External source paths are copied into asset_pipeline\\inbox before processing. Inbox files are staging copies and may be archived after a successful run.",
+    "token_policy": "Every incoming item either arrives with a token or receives a provisional token at reception. The source document name is primary token evidence. Routing and placement decisions are downstream of token identity.",
+    "output_policy": "Generated outputs remain inside mini_ark's natural asset folders until review or approval.",
+    "approval_policy": "Approval copies the best reviewed stage into approved/ and, when family/label are supplied, into library/. Approval is an export, not a destructive cleanup.",
+    "quality_policy": "Deconstruction is lossless. Repair, precision, treatment, review, and approval are explicit stages with manifests.",
+    "movement_policy": "No deletion, dedupe, source relocation, live-app reference update, or project-file move is automatic."
+  },
+  "natural_folders": {
+    "inbox": "C:\\mini_ark\\asset_pipeline\\inbox",
+    "inbox_archive": "C:\\mini_ark\\asset_pipeline\\inbox\\archive",
+    "recipes": "C:\\mini_ark\\asset_pipeline\\recipes",
+    "work": "C:\\mini_ark\\asset_pipeline\\work",
+    "outbox": "C:\\mini_ark\\asset_pipeline\\outbox",
+    "approved": "C:\\mini_ark\\asset_pipeline\\approved",
+    "library": "C:\\mini_ark\\asset_pipeline\\library",
+    "rejected": "C:\\mini_ark\\asset_pipeline\\rejected",
+    "logs": "C:\\mini_ark\\asset_pipeline\\logs"
+  },
+  "standard_flow": [
+    "copy source sheet to inbox",
+    "read source document name for project/capability token evidence",
+    "detect existing token or assign provisional token",
+    "deconstruct or auto-detect",
+    "repair alpha fragments when needed",
+    "run precision pass for icon-like assets",
+    "review job quality and likely duplicates",
+    "approve/export only when operator accepts the result"
+  ],
+  "token_reception": {
+    "principle": "Reception is token-aware.",
+    "existing_token_sources": [
+      "source document name",
+      "filename",
+      "manifest",
+      "folder context",
+      "metadata",
+      "known project route",
+      "user-provided family",
+      "user-provided label",
+      "prior registry knowledge"
+    ],
+    "source_name_priority": "If the asset sheet or source document names a known project or capability, treat that as intentional identity evidence before falling back to weaker inference.",
+    "examples": {
+      "project_orbit_icon_sheet_4x7.png": [
+        "project_orbit",
+        "icons"
+      ],
+      "media_player_controls_sheet.png": [
+        "media_player",
+        "controls"
+      ]
+    },
+    "missing_token_behavior": "Assign a reviewable provisional token instead of treating the item as anonymous.",
+    "routing_dependency": "Destination logic follows token identity."
+  },
+  "navigator_surface": {
+    "primary_tool": "Tools > Asset Intake",
+    "history": "Tools > Asset Intake History",
+    "advanced_tools": [
+      "Smart Asset Intake",
+      "Batch Master Composer",
+      "Asset Sheet Deconstructor",
+      "Recipe-Bound ImageGen Brief",
+      "9-Slice Builder",
+      "Asset Treatment Bench",
+      "Asset Job Review",
+      "Approve Asset Job",
+      "Asset Repair Pass",
+      "Icon Precision Pass"
+    ]
+  }
+}

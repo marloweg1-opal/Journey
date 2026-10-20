@@ -1,0 +1,27 @@
+{
+  "schema_version": 2,
+  "canonical_short_form": "Journey owns stable functional kernels and safety contracts. External projects own their expression profiles.",
+  "architecture_rule": "No expression profile is ontologically primary. A profile may translate labels and presentation without changing authority, state, receipts or rollback behavior.",
+  "functional_kernels": {
+    "integrate": "Connect systems and preserve coherence.",
+    "sustain": "Protect continuity and ongoing support.",
+    "perceive": "Observe authorized state and surface evidence.",
+    "maintain": "Normalize, repair and reduce drift.",
+    "regulate": "Balance workload, conditions and resource use.",
+    "route": "Resolve ownership, destination and movement paths.",
+    "synchronize": "Coordinate timing, communication and shared state."
+  },
+  "default_profile": {
+    "id": "journey_default",
+    "label": "Journey",
+    "ownership": "this_repository",
+    "translation": "kernel labels remain unchanged"
+  },
+  "external_profile_examples": {
+    "carebloomos": {
+      "label": "CareBloomOS",
+      "ownership": "external_project",
+      "documentation": "examples/carebloom/README.md"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+name: Question or feedback
+description: Ask about Journey, suggest a bounded use case, or share redacted feedback.
+title: "[Question] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking a look at Journey. Please keep examples synthetic or redacted; private inventories, credentials, personal media, and machine logs are not needed.
+  - type: dropdown
+    id: topic
+    attributes:
+      label: What is this about?
+      options:
+        - Product concept or use case
+        - Architecture or implementation
+        - Safety, privacy, or authority boundaries
+        - Documentation or reproducibility
+        - Collaboration or employment conversation
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Question or feedback
+      description: What would you like to understand, test, or suggest?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Optional context
+      description: Include only redacted, non-sensitive details that help explain the question.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I have not included credentials, private inventories, personal media, or unredacted machine logs.
+          required: true

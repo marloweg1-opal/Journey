@@ -1,0 +1,35 @@
+{
+  "schema_version": 2,
+  "implementation_name": "Mini ARK",
+  "implementation_slug": "mini_ark",
+  "canonical_working_tree": "C:\\mini_ark",
+  "product_identity": "Journey",
+  "higher_order_architecture": "Project ARK",
+  "current_decision": "Use Journey as the public product and repository identity. Retain Mini ARK only as a compatibility name for technical paths and integrations until each dependency is deliberately migrated.",
+  "rename_status": "public_identity_approved_technical_migration_pending",
+  "do_not_rename": [
+    "C:\\mini_ark",
+    "ark.py",
+    "ark.cmd",
+    "database paths",
+    "config keys",
+    "module names",
+    "scripts",
+    "service references"
+  ],
+  "future_transition_requires": [
+    "naming and path dependency audit",
+    "config and schema compatibility review",
+    "database migration review",
+    "CLI compatibility and alias strategy",
+    "documentation audit",
+    "logs and receipts compatibility review"
+  ],
+  "expression_rule": {
+    "principle": "Semantic stability, expressive variation.",
+    "identity_boundary": "Journey is the orchestration layer. External projects own their expression profiles.",
+    "allowed_variation": ["visual language", "atmosphere", "persona", "ornamentation", "animation", "sounds", "iconography"],
+    "stability_requirement": "Profiles must preserve familiar controls, capability meaning, authority state, evidence and rollback semantics."
+  },
+  "architecture_summary": "Journey is the adaptive local orchestration layer that reconciles HEXSEED with the user's evolving way of working. Mini ARK is its former product name and current compatibility identifier."
+}

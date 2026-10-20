@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "implementation": "FOUNDATIONS_ONLY",
+  "gate_a_scope_expanded": false,
+  "discover_mode": {"canonical_name":"Discover Mode", "enabled":false,
+    "rule":"Observation never expands action authority; separately approve sensitive variable families."},
+  "existing_schema_mapping": {
+    "provenance":"sources + events.source_id",
+    "temporal_claim":"events.status + supersedes_event_id; future protected payload extension",
+    "need":"open_loops; future protected requirement extension, not proposals",
+    "finding_proposal_operation_event":"existing stewardship tables",
+    "permissions":"perception_policy_events.permissions_json",
+    "self_model":"knowledge_capability_status + existing capability_status; not a new inventory database"
+  },
+  "provider_evidence_fields": ["source_ref","provider_id","subject","claim","provenance","observed_at","scope","purpose","collection_policy_ref","retention_policy_ref","expires_at","supporting_evidence_refs","uncertainty"],
+  "user_derived_default": {"sensitivity":"PRIVATE", "portability":"NONTRANSFERABLE",
+    "persistence":"BLOCKED_UNTIL_PROTECTED_STORE_READY", "logs":"OPAQUE_IDS_AND_STATUS_ONLY",
+    "training":false, "cloud_transmission":false, "automatic_export":false},
+  "protection_requirements": ["vetted cryptography","current-user key protection","access control","purpose checks","bounded retention","selective forgetting including derivatives","encrypted backups","explicit portable export","no plaintext fallback"],
+  "principles": ["Minimum Sufficient Access","Difference is not dysfunction","Frequency is not intent","Correlation is not preference","Availability is not relevance","Explicit correction outranks unsupported inference","Familiarity grants no ownership or authority"],
+  "deferred": ["Discover collectors","behavioral inference","encrypted store implementation and migration","spellchecker service extraction","background scheduling","Journey instantiation"]
+}

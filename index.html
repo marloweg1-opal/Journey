@@ -1,0 +1,1948 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mini_ark Navigator</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07172f;
+      --panel: rgba(9, 27, 55, 0.9);
+      --panel-2: rgba(19, 48, 83, 0.84);
+      --line: rgba(155, 218, 255, 0.34);
+      --text: #f7fbff;
+      --muted: #b8cce2;
+      --cyan: #79dcff;
+      --green: #86e59e;
+      --gold: #ffd987;
+      --rose: #ff94c6;
+      --blue: #9fc4ff;
+      --violet: #d49cff;
+      --frame-panel: linear-gradient(145deg, rgba(28, 62, 101, 0.88), rgba(7, 24, 49, 0.94));
+      --frame-card: linear-gradient(145deg, rgba(21, 52, 87, 0.9), rgba(6, 21, 43, 0.96));
+      --frame-review: linear-gradient(145deg, rgba(34, 63, 98, 0.92), rgba(9, 28, 54, 0.97));
+      font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 50% 4%, rgba(181, 230, 255, 0.28), transparent 26rem),
+        radial-gradient(circle at 20% 72%, rgba(254, 154, 212, 0.16), transparent 22rem),
+        radial-gradient(circle at 78% 72%, rgba(94, 232, 166, 0.14), transparent 24rem),
+        linear-gradient(180deg, #061429, #081b37 48%, #050d1e);
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    button, input, textarea { font: inherit; }
+    button, .link-button {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      min-height: 38px;
+      padding: 8px 11px;
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(28, 67, 111, 0.9), rgba(10, 30, 60, 0.88));
+      cursor: pointer;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 0 18px rgba(76, 174, 255, 0.08);
+    }
+    .link-button { display: inline-flex; align-items: center; }
+    button:hover, button:focus-visible, .link-button:hover, .link-button:focus-visible { border-color: var(--cyan); outline: 0; }
+    a { color: var(--cyan); text-decoration: none; }
+    .navigator {
+      width: min(1120px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background:
+        radial-gradient(circle at 50% -20%, rgba(139, 220, 255, 0.2), transparent 22rem),
+        linear-gradient(rgba(7, 22, 44, 0.94), rgba(7, 22, 44, 0.97)),
+        var(--panel);
+      box-shadow: 0 18px 70px rgba(0, 0, 0, 0.42), 0 0 70px rgba(76, 199, 255, 0.18);
+      overflow: hidden;
+    }
+    .titlebar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: start;
+      padding: 18px 20px 10px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent 65%);
+    }
+    h1, h2, h3, p { margin: 0; letter-spacing: 0; }
+    h1 { font-size: clamp(26px, 4vw, 46px); font-weight: 650; font-family: Georgia, "Times New Roman", serif; }
+    h2 {
+      font-size: 14px;
+      font-weight: 650;
+      margin-bottom: 8px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    h3 { font-size: 15px; font-weight: 650; }
+    .subtitle, .muted, .item p, .detail p { color: var(--muted); }
+    .subtitle { margin-top: 3px; font-size: 13px; }
+    .kernel-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 7px;
+      margin-top: 8px;
+    }
+    .kernel-chip {
+      border: 1px solid rgba(180, 225, 255, 0.26);
+      border-radius: 8px;
+      padding: 6px 7px;
+      min-height: 44px;
+      background: rgba(4, 18, 39, 0.54);
+      display: grid;
+      align-content: center;
+      gap: 2px;
+      text-align: center;
+      font-size: 11px;
+    }
+    .kernel-chip strong { font-size: 12px; }
+    .kernel-chip span { color: var(--muted); }
+    .core { color: #f8f3ff; }
+    .heart { color: #ff9ec9; }
+    .music { color: #ff727f; }
+    .wish { color: #ffd88a; }
+    .clover { color: #84e69a; }
+    .cloud { color: #87ceff; }
+    .moon { color: #b7a0ff; }
+    .status-pill {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      border: 1px solid rgba(151, 213, 122, 0.45);
+      border-radius: 999px;
+      padding: 6px 9px;
+      color: var(--green);
+      background: rgba(151, 213, 122, 0.08);
+      white-space: nowrap;
+      font-size: 13px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--green);
+    }
+    .content {
+      padding: 16px 20px 18px;
+      display: grid;
+      gap: 14px;
+    }
+    .search { display: grid; gap: 7px; }
+    .search label { font-size: 12px; color: var(--muted); }
+    .search input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 9px 11px;
+      color: var(--text);
+      background: rgba(3, 15, 33, 0.82);
+      box-shadow: 0 0 26px rgba(122, 217, 255, 0.16);
+    }
+    .search input:focus { border-color: var(--cyan); outline: 0; }
+    .quick span { font-size: 12px; color: var(--muted); }
+    .quick {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .quick button {
+      min-height: 124px;
+      text-align: center;
+      display: grid;
+      align-content: center;
+      gap: 6px;
+      border: 1px solid rgba(153, 224, 255, 0.42);
+      background:
+        linear-gradient(rgba(4, 21, 45, 0.52), rgba(4, 21, 45, 0.68)),
+        var(--frame-panel);
+      box-shadow: inset 0 0 30px rgba(255,255,255,0.04), 0 12px 28px rgba(0, 0, 0, 0.22);
+    }
+    .quick strong { font-family: Georgia, "Times New Roman", serif; font-size: 24px; font-weight: 600; }
+    .quick button:nth-child(1) { color: var(--cyan); }
+    .quick button:nth-child(2) { color: var(--gold); }
+    .quick button:nth-child(3) { color: var(--violet); }
+    .quick button:nth-child(4) { color: var(--green); }
+    .readouts {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .readout {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 13px;
+      background:
+        linear-gradient(rgba(5, 20, 43, 0.72), rgba(5, 20, 43, 0.78)),
+        var(--frame-card);
+      min-height: 92px;
+      display: grid;
+      align-content: space-between;
+    }
+    .readout span {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+    .readout strong {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .readout small { color: var(--muted); overflow-wrap: anywhere; }
+    .panel { display: none; gap: 9px; }
+    .panel.active { display: grid; }
+    .home-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 0.7fr;
+      gap: 10px;
+    }
+    .home-card,
+    .workbench-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 13px;
+      background:
+        linear-gradient(rgba(5, 20, 43, 0.7), rgba(5, 20, 43, 0.78)),
+        var(--frame-review);
+    }
+    .home-card h3,
+    .workbench-card h3 { margin-bottom: 6px; }
+    .home-card p,
+    .workbench-card p { color: var(--muted); font-size: 13px; line-height: 1.4; }
+    .slot-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 9px;
+    }
+    .slot-chip {
+      border: 1px solid rgba(180, 225, 255, 0.24);
+      border-radius: 7px;
+      padding: 6px;
+      background: rgba(5, 20, 43, 0.58);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .slot-chip strong { display: block; color: var(--text); font-size: 13px; }
+    .home-actions,
+    .workbench-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 11px;
+    }
+    .workbench-flow {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px;
+      background:
+        linear-gradient(rgba(8, 28, 55, 0.68), rgba(8, 28, 55, 0.8)),
+        var(--frame-card);
+    }
+    .item p {
+      margin-top: 4px;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      border-radius: 999px;
+      padding: 3px 8px;
+      color: #121318;
+      background: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .green { background: var(--green); }
+    .gold { background: var(--gold); }
+    .rose { background: var(--rose); }
+    .blue { background: var(--blue); }
+    .cyan { background: var(--cyan); }
+    .detail {
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      display: grid;
+      gap: 9px;
+    }
+    .detail:empty { display: none; }
+    .detail p {
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .touches {
+      display: grid;
+      gap: 5px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .field-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .field-row input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 10px;
+      color: var(--text);
+      background: #0f1217;
+    }
+    .asset-tool {
+      display: grid;
+      gap: 8px;
+      min-width: min(430px, 100%);
+    }
+    .dropzone {
+      display: grid;
+      place-items: center;
+      min-height: 86px;
+      border: 1px dashed rgba(127, 217, 210, 0.72);
+      border-radius: 7px;
+      padding: 12px;
+      text-align: center;
+      color: var(--muted);
+      background: rgba(127, 217, 210, 0.06);
+    }
+    .dropzone.dragover {
+      border-color: var(--gold);
+      color: var(--text);
+      background: rgba(229, 198, 96, 0.12);
+    }
+    .asset-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .asset-controls input[type="file"] {
+      inline-size: 100%;
+      max-inline-size: 250px;
+      color: var(--muted);
+    }
+    .asset-path-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .asset-path-row input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 10px;
+      color: var(--text);
+      background: #0f1217;
+    }
+    textarea.asset-paths {
+      width: 100%;
+      min-height: 94px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 10px;
+      color: var(--text);
+      background: #0f1217;
+    }
+    .mini-form {
+      display: grid;
+      gap: 8px;
+      min-width: min(430px, 100%);
+    }
+    .mini-form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .mini-form input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 10px;
+      color: var(--text);
+      background: #0f1217;
+    }
+    .check-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .check-row input {
+      width: auto;
+      min-height: 0;
+    }
+    .intent-toggle {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .intent-options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .intent-options label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 8px 10px;
+      color: var(--text);
+      background: rgba(20, 26, 36, 0.78);
+      cursor: pointer;
+    }
+    .intent-options input {
+      width: auto;
+      min-height: 0;
+    }
+    .intent-options label:has(input:checked) {
+      border-color: var(--gold);
+      box-shadow: inset 0 -2px 0 rgba(229, 198, 96, 0.65);
+    }
+    .output {
+      max-height: 320px;
+      overflow: auto;
+      white-space: pre-wrap;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px;
+      background: #0b0e13;
+      color: var(--text);
+      font: 12px/1.45 Consolas, "Cascadia Mono", monospace;
+    }
+    .output.error { border-color: var(--rose); }
+    .output.ok { border-color: rgba(151, 213, 122, 0.5); }
+    .output-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-bottom: -2px;
+    }
+    .output-toolbar button {
+      min-height: 30px;
+      padding: 5px 9px;
+      font-size: 12px;
+    }
+    .result-card {
+      display: grid;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px;
+      background: #0f1217;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .result-card.ok { border-color: rgba(151, 213, 122, 0.55); }
+    .result-card.error { border-color: var(--rose); }
+    .result-card strong { color: var(--text); }
+    .result-card span { color: var(--muted); overflow-wrap: anywhere; }
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .mini-list {
+      display: grid;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .mini-list button { min-height: 30px; padding: 5px 8px; }
+    code { color: var(--cyan); overflow-wrap: anywhere; }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    @media (max-width: 520px) {
+      body { padding: 10px; align-items: start; }
+      .navigator { width: 100%; }
+      .titlebar, .item { grid-template-columns: 1fr; }
+      .quick, .readouts, .kernel-row, .slot-grid, .workbench-flow { grid-template-columns: 1fr 1fr; }
+      .home-grid { grid-template-columns: 1fr; }
+      .actions { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="navigator" aria-label="mini_ark Navigator">
+    <section class="titlebar">
+      <div>
+        <h1>mini_ark Navigator</h1>
+        <p class="subtitle">Human-centered local AI stewardship controls</p>
+      </div>
+      <button class="status-pill" type="button" data-select="manage" data-detail="status">
+        <span class="status-dot"></span>
+        Ready
+      </button>
+      <div class="kernel-row" aria-label="Journey functional kernels">
+        <span class="kernel-chip heart"><strong>Sustain</strong><span>Continuity</span></span>
+        <span class="kernel-chip music"><strong>Synchronize</strong><span>Coordinate</span></span>
+        <span class="kernel-chip wish"><strong>Route</strong><span>Place</span></span>
+        <span class="kernel-chip clover"><strong>Maintain</strong><span>Repair</span></span>
+        <span class="kernel-chip cloud"><strong>Regulate</strong><span>Balance</span></span>
+        <span class="kernel-chip moon"><strong>Perceive</strong><span>Observe</span></span>
+        <span class="kernel-chip core"><strong>Integrate</strong><span>Connect</span></span>
+      </div>
+    </section>
+    <section class="content">
+      <div class="search">
+        <label for="command">Search tools, guide entries, and ARK memory</label>
+        <input id="command" type="search" autocomplete="off" placeholder="duplicates, migration, kernels, profiles, diagnostics">
+      </div>
+      <div class="quick" aria-label="Primary actions">
+        <button type="button" data-select="find"><strong>Find</strong><span>Search memory and context</span></button>
+        <button type="button" data-select="tools"><strong>Launch</strong><span>Use focused local utilities</span></button>
+        <button type="button" data-select="guide"><strong>Guide</strong><span>Task-based help with actions</span></button>
+        <button type="button" data-select="manage"><strong>Manage</strong><span>Config, ledgers, tests, Git</span></button>
+      </div>
+      <section class="panel active" data-panel="home">
+        <div class="readouts" aria-label="Tender Console readouts">
+          <div class="readout"><span>System</span><strong>Ready</strong><small>Local control</small></div>
+          <div class="readout"><span>Proposals</span><strong>Loading</strong><small>Bridge status</small></div>
+          <div class="readout"><span>Recent</span><strong>None</strong><small>No actions</small></div>
+          <div class="readout"><span>Authority</span><strong>Human-Gated</strong><small>Minimum necessary</small></div>
+        </div>
+        <div class="home-grid">
+          <article class="home-card">
+            <h3>Tender Console</h3>
+            <p>Home is the quick control surface. Find searches actual ARK memory, Launch opens local tools, Guide ends in actions, and Manage exposes status, approvals, receipts, undo, logs, tests, and Git.</p>
+            <div class="slot-grid">
+              <span class="slot-chip"><strong>Find</strong>Memory and context</span>
+              <span class="slot-chip"><strong>Launch</strong>Tools and workflows</span>
+              <span class="slot-chip"><strong>Guide</strong>Task to action</span>
+              <span class="slot-chip"><strong>Manage</strong>System controls</span>
+            </div>
+          </article>
+          <article class="home-card">
+            <h3>Review Workbench</h3>
+            <p>Use the real proposal lifecycle from inside Navigator: review items, approve, preview, then explicitly apply.</p>
+            <div class="home-actions">
+              <button type="button" data-open-workbench>Open Workbench</button>
+              <button type="button" data-select="tools" data-detail="shadow-run">Shadow Scan</button>
+              <button type="button" data-run-action="patrol-status">Patrol Status</button>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section class="panel" data-panel="find"></section>
+      <section class="panel" data-panel="tools"></section>
+      <section class="panel" data-panel="guide"></section>
+      <section class="panel" data-panel="manage"></section>
+      <section class="panel" data-panel="workbench">
+        <div class="workbench-flow">
+          <article class="workbench-card">
+            <h3>1. Observe</h3>
+            <p>Run Shadow Mode or load current proposals. No filesystem changes happen here.</p>
+            <div class="workbench-actions">
+              <button type="button" data-select="tools" data-detail="shadow-run">Shadow Scan</button>
+              <button type="button" data-workbench-load>Load Proposals</button>
+              <button type="button" data-run-action="patrol-status">Patrol Status</button>
+            </div>
+          </article>
+          <article class="workbench-card">
+            <h3>2. Review</h3>
+            <p>Open proposal items, skip noise, and choose modes before anything is allowed to execute.</p>
+            <div class="workbench-actions">
+              <button type="button" data-select="manage" data-detail="approvals">Approval Desk</button>
+            </div>
+          </article>
+          <article class="workbench-card">
+            <h3>3. Commit</h3>
+            <p>Preview first. Apply requires explicit confirmation and writes receipts for undo.</p>
+            <div class="workbench-actions">
+              <button type="button" data-select="manage" data-detail="receipts">Receipts</button>
+              <button type="button" data-select="manage" data-detail="manage-undo">Undo</button>
+            </div>
+          </article>
+        </div>
+        <section class="mini-list" id="workbench-proposals"></section>
+      </section>
+      <section class="panel" data-panel="results"></section>
+      <section class="detail" id="detail"></section>
+      <div class="footer">
+        <span>C:\mini_ark</span>
+        <span id="live" aria-live="polite">Ctrl + Alt + A focuses search.</span>
+      </div>
+    </section>
+  </main>
+  <script>
+    const entries = [
+      { id: "work-policy", mode: "manage", group: "JOURNEY", title: "Work Policy", summary: "Persisted posture and pending work-mode requests.", touches: ["Read-only policy view"], actionId: "work-policy", details: "Modes never grant permissions. Unsupported requests remain pending, not active.", tags: ["policy", "mode", "pause", "focus"], risk: "green" },
+      { id: "patrol-status", mode: "manage", group: "STEWARDSHIP", title: "Patrol Status", summary: "Coverage, review families, changes, and authority history.", touches: ["Mini ARK ledger"], actionId: "patrol-status", details: "Inspect recent bounded Shadow runs and scoped policy receipts.", tags: ["patrol", "authority", "coverage"], risk: "green" },
+      { id: "recovery-status", mode: "manage", group: "STEWARDSHIP", title: "Recovery & Repair", summary: "Recovery evidence, validation coverage, and task authority.", touches: ["Local recovery evidence"], actionId: "recovery-status", details: "Originals remain unchanged. Recovery does not authorize retirement.", tags: ["recovery", "repair", "media"], risk: "green" },
+      { id: "media-inventory-resume", mode: "manage", group: "STEWARDSHIP", title: "Continue Media Inventory", summary: "Next bounded inventory and hash batch.", touches: ["Registered sources: read only", "Private progress ledger"], actionId: "media-inventory-resume", details: "Resumes registered work only. Held files stay held. No repair, move, deletion, or semantic inspection.", tags: ["recovery", "inventory", "resume", "hash"], risk: "green" },
+      { id: "perception-policy", mode: "manage", group: "PRIVACY", title: "Perception Policy", summary: "Inherited inspection, retention, and learning permissions.", touches: ["Journey privacy registry"], actionId: "perception-policy", privacyForm: true, details: "Semantic providers remain disabled. Structural inspection does not grant semantic access.", tags: ["privacy", "seal", "perception"], risk: "green" },
+      { id: "diagnostics", mode: "tools", group: "SYSTEM TOOLS", title: "Diagnostics", summary: "Checks Mini ARK health, ledger, schema, scan history, handoffs, and open loops.", touches: ["Mini ARK ledger", "Navigator output", "No project files"], actionId: "doctor", details: "Runs the local doctor command and returns the result here.", tags: ["doctor", "health", "status", "diag", "diagnostics"], risk: "green" },
+      { id: "brief", mode: "tools", group: "SYSTEM TOOLS", title: "Current Brief", summary: "Shows unreconciled events, open loops, pending proposals, and recent operating pressure.", touches: ["Mini ARK ledger", "Navigator output", "No project files"], actionId: "brief", details: "Runs the daily orientation command and returns the brief here.", tags: ["brief", "status", "pending", "proposals"], risk: "green" },
+      { id: "inventory", mode: "tools", group: "FILE TOOLS", title: "Inventory Scan", summary: "Classifies files under R: using Mini ARK's doctrine map.", touches: ["Mini ARK report", "Mini ARK ledger", "No moves"], actionId: "inventory-r", details: "Runs read-only classification for R:. It writes an inventory report but does not move files.", tags: ["inventory", "scan", "files", "classify", "folder"], risk: "green" },
+      { id: "duplicates", mode: "tools", group: "FILE TOOLS", title: "Duplicate Review", summary: "Checks duplicate ledger rows and case/path pressure.", touches: ["Mini ARK ledger", "Navigator output", "No project files"], actionId: "duplicates-r", details: "Runs duplicate review from the Navigator.", tags: ["duplicates", "dedupe", "case drift", "drive", "usb", "recovery"], risk: "green" },
+      { id: "diagnose", mode: "tools", group: "FILE TOOLS", title: "Path Diagnostics", summary: "Distinguishes case-only path drift from genuine missing/moved files.", touches: ["Mini ARK ledger", "Navigator output", "No moves"], actionId: "diagnose-r", details: "Runs read-only path diagnostics for R:.", tags: ["diagnose", "case drift", "missing", "paths"], risk: "green" },
+      { id: "placement-check", mode: "tools", group: "FILE TOOLS", title: "Placement Check", summary: "Checks whether a file or folder belongs where it is and suggests the likely canonical home.", touches: ["C:\\mini_ark\\config\\canonical_placement.json", "Navigator output", "No file changes"], actionId: "placement-check", needsPath: true, pathPlaceholder: "R:\\Downloads2", details: "Read-only placement evaluator. It uses the canonical placement doctrine plus classification signals to return current placement, likely canonical placement, confidence, reason, dependencies status, and recommended action. Any actual move still goes through proposal, approval, preview, execute, receipt, and undo.", tags: ["placement", "belongs", "where things belong", "architecture", "cathedralroot", "runescript", "route", "canon", "downloads2", "en route", "protected"], risk: "green" },
+      { id: "shadow-run", mode: "tools", group: "STEWARDSHIP", title: "Shadow Run", summary: "Runs Gate A stewardship reasoning over a bounded scope without moving, renaming, deleting, quarantining, or rewriting managed files.", touches: ["Mini ARK ledger", "Shadow reports", "No managed file changes"], actionId: "shadow-run", needsPath: true, pathPlaceholder: "R:\\Projects\\ExampleProject", details: "Shadow Mode executes the real reasoning path through classification and placement evaluation, records findings/proposals in the Mini ARK ledger, writes summary/evidence reports, and stops before mutation. Use escalating scopes and inspect false positives before expanding.", tags: ["shadow", "gate a", "simulation", "stewardship", "review families", "estimated decisions", "no movement", "proof", "evidence", "journey"], risk: "green" },
+      { id: "name-preview", mode: "tools", group: "FILE TOOLS", title: "Name Preview", summary: "Suggests a canonical name from project, role, and source filename without renaming anything.", touches: ["Navigator output", "No file changes"], actionId: "name-preview", needsPath: true, pathPlaceholder: "C:\\path\\to\\asset.png", details: "Preview-only naming seam. Journey suggests a stable filename; actual rename still goes through proposal, approval, apply, and undo.", tags: ["name", "naming", "rename", "preview", "canonical", "slug", "tokens"], risk: "green" },
+      { id: "migration", mode: "tools", group: "PLANNING TOOLS", title: "R Profile Migration Map", summary: "Maps old R: profile contents into staging destinations.", touches: ["Plan reports", "No source deletion"], actionId: "profile-migration-plan", details: "Builds the profile migration map. Cleanup remains approval-gated.", tags: ["migration", "quarantine", "profile", "users", "cleanup", "move"], risk: "yellow" },
+      { id: "hierarchy", mode: "tools", group: "PLANNING TOOLS", title: "R: Hierarchy Scan", summary: "Scans R: top-level organization and suggests hierarchy lanes.", touches: ["Report output", "No moves"], actionId: "r-hierarchy-scan", details: "Runs hierarchy scan and returns the suggested structure here.", tags: ["hierarchy", "folder", "organization", "R:"], risk: "green" },
+      { id: "asset-intake", mode: "tools", group: "ASSET PIPELINE", title: "Asset Intake", summary: "Drop one or many asset sheets; Journey copies sources into intake, reads source names for tokens, extracts, repairs, checks, and exports only approved sets.", touches: ["asset_pipeline\\inbox receives copies", "source document name read as token evidence", "token detected or provisional token assigned", "asset_pipeline\\outbox generated", "asset_pipeline\\approved generated when quality passes", "asset_pipeline\\library generated when family is set", "External source files are not moved"], actionId: "assets-intake", assetIntake: true, pathPlaceholder: "C:\\path\\to\\sheet-1.png\nC:\\path\\to\\sheet-2.png", details: "Give the pipeline asset sheets and it runs the standard intake/routing workflow end-to-end. Source names are treated as intentional token evidence. An item keeps its existing token when present or receives a provisional token when missing. Path-based intake copies external files into mini_ark first; it does not move the original source. Imperfect results are held for review instead of approved as adequate.", tags: ["asset", "ark", "intake", "extract", "repair", "precision", "review", "approve", "library", "batch", "doctrine", "source", "source document", "asset sheet name", "filename", "token", "provisional token", "reception"], risk: "yellow" },
+      { id: "asset-job-index", mode: "tools", group: "ASSET PIPELINE", title: "Asset Intake History", summary: "Shows intake jobs, stages, asset counts, and contact sheets without exposing internal source jobs.", touches: ["asset_pipeline\\outbox read", "No asset changes"], builtin: "assetJobs", details: "Use this when you need to inspect current asset jobs or grab a job name.", tags: ["asset", "jobs", "outbox", "manifest", "contact sheet", "review"], risk: "green" },
+      { id: "asset-smart-intake", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Smart Asset Intake", summary: "Manual extraction-only pass for debugging detection.", touches: ["asset_pipeline\\inbox generated", "asset_pipeline\\recipes\\<job>.json generated", "asset_pipeline\\outbox\\<job> generated"], actionId: "assets-auto-deconstruct", assetAuto: true, pathPlaceholder: "C:\\path\\to\\asset-sheet.png", details: "Advanced/manual tool for testing detection without running the full pipeline.", tags: ["asset", "smart", "auto", "detect", "intake", "deconstruct", "recipe"], risk: "yellow", advanced: true },
+      { id: "asset-compose-master", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Batch Master Composer", summary: "Manual compose-only pass for building a recipe-bound master sheet.", touches: ["asset_pipeline\\inbox generated", "asset_pipeline\\outbox\\<job> generated", "asset_pipeline\\outbox\\<job>\\master-sheet.png generated"], actionId: "assets-compose-master", assetCompose: true, pathPlaceholder: "C:\\path\\to\\sheet-1.png\nC:\\path\\to\\sheet-2.png", details: "Advanced/manual tool. Asset Intake already uses this when multiple sheets arrive.", tags: ["asset", "batch", "multiple", "compose", "master", "sprite sheet", "atlas"], risk: "yellow", advanced: true },
+      { id: "asset-inbox-deconstruct", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Asset Sheet Deconstructor", summary: "Manual recipe-based deconstruction.", touches: ["asset_pipeline\\inbox read", "asset_pipeline\\outbox generated", "asset_pipeline\\outbox\\<job>\\groups generated", "asset_pipeline\\logs generated"], actionId: "assets-deconstruct-inbox", assetUpload: true, pathPlaceholder: "C:\\path\\to\\master-sheet.png", details: "Advanced/manual tool for recipe-bound sheets. Asset Intake is the normal flow.", tags: ["asset", "assets", "inbox", "deconstruct", "master sheet", "sprite sheet", "atlas", "grouped files", "proof"], risk: "yellow", advanced: true },
+      { id: "asset-brief", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Recipe-Bound ImageGen Brief", summary: "Creates an ImageGen prompt and matching extraction recipe before the sheet is generated.", touches: ["asset_pipeline\\recipes\\<job>.json generated", "asset_pipeline\\outbox\\<job>__imagegen_brief generated"], actionId: "assets-brief", assetBrief: true, details: "Advanced prep tool for engineering future asset sheets.", tags: ["asset", "imagegen", "recipe", "brief", "sprite sheet", "texture atlas", "prompt", "slots"], risk: "green", advanced: true },
+      { id: "asset-nine-slice", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "9-Slice Builder", summary: "Manual 9-slice extraction for frame or panel images.", touches: ["asset_pipeline\\outbox\\<job>\\nine_slice generated", "asset_pipeline\\outbox\\<job>\\manifest.json generated"], actionId: "assets-nine-slice", assetNineSlice: true, pathPlaceholder: "C:\\path\\to\\frame.png", details: "Advanced/manual tool for geometry-sensitive rails and frames. Insets are protected border distances from each edge; leave them blank for an estimated first pass.", tags: ["asset", "nine slice", "9 slice", "frame", "rail", "panel", "resize"], risk: "yellow", advanced: true },
+      { id: "asset-treatment", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Asset Treatment Bench", summary: "Manual treatment variants with trim, padding, fit, tint, and shadow.", touches: ["asset_pipeline\\outbox\\<job>\\treated generated", "asset_pipeline\\outbox\\<job>\\manifest.json generated"], actionId: "assets-treat", assetTreat: true, pathPlaceholder: "C:\\path\\to\\asset.png", details: "Advanced/manual prep for specific one-off variants.", tags: ["asset", "treat", "normalize", "crop", "trim", "padding", "tint", "shadow"], risk: "yellow", advanced: true },
+      { id: "asset-review-job", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Asset Job Review", summary: "Manual quality review for an outbox job.", touches: ["asset_pipeline\\outbox read", "No asset changes"], actionId: "assets-review-job", assetReview: true, details: "Advanced/manual tool. Asset Intake already reviews before approval.", tags: ["asset", "review", "quality", "duplicates", "approve"], risk: "green", advanced: true },
+      { id: "asset-approve-job", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Approve Asset Job", summary: "Manual approval/export for a specific job.", touches: ["asset_pipeline\\approved generated", "asset_pipeline\\library generated when family is set"], actionId: "assets-approve-job", assetApprove: true, details: "Advanced/manual tool. Asset Intake auto-approves only near-perfect sets.", tags: ["asset", "approve", "export", "library", "route"], risk: "yellow", advanced: true },
+      { id: "asset-repair-icons", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Asset Repair Pass", summary: "Manual alpha-fragment repair pass.", touches: ["asset_pipeline\\outbox\\<job>\\repaired generated", "asset_pipeline\\outbox\\<job>\\repair-manifest.json generated", "asset_pipeline\\outbox\\<job>\\repair-contact-sheet.png generated"], actionId: "assets-repair-icons", assetRepair: true, details: "Advanced/manual tool. Asset Intake already repairs before precision/review.", tags: ["asset", "repair", "cleanup", "background removal", "alpha", "fragments", "edge", "reshape"], risk: "green", advanced: true },
+      { id: "asset-precision-icons", mode: "tools", group: "ASSET PIPELINE — ADVANCED", title: "Icon Precision Pass", summary: "Manual trim, pad, center, and organization pass.", touches: ["asset_pipeline\\outbox\\<job>\\precision generated", "asset_pipeline\\outbox\\<job>\\precision-manifest.json generated", "asset_pipeline\\outbox\\<job>\\precision-contact-sheet.png generated"], actionId: "assets-precision-icons", assetPrecision: true, details: "Advanced/manual tool. Asset Intake already runs precision for icon-like extracted assets.", tags: ["asset", "precision", "trim", "center", "icons", "organize", "padding"], risk: "green", advanced: true },
+      { id: "find-memory", mode: "find", group: "ARK MEMORY", title: "Find ARK Memory", summary: "Search actual Mini ARK docs and SQLite memory.", touches: ["Local docs", "SQLite ledger", "No project files"], details: "Type into the search field. FIND queries the local bridge at /api/search and returns ARK docs/ledger results here.", tags: ["find", "search", "memory", "canon", "attribution", "legacy"], risk: "green" },
+      { id: "guide-add-conversation", mode: "guide", group: "GUIDE", title: "Add A Conversation", summary: "Ingest a normalized conversation JSON into review output.", touches: ["ARK database", "Review JSON", "Original conversation is read"], needsPath: true, pathPlaceholder: "C:\\path\\conversation.json", details: "Choose a normalized conversation export. Ingest stops at review output; it does not canonize candidates automatically.", tags: ["conversation", "ingest", "canon", "memory"], risk: "yellow" },
+      { id: "guide-assessment", mode: "guide", group: "GUIDE", title: "Filesystem Assessment", summary: "Retained metadata observations and placement evidence.", touches: ["Historical evidence", "Approved scope only"], actionId: "assessment-status", details: "Metadata only. Historical observations are not a current filesystem snapshot. Scope approval and deployment are required for new observations.", tags: ["scan", "assessment", "progress", "resume", "files"], risk: "green" },
+      { id: "guide-scan", mode: "guide", group: "GUIDE", title: "Legacy Content Hash Scan", summary: "Reads file contents for hashes; fixed 300-second timeout.", touches: ["Mini ARK ledger", "File contents"], needsPath: true, pathPlaceholder: "R:\\", details: "Not the bounded metadata assessment. A timeout may leave partial records and stale running status; automatic continuation is not supported here.", tags: ["scan", "path", "files"], risk: "yellow" },
+      { id: "guide-asset-pipeline", mode: "guide", group: "GUIDE", title: "Use the Asset Pipeline", summary: "Token-aware asset intake doctrine, folders, and launch path.", touches: ["Navigator output", "No asset changes"], actionId: "asset-pipeline-doctrine", details: "Shows how Journey copies source sheets into intake, detects or assigns reception tokens, writes outputs into natural asset folders, and keeps source movement approval-gated.", tags: ["asset", "pipeline", "doctrine", "source", "library", "approved", "inbox", "outbox", "token", "provisional token", "reception"], risk: "green" },
+      { id: "guide-review-duplicates", mode: "guide", group: "GUIDE", title: "Review Duplicates", summary: "Run duplicate review from inside Navigator.", touches: ["Mini ARK ledger", "Navigator output"], actionId: "duplicates-r", details: "Runs duplicate review and shows the result here.", tags: ["duplicates", "review"], risk: "green" },
+      { id: "guide-move-quarantine", mode: "guide", group: "GUIDE", title: "Move / Quarantine Files", summary: "Use proposals: review items, approve, preview apply, then execute.", touches: ["Proposal items", "Quarantine only after execute"], details: "Use Manage > Approvals below. The Navigator preserves the approve -> preview -> explicit apply gate.", tags: ["move", "quarantine", "cleanup", "approve", "apply"], risk: "red" },
+      { id: "undo", mode: "guide", group: "GUIDE", title: "Undo Operation", summary: "Reverse a completed operation by OP id.", touches: ["Prior operation paths", "Mini ARK ledger"], needsOpId: true, details: "Enter an operation id. Undo still requires explicit confirmation in the Navigator.", tags: ["undo", "rollback", "reverse"], risk: "red" },
+      { id: "status", mode: "manage", group: "MANAGE", title: "ARK Status", summary: "Live database, proposal, Git, and recent action state.", touches: ["Mini ARK ledger", "Git status"], actionId: "status", builtin: "status", details: "Refreshes the live status readouts and shows current operating state.", tags: ["ready", "status", "git", "recent"], risk: "green" },
+      { id: "tests", mode: "manage", group: "MANAGE", title: "Test Suite", summary: "Runs standard Mini ARK tests.", touches: ["Test runtime output", "No project files"], actionId: "tests", details: "Runs tests and returns output here.", tags: ["test", "tests", "validation", "22"], risk: "green" },
+      { id: "git", mode: "manage", group: "MANAGE", title: "Git State", summary: "Shows local branch and uncommitted state.", touches: ["Git metadata read", "No push"], actionId: "git-status", details: "Runs git status only. No commit or push.", tags: ["github", "git", "archive", "commit", "push"], risk: "green" },
+      { id: "logs", mode: "manage", group: "MANAGE", title: "Logs", summary: "Lists Mini ARK runtime logs.", touches: ["C:\\mini_ark\\logs"], actionId: "logs", details: "Returns recent local log files here.", tags: ["logs", "server", "runtime"], risk: "green" },
+      { id: "naming-status", mode: "manage", group: "MANAGE", title: "Naming Status", summary: "Shows the Mini ARK / Journey identity boundary and migration guardrails.", touches: ["C:\\mini_ark\\config\\naming_status.json", "C:\\mini_ark\\docs\\JOURNEY_NAMING_ARCHITECTURE.md", "Navigator output"], actionId: "naming-status", details: "Mini ARK remains the implementation name while Journey is the product identity. Project profiles may change presentation without replacing backend identity.", tags: ["journey", "mini ark", "naming", "identity", "migration", "architecture", "project profile"], risk: "green" },
+      { id: "expression-framework", mode: "manage", group: "MANAGE", title: "Expression Framework", summary: "Shows neutral functional kernels, expression profiles, and profile-specific translations.", touches: ["C:\\mini_ark\\config\\expression_framework.json", "C:\\mini_ark\\docs\\HEXSEED_EXPRESSION_FRAMEWORK.md", "Navigator output"], actionId: "expression-framework", details: "Use this when deciding whether something is a functional kernel, an expression profile, or a surface translation. No integration profile becomes Journey's base ontology.", tags: ["expression framework", "functional kernels", "kernel", "profile", "expression profile", "integrate", "sustain", "perceive", "maintain", "regulate", "route", "synchronize"], risk: "green" },
+      { id: "token-registry", mode: "manage", group: "MANAGE", title: "Token Registry", summary: "Shows identities, aliases, owned capabilities, routes, and surface customization hints.", touches: ["C:\\mini_ark\\config\\project_tokens.json", "Navigator output", "No project files"], actionId: "token-registry", details: "Creates the registry if needed, then shows what Journey knows about its capabilities, projects, routes, and customization tokens.", tags: ["tokens", "registry", "journey", "mini ark", "project", "identity", "routing", "customization"], risk: "green" },
+      { id: "route-registry", mode: "manage", group: "MANAGE", title: "Project Routes", summary: "Shows canonical roots and project representations so views, shortcuts, and source-of-truth paths stay distinct.", touches: ["C:\\mini_ark\\config\\project_tokens.json", "Navigator output", "No project files"], actionId: "route-registry", details: "Reads the token registry and reports which paths are canonical routes versus representations without turning every visible folder into a source of truth.", tags: ["routes", "routing", "project", "representations", "canonical", "source of truth", "asset pipeline"], risk: "green" },
+      { id: "placement-doctrine", mode: "manage", group: "MANAGE", title: "Placement Doctrine", summary: "Shows the machine-readable CathedralRoot/RuneScript placement grammar Mini ARK uses to decide where things belong.", touches: ["C:\\mini_ark\\config\\canonical_placement.json", "Navigator output", "No project files"], actionId: "placement-doctrine", details: "Lists canonical locations, domains, owners, purposes, allowed/disallowed content, lifecycle, canonicality, protection level, aliases, related destinations, and reasoning notes.", tags: ["placement", "doctrine", "cathedralroot", "runescript", "where things belong", "canonical location", "architecture", "congruence"], risk: "green" },
+      { id: "stewardship-contract", mode: "manage", group: "MANAGE", title: "Stewardship Contract", summary: "Shows the reliability substrate Mini ARK must obey before broad physical convergence.", touches: ["C:\\mini_ark\\config\\stewardship_contract.json", "Navigator output", "No project files"], actionId: "stewardship-contract", details: "Reports identity layers, finding/proposal/operation/event separation, operation states, commit phases, policy precedence, protected default posture, shadow mode, and graduation gates.", tags: ["contract", "stewardship", "reliability", "shadow mode", "operation state", "identity", "paths are not identity", "policy precedence", "crash recovery", "journey gate"], risk: "green" },
+      { id: "expression-slots", mode: "manage", group: "MANAGE", title: "Expression Slots", summary: "Shows semantic UI slots that project profiles can skin without changing system meaning.", touches: ["C:\\mini_ark\\config\\expression_slot_registry.json", "Navigator output", "No project files"], actionId: "expression-slots", details: "Reports stable slots for shell, system states, review, architecture, operations, and personas. This is the visual-pipeline contract, not final artwork.", tags: ["expression", "slots", "semantic stability", "expressive variation", "visual pipeline", "manifestation", "journey", "ui contract"], risk: "green" },
+      { id: "asset-pipeline-doctrine", mode: "manage", group: "MANAGE", title: "Asset Pipeline Doctrine", summary: "Shows mini_ark's token-aware asset-pipeline source policy, source-name token priority, natural folders, and approval boundaries.", touches: ["C:\\mini_ark\\config\\asset_pipeline_doctrine.json", "C:\\mini_ark\\docs\\ASSET_PIPELINE_DOCTRINE.md", "Navigator output"], actionId: "asset-pipeline-doctrine", details: "Use this when you want project-native asset routing rules without opening docs manually. It returns the doctrine, token-reception policy, source document naming priority, and folder map inside Navigator.", tags: ["asset", "pipeline", "doctrine", "routing", "inbox", "outbox", "approved", "library", "source policy", "source document", "asset sheet name", "filename", "token", "provisional token", "reception"], risk: "green" },
+      { id: "receipts", mode: "manage", group: "MANAGE", title: "Operation Receipts", summary: "Shows recent journaled operations, before/after snapshots, status, and undo commands.", touches: ["Mini ARK ledger", "Navigator output", "No project files"], actionId: "receipts", details: "Reads the action journal and returns the receipts that prove what changed and whether an undo path is available.", tags: ["receipts", "rollback", "undo", "operation", "journal", "audit", "transaction"], risk: "green" },
+      { id: "approvals", mode: "manage", group: "MANAGE", title: "Approvals", summary: "Review pending/approved proposals and run gated apply flow.", touches: ["Mini ARK ledger", "Filesystem only after explicit apply"], builtin: "approvals", details: "Loads real proposals. Each proposal can list items, approve, preview, then explicitly apply.", tags: ["approval", "approve", "proposal", "apply", "review"], risk: "yellow" },
+      { id: "manage-undo", mode: "manage", group: "MANAGE", title: "Undo Controls", summary: "Reverse a completed operation by OP id.", touches: ["Prior operation paths", "Mini ARK ledger"], needsOpId: true, details: "Enter an operation id. Undo requires explicit confirmation in the Navigator.", tags: ["undo", "rollback", "reverse", "operation"], risk: "red" },
+      { id: "reservations", mode: "manage", group: "MANAGE", title: "Reservations", summary: "Shows protected paths Mini ARK will not act on.", touches: ["Mini ARK ledger", "No project files"], actionId: "reservations", details: "Lists protected/reserved paths.", tags: ["reservation", "protected", "guardrail"], risk: "green" }
+    ];
+    const panels = document.querySelectorAll("[data-panel]");
+    const search = document.querySelector("#command");
+    const live = document.querySelector("#live");
+    const detail = document.querySelector("#detail");
+    const detailById = new Map(entries.map((entry) => [entry.id, entry]));
+    const outputCopies = new Map();
+    let lastApplyPreview = null;
+    let lastItemsProposalId = null;
+
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[char]));
+    }
+    function outputStamp() {
+      return new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    }
+    function copyButton(text, label = "Copy Journey Output") {
+      const id = `output-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      outputCopies.set(id, String(text ?? ""));
+      return `<div class="output-toolbar"><button type="button" data-copy-output="${esc(id)}">${esc(label)}</button></div>`;
+    }
+    async function copyTextToClipboard(text) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const scratch = document.createElement("textarea");
+      scratch.value = text;
+      scratch.setAttribute("readonly", "");
+      scratch.style.position = "fixed";
+      scratch.style.left = "-9999px";
+      document.body.appendChild(scratch);
+      scratch.select();
+      document.execCommand("copy");
+      scratch.remove();
+    }
+    function riskTag(risk) {
+      const label = risk === "green" ? "Look" : risk === "yellow" ? "Plan" : "Changes";
+      const cls = risk === "green" ? "green" : risk === "yellow" ? "gold" : "rose";
+      return `<span class="tag ${cls}">${label}</span>`;
+    }
+    async function bridgeRequest(path, options = {}) {
+      let response;
+      try { response = await fetch(path, options); }
+      catch (error) {
+        throw {error: `Navigator lost its local connection at ${location.origin}. Action outcome is unknown; check status before retrying.`, connectionLost: true};
+      }
+      let payload;
+      try { payload = await response.json(); }
+      catch (error) { throw {error: `The local bridge returned an unreadable response (${response.status}). Check status before retrying.`}; }
+      if (!response.ok && response.status !== 409) throw payload;
+      return payload;
+    }
+    async function apiGet(path) { return bridgeRequest(path); }
+    async function apiPost(path, body = {}) {
+      return bridgeRequest(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+    }
+    function setMode(mode) {
+      panels.forEach((panel) => panel.classList.toggle("active", panel.dataset.panel === mode));
+      if (mode !== "results") search.value = "";
+    }
+    function showDetailHtml(html) { detail.innerHTML = html; }
+    function patrolCoverage(run) {
+      return JSON.stringify({
+        discovery: run.coverage ?? null,
+        dependency: run.dependency_coverage ?? {
+          dependency_state: "UNKNOWN", dependency_clearance: false,
+          reason: "Dependency coverage was not recorded for this run."
+        }
+      }, null, 2);
+    }
+    function showOutput(title, payload) {
+      if (payload.ok && String(payload.action || "").startsWith("work-policy")) {
+        const preview = payload.policy;
+        const current = preview.current || preview;
+        live.textContent = `Persisted work policy: ${current.effective_mode}`;
+        showDetailHtml(`<h2>Work Policy</h2><p><strong>${esc(current.effective_mode)}</strong> · revision ${esc(current.posture.version ?? "unknown")}</p>
+          <p>Read at ${esc(current.observed_at)}. This is policy evidence, not worker activity.</p>
+          ${current.limitations.map(v => `<p>${esc(v)}</p>`).join("")}
+          ${preview.draft ? `<h3>Requested, not applied: ${esc(preview.state)}</h3><p>${esc(preview.draft.intention)}</p><p>${esc(preview.next_step)}</p>` : ""}
+          ${preview.recognized === false ? "<p>Request not recognized. No policy changed.</p>" : ""}
+          <form id="work-policy-form"><label for="work-policy-intention">Work-mode request</label>
+          <input id="work-policy-intention" maxlength="1000" required placeholder="Only help with duplicate detection and ask before every job">
+          <button type="submit">Review Request</button></form>
+          <button data-run-action="work-policy">Refresh Policy</button>
+          <details><summary>Policy and draft evidence</summary><pre>${esc(JSON.stringify(preview, null, 2))}</pre></details>`);
+        document.querySelector('#work-policy-form').onsubmit = async event => {
+          event.preventDefault();
+          const intention = document.querySelector('#work-policy-intention').value;
+          try { showOutput('Work Policy', await apiPost('/api/actions/work-policy-preview', {intention})); }
+          catch (error) { live.textContent = 'Policy unavailable; no change applied.'; }
+        };
+        return;
+      }
+      if (payload.ok && String(payload.action || "").startsWith("assessment-")) {
+        const r = payload.assessment;
+        const b = payload.baseline;
+        live.textContent = r ? `Assessment #${r.id}: ${r.state}` : "Historical assessment evidence loaded.";
+        showDetailHtml(`<h2>Filesystem Assessment</h2>
+          <p>${esc(payload.readiness || "Metadata observations retained. No managed files changed.")}</p>
+          ${payload.approved_scope ? `<p>Approved scope: ${esc(payload.approved_scope)}</p>` : ""}
+          ${r ? `<h3>Assessment #${Number(r.id)}: ${esc(r.state)}</h3><p>${esc(r.scope)}</p>
+          <p>${Number(r.files)} files · ${Number(r.bytes).toLocaleString()} bytes observed</p>
+          <p>${Object.entries(r.directory_states).map(([s,n]) => `${Number(n)} ${esc(s.toLowerCase())}`).join(" · ")}</p>
+          <p>First: ${esc(r.first_file_observation || "No files observed")}<br>Latest: ${esc(r.last_file_observation || "No files observed")}</p>
+          <h3>Placement evidence</h3>${r.placement.map(p => `<p><strong>${esc(p.location)}: ${Number(p.count)} observations</strong><br>${esc(p.fact)}<br>${esc(p.inference)}</p>`).join("")}
+          <h3>Unresolved coverage</h3>${r.held.map(h => `<p>${esc(h.path)}: ${esc(h.reason)}</p>`).join("") || "<p>No held directories recorded.</p>"}
+          ${r.limitations.map(v => `<p>${esc(v)}</p>`).join("")}` : "<p>No bounded assessment retained.</p>"}
+          ${b ? `<h3>Earlier inventory: historical, partial</h3><p>${esc(b.scope)}: ${Number(b.retained_files)} retained files · ${Number(b.retained_bytes).toLocaleString()} bytes</p><p>${b.first_observation_utc ? `${esc(b.first_observation_utc)} to ${esc(b.last_observation_utc)} UTC` : "No retained observation timestamps"}</p><p>${esc(b.provenance)}</p>${b.branches.map(g => `<p><strong>${esc(g.relative_branch)}</strong>: ${Number(g.files)} files<br>${esc(g.rule_purpose || "No matching placement rule")}<br>${esc(g.assessment || "Placement not evaluated")}</p>`).join("")}${b.limitations.map(v => `<p>${esc(v)}</p>`).join("")}` : ""}
+          <div class="actions"><button data-run-action="assessment-status">Refresh Evidence</button>
+          <button data-run-action="assessment-continue" ${payload.can_continue ? "" : "disabled"}>${r ? "Continue Bounded Assessment" : "Start Bounded Assessment"}</button></div>
+          <details><summary>Exact evidence receipt</summary><pre>${esc(JSON.stringify(payload, null, 2))}</pre></details>`);
+        return;
+      }
+      if (payload.ok && (payload.action === "patrol-status" || payload.patrol)) {
+        const patrol = payload.patrol || payload;
+        live.textContent = "Patrol evidence loaded. Shadow authority; Gate A remains open.";
+        showDetailHtml(`<h2>Patrol</h2>${(patrol.runs || []).slice(0, 5).map(run => `<article class="item"><div><h3>${esc(run.scope)}</h3><p>${esc(run.status)} · ${run.files_examined} examined · ${run.files_implicated} implicated · ${run.estimated_human_decisions} decisions</p><p>${esc(run.evidence_source)} · ${esc(run.lifecycle_posture?.value || "CONSTRUCTION")} · ${esc(run.attention_posture || "")}</p>${(run.families || []).map(family => `<p>${esc(family.resolution_strategy)}: ${family.count} files · ${esc(family.recommended_action)}</p>`).join("")}<details><summary>Evidence and coverage</summary><pre>${esc(patrolCoverage(run))}</pre></details></div></article>`).join("")}<details><summary>Authority history</summary><pre>${esc(JSON.stringify(patrol.policies || [], null, 2))}</pre></details>`);
+        const control = patrol.control_state;
+        if (control) detail.insertAdjacentHTML("afterbegin", `<p>${esc(control.lifecycle)} · ${esc(control.mode)} · ${esc(control.authority)}</p><label><input type="checkbox" data-patrol-paused data-version="${Number(control.version)}" ${control.paused ? "checked" : ""}> Pause Patrol between sweeps</label><p>Background schedule: not enabled</p>`);
+        return;
+      }
+      if (String(payload.action || "").startsWith("assets-")) {
+        showAssetOutput(title, payload);
+        return;
+      }
+      const text = payload.output || payload.error || JSON.stringify(payload, null, 2);
+      const cls = payload.ok ? "ok" : "error";
+      live.textContent = payload.ok ? `${title} complete.` : `${title} needs attention.`;
+      detail.insertAdjacentHTML("beforeend", `${copyButton(text, `Copy: ${title} ${outputStamp()}`)}<pre class="output ${cls}">${esc(text)}</pre>`);
+      refreshStatus();
+    }
+    function parseOutputJson(payload) {
+      if (!payload.output || typeof payload.output !== "string") return null;
+      try { return JSON.parse(payload.output); } catch { return null; }
+    }
+    function showAssetOutput(title, payload) {
+      const parsed = parseOutputJson(payload);
+      const cls = payload.ok ? "ok" : "error";
+      const processed = parsed?.processed || [];
+      const skipped = parsed?.skipped || [];
+      const errors = parsed?.errors || [];
+      const outputPath = processed[0]?.job_dir || (payload.output && !payload.output.trim().startsWith("{") ? payload.output.trim() : "");
+      const headline = payload.ok
+        ? `${title} complete.`
+        : `${title} needs attention.`;
+      live.textContent = headline;
+      const rows = [];
+      if (payload.saved_to) rows.push(["Saved to inbox", Array.isArray(payload.saved_to) ? payload.saved_to.join("\n") : payload.saved_to]);
+      if (payload.archived_to) rows.push(["Archived to", Array.isArray(payload.archived_to) ? payload.archived_to.join("\n") : payload.archived_to]);
+      if (parsed?.recipe_path) rows.push(["Recipe", parsed.recipe_path]);
+      if (parsed?.brief_path) rows.push(["ImageGen brief", parsed.brief_path]);
+      if (parsed?.job_dir) rows.push(["Job folder", parsed.job_dir]);
+      if (parsed?.master_sheet) rows.push(["Master sheet", parsed.master_sheet]);
+      if (parsed?.master_recipe) rows.push(["Master recipe", parsed.master_recipe]);
+      if (parsed?.master_manifest) rows.push(["Master manifest", parsed.master_manifest]);
+      if (parsed?.status) rows.push(["Status", parsed.status]);
+      if (parsed?.summary_path) rows.push(["Summary", parsed.summary_path]);
+      if (parsed?.source_count) rows.push(["Sources", `${parsed.source_count}`]);
+      if (parsed?.canvas) rows.push(["Canvas", `${parsed.canvas.width} x ${parsed.canvas.height}`]);
+      if (parsed?.canvas_size) rows.push(["Canvas", parsed.canvas_size.join(" x ")]);
+      if (parsed?.slot_count) rows.push(["Slots", `${parsed.slot_count}`]);
+      if (parsed?.asset_count) rows.push(["Assets", `${parsed.asset_count}`]);
+      if (parsed?.removed_components !== undefined) rows.push(["Removed fragments", `${parsed.removed_components}`]);
+      if (parsed?.removed_pixels !== undefined) rows.push(["Removed pixels", `${parsed.removed_pixels}`]);
+      if (parsed?.reshape_candidate !== undefined) rows.push(["Reshape candidate", parsed.reshape_candidate ? "attempted" : "off"]);
+      if (parsed?.reshape_accepted !== undefined) rows.push(["Reshape accepted", `${parsed.reshape_accepted}`]);
+      if (parsed?.reshape_rejected !== undefined) rows.push(["Reshape rejected", `${parsed.reshape_rejected}`]);
+      if (parsed?.max_fill_ratio !== undefined) rows.push(["Max fill", `${Math.round(Number(parsed.max_fill_ratio) * 100)}%`]);
+      if (parsed?.source_stage) rows.push(["Source stage", parsed.source_stage]);
+      if (parsed?.approved_root) rows.push(["Approved root", parsed.approved_root]);
+      if (parsed?.assets_root) rows.push(["Assets root", parsed.assets_root]);
+      if (parsed?.library_root) rows.push(["Library root", parsed.library_root]);
+      if (parsed?.quality) rows.push(["Quality", `${parsed.quality.pass_count || 0} pass / ${parsed.quality.review_count || 0} review / ${parsed.quality.reject_count || 0} reject`]);
+      if (parsed?.quality?.duplicate_pair_count !== undefined) rows.push(["Duplicate checks", `${parsed.quality.duplicate_group_count || 0} groups / ${parsed.quality.duplicate_asset_count || 0} assets / ${parsed.quality.duplicate_pair_count || 0} pairs`]);
+      if (parsed?.review?.quality) rows.push(["Review", `${parsed.review.quality.pass_count || 0} pass / ${parsed.review.quality.review_count || 0} review / ${parsed.review.quality.reject_count || 0} reject`]);
+      if (parsed?.review?.quality?.duplicate_pair_count !== undefined) rows.push(["Duplicate checks", `${parsed.review.quality.duplicate_group_count || 0} groups / ${parsed.review.quality.duplicate_asset_count || 0} assets / ${parsed.review.quality.duplicate_pair_count || 0} pairs`]);
+      if (parsed?.approval_blocked_reasons?.length) rows.push(["Approval blocked", parsed.approval_blocked_reasons.join(", ")]);
+      if (parsed?.approval?.library_root) rows.push(["Library root", parsed.approval.library_root]);
+      if (parsed?.organization) rows.push(["Organization", parsed.organization]);
+      if (parsed?.contact_sheet) rows.push(["Contact sheet", parsed.contact_sheet]);
+      if (parsed?.preview_path) rows.push(["Preview", parsed.preview_path]);
+      if (outputPath) rows.push(["Output", outputPath]);
+      if (processed.length) rows.push(["Processed", `${processed.length} sheet${processed.length === 1 ? "" : "s"}`]);
+      if (skipped.length) rows.push(["Skipped", `${skipped.length} sheet${skipped.length === 1 ? "" : "s"}`]);
+      if (errors.length) rows.push(["Errors", `${errors.length}`]);
+      if (parsed?.log_path) rows.push(["Log", parsed.log_path]);
+      if (!rows.length && payload.error) rows.push(["Issue", payload.error]);
+      const skippedList = skipped.slice(0, 4).map((item) => `<span>${esc(item.reason)}: ${esc(item.sheet)}</span>`).join("");
+      const copyText = payload.output || payload.error || JSON.stringify(payload, null, 2);
+      detail.insertAdjacentHTML("beforeend", `
+        <section class="result-card ${cls}">
+          ${copyButton(copyText, `Copy: ${title} ${outputStamp()}`)}
+          <strong>${esc(headline)}</strong>
+          <div class="result-grid">
+            ${rows.map(([label, value]) => `<span><strong>${esc(label)}</strong><br>${esc(value)}</span>`).join("")}
+          </div>
+          ${skippedList ? `<div class="mini-list">${skippedList}<span>Next: create or choose a matching recipe for skipped sheets.</span></div>` : ""}
+          ${payload.output ? `<details><summary>Raw output</summary><pre class="output ${cls}">${esc(payload.output)}</pre></details>` : ""}
+        </section>
+      `);
+      refreshStatus();
+    }
+    function actionButtons(item) {
+      if (item.builtin === "status") return `<button type="button" data-run-status>Refresh Status</button>`;
+      if (item.builtin === "approvals") return `<button type="button" data-load-proposals>Load Proposals</button>`;
+      if (item.builtin === "assetJobs") return `<button type="button" data-load-asset-jobs>Load Asset Jobs</button>`;
+      if (item.assetIntake) {
+        return `
+          <div class="asset-tool">
+            <div class="dropzone" data-intake-dropzone>Drop asset sheets here</div>
+            <div class="asset-controls">
+              <input type="file" data-intake-file accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff" multiple>
+              <button type="button" data-run-intake-path>Run Asset Intake</button>
+            </div>
+            <textarea class="asset-paths" data-intake-path-input placeholder="${esc(item.pathPlaceholder || "C:\\path\\to\\sheet-1.png\nC:\\path\\to\\sheet-2.png")}"></textarea>
+            <div class="mini-form-grid">
+              <input data-intake-family placeholder="Library family, e.g. navigation">
+              <input data-intake-label placeholder="Set label, e.g. vlc_buttons">
+            </div>
+            <div class="intent-toggle">
+              <strong>Batch intent</strong>
+              <div class="intent-options">
+                <label><input type="checkbox" data-intake-combine-sheets> Combine selected sheets into one set</label>
+              </div>
+            </div>
+            <details>
+              <summary>Advanced intake settings</summary>
+              <div class="mini-form-grid">
+                <input data-intake-job placeholder="Job name">
+                <input data-intake-min-area type="number" min="1" value="5000" placeholder="Min area">
+                <input data-intake-complete-min-area type="number" min="1" value="300" placeholder="Small floor">
+                <input data-intake-padding type="number" min="0" value="8" placeholder="Precision padding">
+                <input data-intake-repair-area type="number" min="1" value="24" placeholder="Repair floor">
+                <input data-intake-fill type="number" min="0" step="0.01" value="0.08" placeholder="Max fill">
+              </div>
+              <div class="check-row">
+                <label><input type="checkbox" data-intake-no-auto-approve> Hold even perfect sets</label>
+                <label><input type="checkbox" data-intake-allow-duplicates> Allow duplicate-looking assets</label>
+              </div>
+            </details>
+          </div>
+        `;
+      }
+      if (item.assetUpload) {
+        return `
+          <div class="asset-tool">
+            <div class="dropzone" data-asset-dropzone>Drag asset sheet here</div>
+            <div class="asset-controls">
+              <input type="file" data-asset-file accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff">
+              <button type="button" data-run-action="${esc(item.actionId)}">Run Inbox</button>
+            </div>
+            <div class="asset-path-row">
+              <input data-asset-path-input placeholder="${esc(item.pathPlaceholder || "C:\\path\\to\\asset-sheet.png")}">
+              <button type="button" data-run-asset-path>Deconstruct Path</button>
+            </div>
+          </div>
+        `;
+      }
+      if (item.assetAuto) {
+        return `
+          <div class="asset-tool">
+            <div class="dropzone" data-auto-dropzone>Drag asset sheet here</div>
+            <div class="asset-controls">
+              <input type="file" data-auto-file accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff">
+              <button type="button" data-run-auto-path>Smart Intake Path</button>
+            </div>
+            <div class="asset-path-row">
+              <input data-auto-path-input placeholder="${esc(item.pathPlaceholder || "C:\\path\\to\\asset-sheet.png")}">
+            </div>
+            <details>
+              <summary>Advanced detection</summary>
+              <div class="mini-form-grid">
+                <input data-auto-job placeholder="Job name">
+                <input data-auto-threshold type="number" min="1" max="255" value="8" placeholder="Alpha">
+                <input data-auto-min-area type="number" min="1" value="5000" placeholder="Min area">
+                <input data-auto-padding type="number" min="0" value="0" placeholder="Padding">
+              </div>
+            </details>
+          </div>
+        `;
+      }
+      if (item.assetCompose) {
+        return `
+          <div class="asset-tool">
+            <div class="dropzone" data-compose-dropzone>Drag multiple asset sheets here</div>
+            <div class="asset-controls">
+              <input type="file" data-compose-file accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff" multiple>
+              <button type="button" data-run-compose-path>Compose Paths</button>
+            </div>
+            <textarea class="asset-paths" data-compose-path-input placeholder="${esc(item.pathPlaceholder || "C:\\path\\to\\sheet-1.png\nC:\\path\\to\\sheet-2.png")}"></textarea>
+            <details>
+              <summary>Master sheet options</summary>
+              <div class="mini-form-grid">
+                <input data-compose-job placeholder="Job name">
+                <input data-compose-cell-size type="number" min="1" placeholder="Cell size">
+                <input data-compose-columns type="number" min="1" placeholder="Columns">
+                <input data-compose-gutter type="number" min="0" value="48" placeholder="Gutter">
+                <input data-compose-margin type="number" min="0" value="96" placeholder="Margin">
+                <input data-compose-min-area type="number" min="1" value="5000" placeholder="Min area">
+                <input data-compose-complete-min-area type="number" min="1" value="300" placeholder="Small floor">
+                <input data-compose-prefix placeholder="Name prefix">
+              </div>
+            </details>
+          </div>
+        `;
+      }
+      if (item.assetBrief) {
+        return `
+          <div class="mini-form" data-brief-form>
+            <input data-brief-job placeholder="Job name, e.g. navigation_panel_parts">
+            <input data-brief-slots placeholder="Slots, comma-separated: top_rail,bottom_rail,center_crest,tab_home">
+            <div class="mini-form-grid">
+              <input data-brief-columns type="number" min="1" value="3" placeholder="Columns">
+              <input data-brief-cell-width type="number" min="1" value="512" placeholder="Cell W">
+              <input data-brief-cell-height type="number" min="1" value="512" placeholder="Cell H">
+              <input data-brief-group value="generated_assets" placeholder="Group">
+            </div>
+            <div class="mini-form-grid">
+              <input data-brief-gutter-x type="number" min="0" value="48" placeholder="Gutter X">
+              <input data-brief-gutter-y type="number" min="0" value="48" placeholder="Gutter Y">
+              <input data-brief-margin-x type="number" min="0" value="96" placeholder="Margin X">
+              <input data-brief-margin-y type="number" min="0" value="96" placeholder="Margin Y">
+            </div>
+            <div class="mini-form-grid">
+              <input data-brief-safe-zone-width type="number" min="1" placeholder="Safe W">
+              <input data-brief-safe-zone-height type="number" min="1" placeholder="Safe H">
+              <input data-brief-background value="transparent" placeholder="Background">
+            </div>
+            <input data-brief-style placeholder="Style brief, e.g. dark navy navigation panel parts. No text.">
+            <button type="button" data-run-brief>Build Brief + Recipe</button>
+          </div>
+        `;
+      }
+      if (item.assetNineSlice) {
+        return `
+          <div class="mini-form" data-nine-slice-form>
+            <input data-nine-path placeholder="${esc(item.pathPlaceholder || "C:\\path\\to\\frame.png")}">
+            <p class="muted">Insets protect ornamental borders from stretching. Leave blank for an estimated first pass.</p>
+            <div class="mini-form-grid">
+              <input data-nine-left type="number" min="0" title="Protected pixels from the left edge" placeholder="Left edge">
+              <input data-nine-top type="number" min="0" title="Protected pixels from the top edge" placeholder="Top edge">
+              <input data-nine-right type="number" min="0" title="Protected pixels from the right edge" placeholder="Right edge">
+              <input data-nine-bottom type="number" min="0" title="Protected pixels from the bottom edge" placeholder="Bottom edge">
+            </div>
+            <input data-nine-job placeholder="Optional job name">
+            <button type="button" data-run-nine-slice>Build 9-Slice</button>
+          </div>
+        `;
+      }
+      if (item.assetTreat) {
+        return `
+          <div class="mini-form" data-treat-form>
+            <input data-treat-path placeholder="${esc(item.pathPlaceholder || "C:\\path\\to\\asset.png")}">
+            <div class="check-row">
+              <label><input type="checkbox" data-treat-trim checked> Trim alpha</label>
+              <label>Padding <input data-treat-padding type="number" min="0" value="2"></label>
+            </div>
+            <div class="mini-form-grid">
+              <input data-treat-max-width type="number" min="1" placeholder="Max W">
+              <input data-treat-max-height type="number" min="1" placeholder="Max H">
+              <input data-treat-tint placeholder="#c8ddff">
+              <input data-treat-tint-strength type="number" min="0" max="1" step="0.05" value="0">
+            </div>
+            <div class="mini-form-grid">
+              <input data-treat-shadow-blur type="number" min="0" value="0" placeholder="Blur">
+              <input data-treat-shadow-offset-x type="number" value="0" placeholder="X">
+              <input data-treat-shadow-offset-y type="number" value="0" placeholder="Y">
+              <input data-treat-shadow-opacity type="number" min="0" max="255" value="128" placeholder="Opacity">
+            </div>
+            <input data-treat-job placeholder="Optional job name">
+            <button type="button" data-run-treat>Render Treatment</button>
+          </div>
+        `;
+      }
+      if (item.assetPrecision) {
+        return `
+          <div class="mini-form" data-precision-form>
+            <input data-precision-job placeholder="Outbox job name">
+            <div class="mini-form-grid">
+              <input data-precision-padding type="number" min="0" value="8" placeholder="Padding">
+              <input data-precision-alpha type="number" min="1" max="255" value="1" placeholder="Alpha">
+              <input data-precision-target type="text" placeholder="Target, e.g. 200 or 200x180">
+            </div>
+            <div class="check-row">
+              <label><input type="checkbox" data-precision-not-square> Keep rectangular auto canvas</label>
+            </div>
+            <button type="button" data-run-precision>Run Precision Pass</button>
+          </div>
+        `;
+      }
+      if (item.assetRepair) {
+        return `
+          <div class="mini-form" data-repair-form>
+            <input data-repair-job placeholder="Outbox job name">
+            <div class="mini-form-grid">
+              <input data-repair-alpha type="number" min="1" max="255" value="1" placeholder="Alpha">
+              <input data-repair-min-area type="number" min="1" value="24" placeholder="Min area">
+              <input data-repair-fill type="number" min="0" step="0.01" value="0.08" placeholder="Max fill">
+            </div>
+            <div class="check-row">
+              <label><input type="checkbox" data-repair-smooth checked> Smooth alpha edge</label>
+              <label><input type="checkbox" data-repair-largest> Keep only largest component</label>
+              <label><input type="checkbox" data-repair-reshape> Try reshape candidate</label>
+            </div>
+            <button type="button" data-run-repair>Run Repair Pass</button>
+          </div>
+        `;
+      }
+      if (item.assetReview) {
+        return `
+          <div class="mini-form" data-review-form>
+            <input data-review-job placeholder="Outbox job name">
+            <button type="button" data-run-asset-review>Review Job</button>
+          </div>
+        `;
+      }
+      if (item.assetApprove) {
+        return `
+          <div class="mini-form" data-approve-form>
+            <input data-approve-job placeholder="Outbox job name">
+            <div class="mini-form-grid">
+              <input data-approve-family placeholder="Library family, e.g. navigation">
+              <input data-approve-label placeholder="Set label, e.g. vlc_buttons">
+            </div>
+            <button type="button" data-run-asset-approve>Approve + Export</button>
+          </div>
+        `;
+      }
+      if (item.privacyForm) return `<div class="mini-form" data-privacy-form>
+        <label>Folder or source path<input data-privacy-path></label>
+        <label>Policy<select data-privacy-mode><option>SEALED</option><option>LIMITED</option><option>OPEN</option></select></label>
+        <label>Purpose<input data-privacy-purpose></label><label>Reason<input data-privacy-reason></label>
+        <label><input type="checkbox" data-privacy-retention> Allow semantic retention</label>
+        <label><input type="checkbox" data-privacy-learning> Allow learning</label>
+        <label><input type="checkbox" data-privacy-confirm> Confirm this policy change</label>
+        <button type="button" data-privacy-read>Inspect Policy</button><button type="button" data-privacy-save>Save Policy</button></div>`;
+      if (item.needsPath) {
+        return `
+          <div class="field-row" data-path-form>
+            <input data-path-input placeholder="${esc(item.pathPlaceholder || "Path")}">
+            <button type="button" data-run-path="${esc(item.id)}">Run</button>
+          </div>
+        `;
+      }
+      if (item.needsOpId) {
+        return `
+          <div class="field-row">
+            <input data-op-input placeholder="Operation id, e.g. 42">
+            <button type="button" data-undo-preview>Prepare Undo</button>
+          </div>
+        `;
+      }
+      if (item.actionId) return `<button type="button" data-run-action="${esc(item.actionId)}">Run</button>`;
+      return "";
+    }
+    function renderItems(panelName, items) {
+      const panel = document.querySelector(`[data-panel="${panelName}"]`);
+      if (!panel) return;
+      items.forEach((item) => detailById.set(item.id, item));
+      panel.innerHTML = items.map((item) => `
+        <article class="item">
+          <div>
+            <h3>${esc(item.title)}</h3>
+            <p>${esc(item.summary)}</p>
+          </div>
+          <div class="actions">
+            ${riskTag(item.risk)}
+            <button type="button" data-detail="${esc(item.id)}">Open</button>
+            ${item.actionId && item.risk === "green" ? `<button type="button" data-run-action="${esc(item.actionId)}">Run</button>` : ""}
+          </div>
+        </article>
+      `).join("");
+    }
+    function normalizeServerResult(item, index) {
+      return {
+        id: `server-${index}-${item.group}-${item.title}`.replace(/[^A-Za-z0-9_-]+/g, "-"),
+        mode: "results",
+        group: item.group || "ARK MEMORY",
+        title: item.title || "Result",
+        summary: item.summary || "",
+        touches: item.touches || ["Mini ARK retrieval"],
+        details: item.details || item.summary || "Matched Mini ARK retrieval.",
+        tags: [],
+        risk: item.risk || "green"
+      };
+    }
+    function setDetail(id) {
+      const item = detailById.get(id);
+      if (!item) return;
+      detail.innerHTML = `
+        <h2>${esc(item.group)}</h2>
+        <h3>${esc(item.title)}</h3>
+        <p>${esc(item.details)}</p>
+        <div class="touches">
+          <strong>Touches</strong>
+          ${(item.touches || []).map((touch) => `<span>${esc(touch)}</span>`).join("")}
+        </div>
+        <div class="actions">${actionButtons(item)}</div>
+        ${item.builtin === "approvals" ? `<section class="mini-list" id="proposal-list"></section>` : ""}
+        ${item.builtin === "assetJobs" ? `<section class="mini-list" id="asset-job-list"></section>` : ""}
+      `;
+    }
+    async function fetchArkResults(query) {
+      try {
+        const payload = await apiGet(`/api/search?q=${encodeURIComponent(query)}`);
+        return (payload.results || []).map(normalizeServerResult);
+      } catch {
+        return [];
+      }
+    }
+    async function runBridgeAction(actionId) {
+      const item = [...detailById.values()].find((candidate) => candidate.actionId === actionId);
+      live.textContent = `Running ${item?.title || actionId}...`;
+      detail.querySelectorAll(".output").forEach((node) => node.remove());
+      if (actionId === "logs") {
+        const payload = await apiPost(`/api/actions/${actionId}`);
+        renderLogs(payload.logs || []);
+        return;
+      }
+      const payload = actionId === "status"
+        ? await apiGet("/api/status")
+        : await apiPost(`/api/actions/${actionId}`);
+      if (actionId === "status") renderStatus(payload);
+      else showOutput(item?.title || actionId, payload);
+    }
+    function readFileAsBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+          const result = String(reader.result || "");
+          resolve(result.includes(",") ? result.split(",", 2)[1] : result);
+        });
+        reader.addEventListener("error", () => reject(reader.error || new Error("File read failed.")));
+        reader.readAsDataURL(file);
+      });
+    }
+    async function readFilesForUpload(files) {
+      const list = Array.from(files || []).filter(Boolean);
+      const uploads = [];
+      for (const file of list) {
+        uploads.push({ filename: file.name, data_base64: await readFileAsBase64(file) });
+      }
+      return uploads;
+    }
+    async function runAssetUpload(file) {
+      if (!file) {
+        live.textContent = "Asset sheet required.";
+        return;
+      }
+      live.textContent = `Uploading ${file.name}...`;
+      detail.querySelectorAll(".output").forEach((node) => node.remove());
+      const dataBase64 = await readFileAsBase64(file);
+      live.textContent = `Deconstructing ${file.name}...`;
+      const payload = await apiPost("/api/actions/assets-deconstruct-inbox", {
+        filename: file.name,
+        data_base64: dataBase64
+      });
+      showOutput("Asset Sheet Deconstructor", payload);
+    }
+    async function runAutoUpload(file) {
+      if (!file) {
+        live.textContent = "Asset sheet required.";
+        return;
+      }
+      live.textContent = `Inspecting ${file.name}...`;
+      detail.querySelectorAll(".output, .result-card").forEach((node) => node.remove());
+      const dataBase64 = await readFileAsBase64(file);
+      const payload = await apiPost("/api/actions/assets-auto-deconstruct", {
+        filename: file.name,
+        data_base64: dataBase64,
+        job: fieldValue("[data-auto-job]"),
+        alpha_threshold: fieldValue("[data-auto-threshold]") || "8",
+        min_area: fieldValue("[data-auto-min-area]") || "5000",
+        padding: fieldValue("[data-auto-padding]") || "0"
+      });
+      showOutput("Smart Asset Intake", payload);
+    }
+    async function runAssetPath() {
+      const input = detail.querySelector("[data-asset-path-input]");
+      const value = normalizeLocalPathInput(input?.value?.trim() || "");
+      if (input) input.value = value;
+      if (!value) {
+        live.textContent = "Asset sheet path required.";
+        return;
+      }
+      live.textContent = "Copying asset sheet into inbox...";
+      detail.querySelectorAll(".output").forEach((node) => node.remove());
+      const payload = await apiPost("/api/actions/assets-deconstruct-inbox", { path: value });
+      showOutput("Asset Sheet Deconstructor", payload);
+    }
+    async function runAutoPath() {
+      const input = detail.querySelector("[data-auto-path-input]");
+      const value = normalizeLocalPathInput(input?.value?.trim() || "");
+      if (input) input.value = value;
+      if (!value) {
+        live.textContent = "Asset sheet path required.";
+        return;
+      }
+      live.textContent = "Auto-detecting asset sheet...";
+      detail.querySelectorAll(".output, .result-card").forEach((node) => node.remove());
+      const payload = await apiPost("/api/actions/assets-auto-deconstruct", {
+        path: value,
+        job: fieldValue("[data-auto-job]"),
+        alpha_threshold: fieldValue("[data-auto-threshold]") || "8",
+        min_area: fieldValue("[data-auto-min-area]") || "5000",
+        padding: fieldValue("[data-auto-padding]") || "0"
+      });
+      showOutput("Smart Asset Intake", payload);
+    }
+    function composeOptions() {
+      const payload = {
+        job: fieldValue("[data-compose-job]"),
+        cell_size: fieldValue("[data-compose-cell-size]"),
+        columns: fieldValue("[data-compose-columns]"),
+        gutter: fieldValue("[data-compose-gutter]") || "48",
+        margin: fieldValue("[data-compose-margin]") || "96",
+        min_area: fieldValue("[data-compose-min-area]") || "5000",
+        complete_min_area: fieldValue("[data-compose-complete-min-area]") || "300",
+        name_prefix: fieldValue("[data-compose-prefix]") || "asset"
+      };
+      Object.keys(payload).forEach((key) => {
+        if (payload[key] === "") delete payload[key];
+      });
+      return payload;
+    }
+    async function runComposeUpload(files) {
+      const uploads = await readFilesForUpload(files);
+      if (uploads.length < 2) {
+        live.textContent = "Choose at least two sheets for master compose.";
+        return;
+      }
+      live.textContent = `Composing ${uploads.length} asset sheets...`;
+      detail.querySelectorAll(".output, .result-card").forEach((node) => node.remove());
+      const payload = await apiPost("/api/actions/assets-compose-master", {
+        files: uploads,
+        ...composeOptions()
+      });
+      showOutput("Batch Master Composer", payload);
+    }
+    async function runComposePath() {
+      const input = detail.querySelector("[data-compose-path-input]");
+      const paths = String(input?.value || "").split(/\r?\n/).map((value) => normalizeLocalPathInput(value)).filter(Boolean);
+      if (input) input.value = paths.join("\n");
+      if (paths.length < 2) {
+        live.textContent = "Paste at least two sheet paths, one per line.";
+        return;
+      }
+      live.textContent = `Composing ${paths.length} asset sheet paths...`;
+      detail.querySelectorAll(".output, .result-card").forEach((node) => node.remove());
+      const payload = await apiPost("/api/actions/assets-compose-master", {
+        paths,
+        ...composeOptions()
+      });
+      showOutput("Batch Master Composer", payload);
+    }
+    function intakeOptions() {
+      const payload = {
+        job: fieldValue("[data-intake-job]"),
+        family: fieldValue("[data-intake-family]"),
+        label: fieldValue("[data-intake-label]"),
+        min_area: fieldValue("[data-intake-min-area]") || "5000",
+        complete_min_area: fieldValue("[data-intake-complete-min-area]") || "300",
+        precision_padding: fieldValue("[data-intake-padding]") || "8",
+        repair_min_component_area: fieldValue("[data-intake-repair-area]") || "24",
+        max_fill_ratio: fieldValue("[data-intake-fill]") || "0.08",
+        group_mode: detail.querySelector("[data-intake-combine-sheets]")?.checked ? "one_group" : "keep_separate",
+        no_auto_approve: Boolean(detail.querySelector("[data-intake-no-auto-approve]")?.checked),
+        allow_duplicates: Boolean(detail.querySelector("[data-intake-allow-duplicates]")?.checked)
+      };
+      Object.keys(payload).forEach((key) => {
+        if (payload[key] === "") delete payload[key];
+      });
+      return payload;
+    }
+    async function runIntakeUpload(files) {
+      const uploads = await readFilesForUpload(files);
+      if (!uploads.length) {
+        live.textContent = "Asset sheet required.";
+        return;
+      }
+      live.textContent = `Running asset intake on ${uploads.length} sheet${uploads.length === 1 ? "" : "s"}...`;
+      detail.querySelectorAll(".output, .result-card").forEach((node) => node.remove());
+      const payload = await apiPost("/api/actions/assets-intake", {
+        files: uploads,
+        ...intakeOptions()
+      });
+      showOutput("Asset Intake", payload);
+    }
+    async function runIntakePath() {
+      const input = detail.querySelector("[data-intake-path-input]");
+      const paths = String(input?.value || "").split(/\r?\n/).map((value) => normalizeLocalPathInput(value)).filter(Boolean);
+      if (input) input.value = paths.join("\n");
+      if (!paths.length) {
+        live.textContent = "Paste at least one asset sheet path.";
+        return;
+      }
+      live.textContent = `Running asset intake on ${paths.length} sheet${paths.length === 1 ? "" : "s"}...`;
+      detail.querySelectorAll(".output, .result-card").forEach((node) => node.remove());
+      const payload = await apiPost("/api/actions/assets-intake", {
+        paths,
+        ...intakeOptions()
+      });
+      showOutput("Asset Intake", payload);
+    }
+    function fieldValue(selector) {
+      return detail.querySelector(selector)?.value?.trim() || "";
+    }
+    function normalizeLocalPathInput(value) {
+      let cleaned = String(value || "").trim().replace(/^"+|"+$/g, "");
+      const marker = cleaned.toLowerCase().indexOf("file:///");
+      if (marker >= 0) cleaned = cleaned.slice(marker);
+      if (cleaned.toLowerCase().startsWith("file:///")) {
+        try {
+          const url = new URL(cleaned);
+          cleaned = decodeURIComponent(url.pathname).replace(/^\/([A-Za-z]:)/, "$1").replace(/\//g, "\\");
+        } catch {
+          cleaned = cleaned.replace(/^file:\/\/\//i, "").replace(/\//g, "\\");
+        }
+      }
+      return cleaned;
+    }
+    async function runNineSlice() {
+      const payload = {
+        path: normalizeLocalPathInput(fieldValue("[data-nine-path]")),
+        left: fieldValue("[data-nine-left]"),
+        top: fieldValue("[data-nine-top]"),
+        right: fieldValue("[data-nine-right]"),
+        bottom: fieldValue("[data-nine-bottom]"),
+        job: fieldValue("[data-nine-job]")
+      };
+      live.textContent = "Building 9-slice asset...";
+      detail.querySelectorAll(".output").forEach((node) => node.remove());
+      const result = await apiPost("/api/actions/assets-nine-slice", payload);
+      showOutput("9-Slice Builder", result);
+    }
+    async function runBrief() {
+      const payload = {
+        job: fieldValue("[data-brief-job]"),
+        slots: fieldValue("[data-brief-slots]"),
+        columns: fieldValue("[data-brief-columns]") || "3",
+        cell_width: fieldValue("[data-brief-cell-width]") || "512",
+        cell_height: fieldValue("[data-brief-cell-height]") || "512",
+        gutter_x: fieldValue("[data-brief-gutter-x]") || "48",
+        gutter_y: fieldValue("[data-brief-gutter-y]") || "48",
+        margin_x: fieldValue("[data-brief-margin-x]") || "96",
+        margin_y: fieldValue("[data-brief-margin-y]") || "96",
+        safe_zone_width: fieldValue("[data-brief-safe-zone-width]"),
+        safe_zone_height: fieldValue("[data-brief-safe-zone-height]"),
+        background: fieldValue("[data-brief-background]") || "transparent",
+        group: fieldValue("[data-brief-group]") || "generated_assets",
+        style: fieldValue("[data-brief-style]")
+      };
+      live.textContent = "Building ImageGen brief and recipe...";
+      detail.querySelectorAll(".output, .result-card").forEach((node) => node.remove());
+      const result = await apiPost("/api/actions/assets-brief", payload);
+      showOutput("Recipe-Bound ImageGen Brief", result);
+    }
+    async function runTreatment() {
+      const payload = {
+        path: normalizeLocalPathInput(fieldValue("[data-treat-path]")),
+        trim: Boolean(detail.querySelector("[data-treat-trim]")?.checked),
+        padding: fieldValue("[data-treat-padding]") || "0",
+        max_width: fieldValue("[data-treat-max-width]"),
+        max_height: fieldValue("[data-treat-max-height]"),
+        tint: fieldValue("[data-treat-tint]"),
+        tint_strength: fieldValue("[data-treat-tint-strength]") || "0",
+        shadow_blur: fieldValue("[data-treat-shadow-blur]") || "0",
+        shadow_offset_x: fieldValue("[data-treat-shadow-offset-x]") || "0",
+        shadow_offset_y: fieldValue("[data-treat-shadow-offset-y]") || "0",
+        shadow_opacity: fieldValue("[data-treat-shadow-opacity]") || "128",
+        job: fieldValue("[data-treat-job]")
+      };
+      live.textContent = "Rendering treated asset...";
+      detail.querySelectorAll(".output").forEach((node) => node.remove());
+      const result = await apiPost("/api/actions/assets-treat", payload);
+      showOutput("Asset Treatment Bench", result);
+    }
+    async function runPrecision() {
+      const payload = {
+        job: fieldValue("[data-precision-job]"),
+        padding: fieldValue("[data-precision-padding]") || "8",
+        alpha_threshold: fieldValue("[data-precision-alpha]") || "1",
+        target_size: fieldValue("[data-precision-target]"),
+        not_square: Boolean(detail.querySelector("[data-precision-not-square]")?.checked)
+      };
+      live.textContent = "Running icon precision pass...";
+      detail.querySelectorAll(".output, .result-card").forEach((node) => node.remove());
+      const result = await apiPost("/api/actions/assets-precision-icons", payload);
+      showOutput("Icon Precision Pass", result);
+    }
+    async function runRepair() {
+      const payload = {
+        job: fieldValue("[data-repair-job]"),
+        alpha_threshold: fieldValue("[data-repair-alpha]") || "1",
+        min_component_area: fieldValue("[data-repair-min-area]") || "24",
+        smooth_alpha: Boolean(detail.querySelector("[data-repair-smooth]")?.checked),
+        keep_largest_component: Boolean(detail.querySelector("[data-repair-largest]")?.checked),
+        reshape_candidate: Boolean(detail.querySelector("[data-repair-reshape]")?.checked),
+        max_fill_ratio: fieldValue("[data-repair-fill]") || "0.08"
+      };
+      live.textContent = "Running asset repair pass...";
+      detail.querySelectorAll(".output, .result-card").forEach((node) => node.remove());
+      const result = await apiPost("/api/actions/assets-repair-icons", payload);
+      showOutput("Asset Repair Pass", result);
+    }
+    async function runAssetReview() {
+      const payload = { job: fieldValue("[data-review-job]") };
+      live.textContent = "Reviewing asset job...";
+      detail.querySelectorAll(".output, .result-card").forEach((node) => node.remove());
+      const result = await apiPost("/api/actions/assets-review-job", payload);
+      showOutput("Asset Job Review", result);
+    }
+    async function runAssetApprove() {
+      const payload = {
+        job: fieldValue("[data-approve-job]"),
+        family: fieldValue("[data-approve-family]"),
+        label: fieldValue("[data-approve-label]")
+      };
+      live.textContent = "Approving asset job...";
+      detail.querySelectorAll(".output, .result-card").forEach((node) => node.remove());
+      const result = await apiPost("/api/actions/assets-approve-job", payload);
+      showOutput("Approve Asset Job", result);
+    }
+    async function runPathAction(itemId) {
+      const item = detailById.get(itemId);
+      const value = detail.querySelector("[data-path-input]")?.value?.trim();
+      if (!value) {
+        live.textContent = "Path required.";
+        return;
+      }
+      const action = itemId === "guide-add-conversation"
+        ? { command: "ingest", path: value }
+        : item.actionId
+          ? { command: item.actionId, path: value }
+          : { command: "scan", path: value };
+      live.textContent = `Running ${item.title}...`;
+      const endpoint = action.command === "ingest" ? "ingest" : action.command === "scan" ? "scan" : action.command;
+      const payload = await apiPost(`/api/actions/${endpoint}`, { path: action.path });
+      showOutput(item.title, payload);
+    }
+    function homeMarkup(payload = {}) {
+      const recent = payload.recent_actions?.[0];
+      const state = payload.state || "Ready";
+      const db = payload.db || "checking";
+      const pending = payload.pending_proposals ?? "0";
+      const approved = payload.approved_proposals ?? "0";
+      return `
+        <div class="readouts" aria-label="Tender Console readouts">
+          <div class="readout"><span>System</span><strong>${esc(state)}</strong><small>DB: ${esc(db)}</small></div>
+          <div class="readout"><span>Proposals</span><strong>${esc(pending)} pending</strong><small>${esc(approved)} approved</small></div>
+          <div class="readout"><span>Recent</span><strong>${esc(recent?.action_type || "None")}</strong><small>${recent ? `OP-${String(recent.id).padStart(6, "0")}` : "No actions"}</small></div>
+          <div class="readout"><span>Authority</span><strong>Human-Gated</strong><small>Minimum necessary</small></div>
+        </div>
+        <div class="home-grid">
+          <article class="home-card">
+            <h3>Tender Console</h3>
+            <p>Home is the quick control surface. Find searches actual ARK memory, Launch opens local tools, Guide ends in actions, and Manage exposes status, approvals, receipts, undo, logs, tests, and Git.</p>
+            <div class="slot-grid">
+              <span class="slot-chip"><strong>Find</strong>Memory and context</span>
+              <span class="slot-chip"><strong>Launch</strong>Tools and workflows</span>
+              <span class="slot-chip"><strong>Guide</strong>Task to action</span>
+              <span class="slot-chip"><strong>Manage</strong>System controls</span>
+            </div>
+          </article>
+          <article class="home-card">
+            <h3>Review Workbench</h3>
+            <p>Use the real proposal lifecycle from inside Navigator: review items, approve, preview, then explicitly apply.</p>
+            <div class="home-actions">
+              <button type="button" data-open-workbench>Open Workbench</button>
+              <button type="button" data-select="tools" data-detail="shadow-run">Shadow Scan</button>
+            </div>
+          </article>
+        </div>
+      `;
+    }
+    function renderStatus(payload) {
+      document.querySelector('[data-panel="home"]').innerHTML = homeMarkup(payload);
+      const text = JSON.stringify(payload, null, 2);
+      detail.insertAdjacentHTML("beforeend", `${copyButton(text)}<pre class="output ok">${esc(text)}</pre>`);
+      live.textContent = "Status refreshed.";
+    }
+    async function refreshStatus() {
+      try {
+        const payload = await apiGet("/api/status");
+        document.querySelector('[data-panel="home"]').innerHTML = homeMarkup(payload);
+      } catch {
+        live.textContent = "Bridge status unavailable.";
+      }
+    }
+    function renderLogs(logs) {
+      detail.querySelectorAll(".output, .mini-list").forEach((node) => node.remove());
+      detail.insertAdjacentHTML("beforeend", `
+        <section class="mini-list">
+          ${logs.length ? logs.map((log) => `<span>${esc(log.name)} — ${esc(log.size)} bytes</span>`).join("") : "<span>No logs found.</span>"}
+        </section>
+      `);
+      live.textContent = `${logs.length} log file${logs.length === 1 ? "" : "s"} listed.`;
+    }
+    async function loadProposals() {
+      const payload = await apiGet("/api/proposals");
+      const target = detail.querySelector("#proposal-list") || detail;
+      target.innerHTML = (payload.proposals || []).map((proposal) => `
+        <article class="item">
+          <div>
+            <h3>#${proposal.id} ${esc(proposal.status)}</h3>
+            <p>${esc(proposal.description)}</p>
+            <p>${proposal.items?.pending || 0} pending / ${proposal.items?.skipped || 0} skipped / ${proposal.items?.applied || 0} applied</p>
+            ${proposal.hold_reason ? `<p class="error">${esc(proposal.hold_reason)} (${proposal.quarantine_held} items held)</p>` : ""}
+          </div>
+          <div class="actions">
+            <button type="button" data-proposal-items="${proposal.id}">Items</button>
+            ${proposal.status === "pending" ? `<button type="button" data-proposal-approve="${proposal.id}">Approve</button>` : ""}
+            <button type="button" data-proposal-preview="${proposal.id}">Preview</button>
+            <button type="button" data-proposal-apply="${proposal.id}">Apply</button>
+          </div>
+        </article>
+      `).join("") || "<span>No pending or approved proposals.</span>";
+      live.textContent = `${payload.proposals?.length || 0} proposal${payload.proposals?.length === 1 ? "" : "s"} loaded.`;
+    }
+    async function loadWorkbench() {
+      const payload = await apiGet("/api/proposals");
+      const target = document.querySelector("#workbench-proposals");
+      const proposals = payload.proposals || [];
+      target.innerHTML = `
+        <h2>Review Queue</h2>
+        ${proposals.map((proposal) => `
+          <article class="item">
+            <div>
+              <h3>#${proposal.id} ${esc(proposal.status)}</h3>
+              <p>${esc(proposal.description)}</p>
+              <p>${proposal.items?.pending || 0} pending / ${proposal.items?.skipped || 0} skipped / ${proposal.items?.applied || 0} applied</p>
+              ${proposal.hold_reason ? `<p class="error">${esc(proposal.hold_reason)} (${proposal.quarantine_held} items held)</p>` : ""}
+            </div>
+            <div class="actions">
+              <button type="button" data-proposal-items="${proposal.id}">Items</button>
+              ${proposal.status === "pending" ? `<button type="button" data-proposal-approve="${proposal.id}">Approve</button>` : ""}
+              <button type="button" data-proposal-preview="${proposal.id}">Preview</button>
+              <button type="button" data-proposal-apply="${proposal.id}">Apply</button>
+            </div>
+          </article>
+        `).join("") || "<span>No pending or approved proposals.</span>"}
+      `;
+      live.textContent = `${proposals.length} proposal${proposals.length === 1 ? "" : "s"} loaded into Review Workbench.`;
+    }
+    async function loadAssetJobs() {
+      const payload = await apiGet("/api/assets/jobs");
+      const jobs = payload.jobs || [];
+      const target = detail.querySelector("#asset-job-list") || detail;
+      target.innerHTML = jobs.map((job) => `
+        <article class="item">
+          <div>
+            <h3>${esc(job.job)}</h3>
+            <p>${esc((job.stages || []).join(" -> ") || "No manifests found")} ${job.asset_count ? `// ${esc(job.asset_count)} assets` : ""}</p>
+            <p>${esc(job.path)}</p>
+            ${job.contact_sheet ? `<p>Contact sheet: ${esc(job.contact_sheet)}</p>` : ""}
+          </div>
+          <div class="actions">
+            <button type="button" data-copy-job="${esc(job.job)}">Copy Job</button>
+          </div>
+        </article>
+      `).join("") || "<span>No asset jobs found.</span>";
+      live.textContent = `${jobs.length} asset job${jobs.length === 1 ? "" : "s"} loaded.`;
+    }
+    async function proposalItems(id) {
+      lastItemsProposalId = Number(id);
+      const payload = await apiGet(`/api/proposals/${id}/items`);
+      const items = payload.items || [];
+      const text = items.map((item) =>
+        `#${item.id} [${item.status}] ${item.requested_mode || ""} ${item.canonical_path || ""}`
+      ).join("\n") || "No items found.";
+      detail.querySelector("#proposal-item-review")?.remove();
+      detail.insertAdjacentHTML("beforeend", `
+        <section class="mini-list" id="proposal-item-review">
+          <h3>Proposal ${esc(id)} Items</h3>
+          ${items.map((item) => `
+            <article class="item">
+              <div>
+                <h3>#${esc(item.id)} ${esc(item.status)}</h3>
+                <p>${esc(item.requested_mode || "mode unset")} // ${esc(item.canonical_path || "")}</p>
+                ${item.target_path ? `<p>Target: ${esc(item.target_path)}</p>` : ""}
+                ${item.hold_reason ? `<p class="error">${esc(item.hold_reason)}</p>` : ""}
+              </div>
+              <div class="actions">
+                <button type="button" data-item-skip="${esc(item.id)}">Skip</button>
+                <select data-item-mode="${esc(item.id)}">
+                  <option value="">Mode</option>
+                  <option value="move">Move</option>
+                  <option value="shortcut">Shortcut</option>
+                  <option value="quarantine">Quarantine</option>
+                </select>
+              </div>
+            </article>
+          `).join("") || "<span>No items found.</span>"}
+          ${copyButton(text, "Copy Item List")}
+        </section>
+      `);
+    }
+    async function approveProposal(id) {
+      const payload = await apiPost(`/api/proposals/${id}/approve`);
+      showOutput(`Proposal ${id} approve`, payload);
+      loadProposals();
+    }
+    async function previewProposal(id) {
+      const payload = await apiPost(`/api/proposals/${id}/apply-preview`);
+      lastApplyPreview = payload.ok ? {id: Number(id), token: payload.preview_token} : null;
+      showOutput(`Proposal ${id} preview`, payload);
+    }
+    async function applyProposal(id) {
+      if (lastApplyPreview?.id !== id || !lastApplyPreview.token) {
+        live.textContent = "Preview this proposal before apply.";
+        return;
+      }
+      const confirmed = window.confirm(`Apply proposal ${id}? This may move/quarantine/shortcut eligible files according to the approved plan.`);
+      if (!confirmed) return;
+      const token = lastApplyPreview.token;
+      lastApplyPreview = null;
+      const payload = await apiPost(`/api/proposals/${id}/apply`, { confirmed: true, preview_token: token });
+      showOutput(`Proposal ${id} apply`, payload);
+      loadProposals();
+    }
+    async function skipProposalItem(itemId) {
+      const reason = window.prompt(`Skip proposal item ${itemId}? Optional reason:`, "Kept by operator in Navigator");
+      if (reason === null) return;
+      const payload = await apiPost(`/api/proposal-items/${itemId}/skip`, { reason });
+      showOutput(`Skip item ${itemId}`, payload);
+      if (lastItemsProposalId) await proposalItems(lastItemsProposalId);
+      await loadProposals();
+    }
+    async function setProposalItemMode(itemId, mode) {
+      if (!mode) return;
+      const payload = await apiPost(`/api/proposal-items/${itemId}/mode`, { mode });
+      showOutput(`Set item ${itemId} mode`, payload);
+      if (lastItemsProposalId) await proposalItems(lastItemsProposalId);
+      await loadProposals();
+    }
+    async function prepareUndo() {
+      const raw = detail.querySelector("[data-op-input]")?.value?.trim();
+      const opId = Number(raw);
+      if (!Number.isInteger(opId) || opId <= 0) {
+        live.textContent = "Valid operation id required.";
+        return;
+      }
+      const confirmed = window.confirm(`Undo OP-${String(opId).padStart(6, "0")}?`);
+      if (!confirmed) return;
+      const payload = await apiPost(`/api/undo/${opId}`, { confirmed: true });
+      showOutput(`Undo OP-${opId}`, payload);
+    }
+    async function runSearch(value) {
+      const query = value.trim().toLowerCase();
+      if (!query) {
+        setMode("home");
+        return;
+      }
+      const words = query.split(/\s+/);
+      const scored = entries.map((item) => {
+        const haystack = [item.title, item.summary, item.details, item.group, ...(item.tags || [])].join(" ").toLowerCase();
+        const score = words.reduce((sum, word) => sum + (haystack.includes(word) ? 1 : 0), 0);
+        return { item, score };
+      }).filter((row) => row.score > 0)
+        .sort((a, b) => b.score - a.score || a.item.title.localeCompare(b.item.title))
+        .map((row) => row.item);
+      const arkResults = await fetchArkResults(query);
+      const results = [...scored, ...arkResults];
+      renderItems("results", results);
+      setMode("results");
+      live.textContent = `${results.length} result${results.length === 1 ? "" : "s"} from Navigator and ARK memory.`;
+    }
+    renderItems("find", entries.filter((item) => item.mode === "find"));
+    renderItems("tools", entries.filter((item) => item.mode === "tools" && !item.advanced));
+    renderItems("guide", entries.filter((item) => item.mode === "guide"));
+    renderItems("manage", entries.filter((item) => item.mode === "manage"));
+    refreshStatus();
+    document.addEventListener("click", async (event) => {
+      if (event.target.closest('[data-privacy-read], [data-privacy-save]')) {
+        const form = event.target.closest('[data-privacy-form]');
+        const purpose = form.querySelector('[data-privacy-purpose]').value.trim();
+        const save = !!event.target.closest('[data-privacy-save]');
+        try {
+          const payload = await apiPost(`/api/actions/${save ? 'perception-policy-set' : 'perception-policy'}`, {
+            path: form.querySelector('[data-privacy-path]').value.trim(), purpose, purposes: purpose ? [purpose] : [],
+            mode: form.querySelector('[data-privacy-mode]').value, reason: form.querySelector('[data-privacy-reason]').value,
+            retention: form.querySelector('[data-privacy-retention]').checked, learning: form.querySelector('[data-privacy-learning]').checked,
+            confirmed: form.querySelector('[data-privacy-confirm]').checked});
+          form.querySelector('[data-privacy-confirm]').checked = false;
+          showOutput('Perception Policy', payload);
+        } catch(error) { showOutput('Perception Policy', {ok:false,error:error.error || error.message}); }
+        return;
+      }
+      const select = event.target.closest("[data-select]");
+      if (select) {
+        setMode(select.dataset.select);
+        if (select.dataset.detail) setDetail(select.dataset.detail);
+      }
+      if (event.target.closest("[data-open-workbench]")) {
+        setMode("workbench");
+        loadWorkbench().catch((error) => showOutput("Review Workbench", { ok: false, error: error.error || error.message || error }));
+        return;
+      }
+      if (event.target.closest("[data-workbench-load]")) {
+        loadWorkbench().catch((error) => showOutput("Review Workbench", { ok: false, error: error.error || error.message || error }));
+        return;
+      }
+      const detailButton = event.target.closest("[data-detail]");
+      if (detailButton) setDetail(detailButton.dataset.detail);
+      if (event.target.closest("[data-run-asset-path]")) {
+        runAssetPath().catch((error) => showOutput("Asset Sheet Deconstructor", { ok: false, error: error.error || error.message || error }));
+        return;
+      }
+      if (event.target.closest("[data-run-auto-path]")) {
+        runAutoPath().catch((error) => showOutput("Smart Asset Intake", { ok: false, error: error.error || error.message || error }));
+        return;
+      }
+      if (event.target.closest("[data-run-compose-path]")) {
+        runComposePath().catch((error) => showOutput("Batch Master Composer", { ok: false, error: error.error || error.message || error }));
+        return;
+      }
+      if (event.target.closest("[data-run-intake-path]")) {
+        runIntakePath().catch((error) => showOutput("Asset Intake", { ok: false, error: error.error || error.message || error }));
+        return;
+      }
+      if (event.target.closest("[data-run-nine-slice]")) {
+        runNineSlice().catch((error) => showOutput("9-Slice Builder", { ok: false, error: error.error || error.message || error }));
+        return;
+      }
+      if (event.target.closest("[data-run-brief]")) {
+        runBrief().catch((error) => showOutput("Recipe-Bound ImageGen Brief", { ok: false, error: error.error || error.message || error }));
+        return;
+      }
+      if (event.target.closest("[data-run-treat]")) {
+        runTreatment().catch((error) => showOutput("Asset Treatment Bench", { ok: false, error: error.error || error.message || error }));
+        return;
+      }
+      if (event.target.closest("[data-run-precision]")) {
+        runPrecision().catch((error) => showOutput("Icon Precision Pass", { ok: false, error: error.error || error.message || error }));
+        return;
+      }
+      if (event.target.closest("[data-run-repair]")) {
+        runRepair().catch((error) => showOutput("Asset Repair Pass", { ok: false, error: error.error || error.message || error }));
+        return;
+      }
+      if (event.target.closest("[data-run-asset-review]")) {
+        runAssetReview().catch((error) => showOutput("Asset Job Review", { ok: false, error: error.error || error.message || error }));
+        return;
+      }
+      if (event.target.closest("[data-run-asset-approve]")) {
+        runAssetApprove().catch((error) => showOutput("Approve Asset Job", { ok: false, error: error.error || error.message || error }));
+        return;
+      }
+      const action = event.target.closest("[data-run-action]");
+      if (action) runBridgeAction(action.dataset.runAction).catch((error) => showOutput("Bridge action", { ok: false, error: error.error || error.message || error }));
+      const statusButton = event.target.closest("[data-run-status]");
+      if (statusButton) runBridgeAction("status").catch((error) => showOutput("Status", { ok: false, error: error.error || error.message || error }));
+      const pathAction = event.target.closest("[data-run-path]");
+      if (pathAction) runPathAction(pathAction.dataset.runPath).catch((error) => showOutput("Path action", { ok: false, error: error.error || error.message || error }));
+      if (event.target.closest("[data-load-proposals]")) loadProposals().catch((error) => showOutput("Proposals", { ok: false, error: error.error || error.message || error }));
+      if (event.target.closest("[data-load-asset-jobs]")) loadAssetJobs().catch((error) => showOutput("Asset Job Index", { ok: false, error: error.error || error.message || error }));
+      const copyOutput = event.target.closest("[data-copy-output]");
+      if (copyOutput) {
+        const text = outputCopies.get(copyOutput.dataset.copyOutput || "") || "";
+        copyTextToClipboard(text)
+          .then(() => { live.textContent = "Journey output copied."; })
+          .catch(() => { live.textContent = "Copy blocked by browser permissions."; });
+        return;
+      }
+      const copyJob = event.target.closest("[data-copy-job]");
+      if (copyJob) {
+        navigator.clipboard?.writeText(copyJob.dataset.copyJob || "");
+        live.textContent = "Asset job name copied.";
+      }
+      const items = event.target.closest("[data-proposal-items]");
+      if (items) proposalItems(items.dataset.proposalItems).catch((error) => showOutput("Proposal items", { ok: false, error: error.error || error.message || error }));
+      const approve = event.target.closest("[data-proposal-approve]");
+      if (approve) approveProposal(approve.dataset.proposalApprove).catch((error) => showOutput("Approve", { ok: false, error: error.error || error.message || error }));
+      const preview = event.target.closest("[data-proposal-preview]");
+      if (preview) previewProposal(preview.dataset.proposalPreview).catch((error) => showOutput("Preview", { ok: false, error: error.error || error.message || error }));
+      const apply = event.target.closest("[data-proposal-apply]");
+      if (apply) applyProposal(Number(apply.dataset.proposalApply)).catch((error) => showOutput("Apply", { ok: false, error: error.error || error.message || error }));
+      const itemSkip = event.target.closest("[data-item-skip]");
+      if (itemSkip) skipProposalItem(Number(itemSkip.dataset.itemSkip)).catch((error) => showOutput("Skip item", { ok: false, error: error.error || error.message || error }));
+      if (event.target.closest("[data-undo-preview]")) prepareUndo().catch((error) => showOutput("Undo", { ok: false, error: error.error || error.message || error }));
+    });
+    document.addEventListener("change", (event) => {
+      const patrolToggle = event.target.closest("[data-patrol-paused]");
+      if (patrolToggle) {
+        patrolToggle.disabled = true;
+        apiPost("/api/actions/patrol-control", {version: Number(patrolToggle.dataset.version), paused: patrolToggle.checked, reason: "Operator changed Patrol pause in Navigator"})
+          .then(async result => { if (!result.ok) throw result; await runBridgeAction("patrol-status"); })
+          .catch(error => { patrolToggle.checked = !patrolToggle.checked; patrolToggle.disabled = false; showOutput("Patrol control", {ok: false, error: error.error || error.message}); });
+        return;
+      }
+      const modeSelect = event.target.closest("[data-item-mode]");
+      if (modeSelect) {
+        setProposalItemMode(Number(modeSelect.dataset.itemMode), modeSelect.value).catch((error) => showOutput("Set item mode", { ok: false, error: error.error || error.message || error }));
+        modeSelect.value = "";
+        return;
+      }
+      const input = event.target.closest("[data-asset-file]");
+      const autoInput = event.target.closest("[data-auto-file]");
+      const composeInput = event.target.closest("[data-compose-file]");
+      const intakeInput = event.target.closest("[data-intake-file]");
+      if (!input && !autoInput && !composeInput && !intakeInput) return;
+      if (input) runAssetUpload(input.files?.[0]).catch((error) => showOutput("Asset Sheet Deconstructor", { ok: false, error: error.error || error.message || error }));
+      if (autoInput) runAutoUpload(autoInput.files?.[0]).catch((error) => showOutput("Smart Asset Intake", { ok: false, error: error.error || error.message || error }));
+      if (composeInput) runComposeUpload(composeInput.files).catch((error) => showOutput("Batch Master Composer", { ok: false, error: error.error || error.message || error }));
+      if (intakeInput) runIntakeUpload(intakeInput.files).catch((error) => showOutput("Asset Intake", { ok: false, error: error.error || error.message || error }));
+      if (input) input.value = "";
+      if (autoInput) autoInput.value = "";
+      if (composeInput) composeInput.value = "";
+      if (intakeInput) intakeInput.value = "";
+    });
+    document.addEventListener("dragover", (event) => {
+      const zone = event.target.closest("[data-asset-dropzone]");
+      const autoZone = event.target.closest("[data-auto-dropzone]");
+      const composeZone = event.target.closest("[data-compose-dropzone]");
+      const intakeZone = event.target.closest("[data-intake-dropzone]");
+      if (!zone && !autoZone && !composeZone && !intakeZone) return;
+      event.preventDefault();
+      if (zone) zone.classList.add("dragover");
+      if (autoZone) autoZone.classList.add("dragover");
+      if (composeZone) composeZone.classList.add("dragover");
+      if (intakeZone) intakeZone.classList.add("dragover");
+    });
+    document.addEventListener("dragleave", (event) => {
+      const zone = event.target.closest("[data-asset-dropzone]");
+      const autoZone = event.target.closest("[data-auto-dropzone]");
+      const composeZone = event.target.closest("[data-compose-dropzone]");
+      const intakeZone = event.target.closest("[data-intake-dropzone]");
+      if (zone) zone.classList.remove("dragover");
+      if (autoZone) autoZone.classList.remove("dragover");
+      if (composeZone) composeZone.classList.remove("dragover");
+      if (intakeZone) intakeZone.classList.remove("dragover");
+    });
+    document.addEventListener("drop", (event) => {
+      const zone = event.target.closest("[data-asset-dropzone]");
+      const autoZone = event.target.closest("[data-auto-dropzone]");
+      const composeZone = event.target.closest("[data-compose-dropzone]");
+      const intakeZone = event.target.closest("[data-intake-dropzone]");
+      if (!zone && !autoZone && !composeZone && !intakeZone) return;
+      event.preventDefault();
+      if (zone) {
+        zone.classList.remove("dragover");
+        runAssetUpload(event.dataTransfer?.files?.[0]).catch((error) => showOutput("Asset Sheet Deconstructor", { ok: false, error: error.error || error.message || error }));
+      }
+      if (autoZone) {
+        autoZone.classList.remove("dragover");
+        runAutoUpload(event.dataTransfer?.files?.[0]).catch((error) => showOutput("Smart Asset Intake", { ok: false, error: error.error || error.message || error }));
+      }
+      if (composeZone) {
+        composeZone.classList.remove("dragover");
+        runComposeUpload(event.dataTransfer?.files).catch((error) => showOutput("Batch Master Composer", { ok: false, error: error.error || error.message || error }));
+      }
+      if (intakeZone) {
+        intakeZone.classList.remove("dragover");
+        runIntakeUpload(event.dataTransfer?.files).catch((error) => showOutput("Asset Intake", { ok: false, error: error.error || error.message || error }));
+      }
+    });
+    search.addEventListener("input", () => runSearch(search.value));
+    search.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        const first = document.querySelector('[data-panel="results"] [data-detail]');
+        if (first) setDetail(first.dataset.detail);
+      }
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.ctrlKey && event.altKey && event.key.toLowerCase() === "a") {
+        event.preventDefault();
+        search.focus();
+        search.select();
+        live.textContent = "Navigator search focused.";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "architecture_schema": 1,
+  "operation_contract": 1,
+  "resource_feasibility": {
+    "principle": "Minimum Sufficient Resources: technically preferred does not mean currently feasible.",
+    "dimensions": ["storage", "hardware", "money", "network", "compute", "physical_access"],
+    "unavailable_state": "RESOURCE_BLOCKED",
+    "unknown_state": "RESOURCE_UNKNOWN",
+    "resource_constraints_grant_authority": false,
+    "risk_tradeoffs_require_explicit_approval": true,
+    "waiting_is_valid": true
+  },
+  "identity_model": {
+    "principle": "Paths are not identity.",
+    "layers": [
+      "filesystem_object_id",
+      "volume_identity",
+      "current_path",
+      "normalized_path",
+      "content_fingerprint",
+      "metadata_fingerprint",
+      "logical_asset_id"
+    ],
+    "reasoning": "Mini ARK must distinguish the same object at a new path, another copy of the same bytes, and a derivative/version in the same logical family."
+  },
+  "record_kinds": {
+    "finding": "Something Mini ARK observed.",
+    "proposal": "What Mini ARK recommends.",
+    "operation": "What Mini ARK was authorized to attempt.",
+    "event": "What physically happened."
+  },
+  "operation_states": [
+    "PROPOSED",
+    "REVIEWED",
+    "APPROVED",
+    "PREVIEWED",
+    "QUEUED",
+    "RUNNING",
+    "VERIFYING",
+    "COMPLETED",
+    "FAILED",
+    "PARTIALLY_COMPLETED",
+    "ROLLING_BACK",
+    "ROLLED_BACK",
+    "MANUAL_RECOVERY_REQUIRED"
+  ],
+  "commit_phases": [
+    "PLANNED",
+    "COPYING",
+    "DESTINATION_VERIFIED",
+    "REFERENCES_UPDATED",
+    "SOURCE_RETIRED",
+    "VERIFIED",
+    "COMPLETE"
+  ],
+  "canonicalization_relationships": [
+    "EXACT_DUPLICATE",
+    "DERIVED_COPY",
+    "VERSION_FAMILY",
+    "LIKELY_SUPERSEDED",
+    "CONFLICTING_CANDIDATES",
+    "UNRELATED"
+  ],
+  "policy_precedence": [
+    "explicit reservation",
+    "registered application dependency",
+    "protected runtime",
+    "project-specific placement rule",
+    "canonical architecture rule",
+    "classifier recommendation",
+    "generic extension/type heuristic"
+  ],
+  "protected_territory": {
+    "default_posture": "OBSERVE_ONLY",
+    "categories": [
+      "Windows-owned locations",
+      "Program Files",
+      "ProgramData application internals",
+      "AppData application stores",
+      "package-manager controlled locations",
+      "registered application runtime trees",
+      "system recovery areas",
+      "cloud placeholder stores"
+    ]
+  },
+  "windows_edge_cases": [
+    "junctions",
+    "symbolic links",
+    "hard links",
+    "reparse points",
+    "case-preserving paths",
+    "case-only renames",
+    "long paths",
+    "hidden files",
+    "system files",
+    "read-only attributes",
+    "ACLs",
+    "alternate data streams",
+    "cloud placeholders",
+    "locked/open files",
+    "temporary files",
+    "application caches",
+    "volume boundaries",
+    "removable media",
+    "network locations"
+  ],
+  "scanner_rules": {
+    "follow_reparse_points_by_default": false,
+    "read_only_must_not_initialize_schema": true,
+    "incremental_observation_fields": [
+      "last_seen_at",
+      "last_scanned_at",
+      "last_verified_at",
+      "scan_generation",
+      "source_of_observation"
+    ]
+  },
+  "resource_budget": {
+    "principle": "Interactive work gets priority. Stewardship yields.",
+    "limits_to_support": [
+      "disk_io",
+      "concurrent_hashing",
+      "background_cpu",
+      "batch_size",
+      "quarantine_growth",
+      "operation_duration"
+    ]
+  },
+  "quarantine_governance": {
+    "required_fields": [
+      "original_path",
+      "quarantine_path",
+      "reason",
+      "operation_id",
+      "canonical_replacement",
+      "hash",
+      "quarantined_at",
+      "retention_policy",
+      "dependencies_checked",
+      "restorable"
+    ],
+    "deletion_policy": "Permanent deletion is a separate lifecycle operation."
+  },
+  "graduation_gates": [
+    "Gate A: Shadow",
+    "Gate B: Bounded Stewardship",
+    "Gate C: Sustained Stewardship",
+    "Journey Soft Launch"
+  ],
+  "shadow_mode": {
+    "required": true,
+    "mutates_reality": false,
+    "reports": [
+      "what would be classified",
+      "what would be proposed",
+      "what would be moved",
+      "what would be canonicalized",
+      "what would be quarantined",
+      "which references would be updated",
+      "what would require user judgment"
+    ]
+  }
+}
