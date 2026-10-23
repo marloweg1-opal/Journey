@@ -13,6 +13,7 @@ Journey is being built to help a person and their computer maintain continuity a
 | If you want to… | Go here |
 |---|---|
 | Review Journey as a portfolio project | [Five-minute project walkthrough](docs/PROJECT_WALKTHROUGH.md) |
+| Understand the work behind the public snapshot | [Development history and evidence](docs/DEVELOPMENT_HISTORY.md) |
 | Run a safe, non-mutating example | [Try the public demo](#try-the-public-demo) |
 | Understand Journey in plain language | [What Journey is](#what-journey-is) |
 | See what currently works | [Current state](#current-state) |
