@@ -35,9 +35,26 @@ These areas did not all arrive in one implementation. Many were designed, revise
 | **October 21–23, 2026** | Local development reported replaceable primary-model conversation, an advisory Council, fixed-fixture capability proposal/evaluation, hardened local HTTP boundaries, a Dashboard image planner and recoverable image-action receipts. Security was independently challenged with 25 hostile/legitimate socket cases on a reproduced implementation. | **Reported local, not yet reconciled to public `main`**. Fixture success demonstrates a governed pipeline, not autonomous creation of arbitrary tools or production capability. |
 | **October 23, 2026** | Codex reported **25 real images moved** into `R:\Pictures\CareBloomOS`, receipts `OP-000033`–`OP-000057`, SHA-256 checks, five unrecognized files left in place, and zero deletions. A selected 180-test suite and Brave receipt verification were also reported. | **Local execution report, not independently replayed in this public checkout.** Review the on-machine operational report/receipts before publishing a stronger claim. Codex reported recording explicit chat approval while the independent terminal approval usability problem remained unresolved. This is **not** evidence of general unattended authority. |
 
+## CareBloomOS and Journey: a shared early problem, then different responsibilities
+
+**Origin interpretation (creator recollection, not a precisely dated technical split):** The early Windows automation, screen-capture housekeeping, file placement, and desktop-experience work were not conceived as a neatly separated "Journey product" from day one. They formed part of the wider effort to make HEXSEED usable, coherent, and personally expressive, alongside work that became CareBloomOS. The growing complexity and sprawl of the HEXSEED environment helped make a **dedicated operational coordinator** desirable. The boundary between CareBloomOS and Mini ARK/Journey emerged through practical work; it should not be retroactively portrayed as a fixed distinction from March 2026.
+
+The creator recalls that screenshot cleanup may have become part of CareBloomOS rather than a distinct Journey automation. **That ownership remains a recollection and should not be asserted as confirmed implementation or as a specific migration event without code or dated evidence.**
+
+In the later, clearer architecture:
+
+- **HEXSEED** is the computer and the broader working environment, not a synonym for either application.
+- **CareBloomOS** concerns expression and experience: visual language, interfaces, themed assets, and how the computer's workflows feel to the user.
+- **Mini ARK / Journey** concerns the operational machinery and its evidence: inspection, context, permissions, filesystem stewardship, bounded execution, receipts, recovery, and project-neutral coordination.
+- **Project ARK** is the wider software/intelligence family, not another name for CareBloomOS or Journey.
+
+Those responsibilities can overlap in interfaces and experience. CareBloomOS can provide the expression of a workflow; Journey can provide governed underlying operations. A recurring challenge was to keep project-specific art and language from accidentally becoming Journey's generic core behavior. The present architectural split reflects **lessons learned**, not a claim that the project's early exploratory work was always organized that way.
+
+See [Project Boundaries](PROJECT_BOUNDARIES.md), [Naming Architecture](JOURNEY_NAMING_ARCHITECTURE.md), and [Forward Architecture](JOURNEY_FORWARD_ARCHITECTURE.md).
+
 ## Why the pre–Mini ARK history matters
 
-The original goal was not to make an AI agent for its own sake. It was to stop doing the same filesystem housekeeping by hand: downloads should go where they belong; transient screenshots should not pile up forever; duplicates should be handled deliberately; useful files should remain usable. PowerShell and Windows scheduling were practical starting points. The later challenges of context, dependencies, permission, confidence, review and recovery are why a coordinating program became desirable.
+The original goal was not to make an AI agent for its own sake. It was to stop doing the same filesystem housekeeping by hand: downloads should go where they belong; transient screenshots should not pile up forever; duplicates should be handled deliberately; useful files should remain usable. These concerns developed amid the overlapping HEXSEED and CareBloomOS work before the later Journey distinction became clear. PowerShell and Windows scheduling were practical starting points. The later challenges of context, dependencies, permission, confidence, review and recovery are why a coordinating program became desirable.
 
 March's working file sorter and October's reported 25-image pilot are separated by months of design and engineering, but share the same practical end goal. Neither event should be overstated: early scripts did not have all the later governance, and the current pilot does not demonstrate general unsupervised capability.
 
