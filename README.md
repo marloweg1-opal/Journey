@@ -14,6 +14,7 @@ Journey is being built to help a person and their computer maintain continuity a
 |---|---|
 | Review Journey as a portfolio project | [Five-minute project walkthrough](docs/PROJECT_WALKTHROUGH.md) |
 | Understand the work behind the public snapshot | [Development history and evidence](docs/DEVELOPMENT_HISTORY.md) |
+| Meet a sibling family passion project | [CareBloomOS: a little magic for the machine](https://github.com/marloweg1-opal/CareBloomOS) |
 | Run a safe, non-mutating example | [Try the public demo](#try-the-public-demo) |
 | Understand Journey in plain language | [What Journey is](#what-journey-is) |
 | See what currently works | [Current state](#current-state) |
@@ -141,7 +142,11 @@ You do **not** need to read every file in this repository. These are the useful 
 
 Journey is the local coordinator within the broader Project ARK vision. Project ARK may eventually contain higher-level mapping, memory, and domain systems; Journey is the component responsible for helping the computer remain oriented to the person, their work, and the authority it has actually been given.
 
-Domain projects remain separate. CareBloomOS, for example, was the first mature integration profile. Its small [mapping example](examples/carebloom/README.md) demonstrates how a project can translate Journey's stable functions without turning CareBloom terminology, artwork, or handoffs into Journey's base architecture.
+**[🌈 CareBloomOS](https://github.com/marloweg1-opal/CareBloomOS)** is an independent **family passion project**, not a Journey module, fork, or subordinate brand. It is a fever-dream, nostalgia-fueled love letter to childhood wonder, Saturday-morning cartoons, magic, fantasy, friendship and caring, imagined as a character-driven desktop UI experience. Its Carestone Bearers, original lore, living worlds, themed utilities and visual language are designed for the kind of delight that makes someone go **“awwwww!!!!!!”** It is cute on purpose, and its conviction is that **care is infrastructure**.
+
+Journey and CareBloomOS have **overlapping roots in the early HEXSEED effort** to make a growing, increasingly complicated Windows environment more organized, expressive and humane. The separation between CareBloom's authored world and Journey's project-neutral coordination emerged through that work, rather than existing as a fixed boundary from day one. CareBloomOS was Journey's first mature *integration profile*; the small [mapping example](examples/carebloom/README.md) demonstrates how an external project's terminology can express Journey functions **without transferring ownership of CareBloom's world, lore, assets, or experience to Journey**. The example is a documented mapping, not proof of a released full CareBloom-Journey runtime integration.
+
+**CareBloomOS makes room for wonder. Journey helps the underlying work stay oriented, authorized, and recoverable.** Neither project owns the other's identity. Their separate public repositories and the [development history](docs/DEVELOPMENT_HISTORY.md) document the relationship.
 
 ## Naming transition
 
