@@ -13,6 +13,8 @@ Journey is being built to help a person and their computer maintain continuity a
 | If you want to… | Go here |
 |---|---|
 | Review Journey as a portfolio project | [Five-minute project walkthrough](docs/PROJECT_WALKTHROUGH.md) |
+| Explore the longer development history | [HEXSEED → Mini ARK → Journey](docs/DEVELOPMENT_HISTORY.md) |
+| Meet an independent family passion project | [🌈 CareBloomOS](https://github.com/marloweg1-opal/CareBloomOS) |
 | Run a safe, non-mutating example | [Try the public demo](#try-the-public-demo) |
 | Understand Journey in plain language | [What Journey is](#what-journey-is) |
 | See what currently works | [Current state](#current-state) |
@@ -143,6 +145,8 @@ Journey is the local coordinator within the broader Project ARK vision. Project 
 Domain projects remain separate. **CareBloomOS** is a separate family passion project: a fever-dream, nostalgia-fueled love letter to childhood wonder, Saturday-morning cartoons, magical transformation stories, friendship, fantasy, and caring, translated into a character-driven computer UI experience with its own lore, Carestone Bearers, worlds, visual language, and functional desktop systems. Its small [mapping example](examples/carebloom/README.md) records one point of connection: CareBloom was Journey's first mature integration profile and helped pressure-test how Journey can support a richly opinionated project without absorbing that project's identity into its own architecture.
 
 The relationship runs both ways without collapsing the projects together. Journey gives CareBloom a project-neutral way to preserve provenance, continuity, ownership, context, and reviewable stewardship across a sprawling creative system. CareBloom gives Journey a demanding real-world proving ground full of artwork, lore, implementation files, evolving canon, and human meaning. **Journey helps the computer stay oriented to the work; CareBloom is one gloriously specific world that deserves to remain itself.**
+
+Both projects have **overlapping HEXSEED roots** in early Windows automation, file housekeeping, desktop expression, and a rapidly growing personal computing environment. Their distinct responsibilities emerged over time. Neither is a module, fork, or replacement for the other, and the documented CareBloom [profile mapping](examples/carebloom/README.md) does not claim a fully released integrated runtime. See the [development history](docs/DEVELOPMENT_HISTORY.md) for the longer evolution and evidence limits.
 
 ## Naming transition
 
