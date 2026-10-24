@@ -140,7 +140,9 @@ You do **not** need to read every file in this repository. These are the useful 
 
 Journey is the local coordinator within the broader Project ARK vision. Project ARK may eventually contain higher-level mapping, memory, and domain systems; Journey is the component responsible for helping the computer remain oriented to the person, their work, and the authority it has actually been given.
 
-Domain projects remain separate. CareBloomOS, for example, was the first mature integration profile. Its small [mapping example](examples/carebloom/README.md) demonstrates how a project can translate Journey's stable functions without turning CareBloom terminology, artwork, or handoffs into Journey's base architecture.
+Domain projects remain separate. **CareBloomOS** is a separate family passion project: a fever-dream, nostalgia-fueled love letter to childhood wonder, Saturday-morning cartoons, magical transformation stories, friendship, fantasy, and caring, translated into a character-driven computer UI experience with its own lore, Carestone Bearers, worlds, visual language, and functional desktop systems. Its small [mapping example](examples/carebloom/README.md) records one point of connection: CareBloom was Journey's first mature integration profile and helped pressure-test how Journey can support a richly opinionated project without absorbing that project's identity into its own architecture.
+
+The relationship runs both ways without collapsing the projects together. Journey gives CareBloom a project-neutral way to preserve provenance, continuity, ownership, context, and reviewable stewardship across a sprawling creative system. CareBloom gives Journey a demanding real-world proving ground full of artwork, lore, implementation files, evolving canon, and human meaning. **Journey helps the computer stay oriented to the work; CareBloom is one gloriously specific world that deserves to remain itself.**
 
 ## Naming transition
 
