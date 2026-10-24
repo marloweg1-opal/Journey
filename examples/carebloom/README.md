@@ -1,9 +1,8 @@
 # CareBloomOS integration example
 
-CareBloomOS was Journey's first mature expression profile. It demonstrates how
-an external project can translate stable functional kernels into domain-specific
-language while Journey keeps the underlying contracts and safety behavior
-unchanged.
+[CareBloomOS](https://github.com/marloweg1-opal/CareBloomOS) is its **own family passion project**: a nostalgia-fueled, original fantasy world and expressive desktop UI built around the magic of friendship and care. It is not a Journey feature. CareBloomOS became Journey's first mature *documented expression profile*, showing how an independent project's vocabulary can translate generic functional kernels without changing Journey's authority, safety or recovery contracts.
+
+**This table is a conceptual integration mapping, not an assertion that a complete runtime connection has shipped.**
 
 | Journey kernel | CareBloom translation |
 |---|---|
