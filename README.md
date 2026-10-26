@@ -122,6 +122,20 @@ is after installation. To remove only the shortcut, run:
 powershell -ExecutionPolicy Bypass -File .\install_journey_shortcut.ps1 -Remove
 ```
 
+
+### Use the Cloverstone badge as the Journey button
+
+If you use the 1920 x 1080 CareBloom desktop, double-click
+`install_cloverstone_launcher.cmd`. It places an invisible Rainmeter button
+over the green Cloverstone badge. Click that badge whenever you want to open
+Journey; desktop icons can remain hidden.
+
+To remove only the Cloverstone button, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install_cloverstone_launcher.ps1 -Remove
+```
+
 ## Developer map
 
 You do **not** need to read every file in this repository. These are the useful entry points:
