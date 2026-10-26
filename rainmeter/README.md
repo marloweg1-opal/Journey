@@ -34,10 +34,3 @@ TenderConsole.ini
 - GitHub opens the mini_ark GitHub archive.
 
 This widget is a launcher/control surface. It does not move files, approve proposals, delete anything, or bypass mini_ark's existing safety gates.
-
-## Cloverstone launcher
-
-`JourneyCloverstone\Cloverstone.ini` is a transparent 145 x 165 click target
-positioned over the Cloverstone badge in the 1920 x 1080 CareBloom desktop.
-The repository-level `install_cloverstone_launcher.cmd` installs and activates
-it. Clicking the badge starts Journey with `start_mini_ark.ps1 -Open`.
