@@ -42,6 +42,16 @@ On October 26, 2026 (Pacific), the local development build completed one bounded
 
 **Limits:** The sample was a two-file group already in the same directory, so the suggested shared-home review was not independently shown to save user effort. File roles, dependency clearance, backups, current contents, and deletion eligibility were **not** established. The history contains two earlier rejected live proposals under stricter/duplicative output contracts and only one successful `ID_ONLY_V2` live case. This observation does not estimate accuracy, utility, or safety for other data. Local implementation changes and real reasoning records are not published here. The one-time retention confirmation accepted unresolved synchronization uncertainty, not standing authority or authenticated task approval.
 
+## Milestone 002: deterministic census review (local, pending usefulness grades)
+
+In the local development worktree, Codex reported implementing a bounded, terminal-only `census-review` capability to classify historical exact-duplicate groups into four transparent buckets: **Worth reviewing**, **Needs additional evidence**, **Already congruent or low-value**, and **Protected or blocked**. Every eligible two- or three-file group is accounted for once, while unsupported or unjoined groups are counted as exclusions. Reasons are fixed rule codes, with filename and timestamp clues labeled as weak hints. The feature does not claim current file equality, file roles or execution authority.
+
+**Reported verification, not replicated on this published code:** The initial selected fixture suite yielded 152 passes and five explicit skips. A later focused, synthetic policy-integration run reportedly yielded **112 passes, zero failures, errors or skips**. It exercised actual CLI policy-store selection against fixture and decoy hold databases, confirmed denial when the active policy was unavailable or malformed, and checked nonzero malformed-input exits and cancellation. The runs used different test selections and their counts must not be added or treated as a full-repository pass. Codex reported no code changes from the final integration check.
+
+**Real-use observation:** A separate user-supplied terminal screenshot showed the historical review command completing in approximately 42.6 seconds, displaying findings without an intentional file operation. The synthetic integration verification neither inspected the real policy database nor retroactively establishes the correct production store selection for that earlier run. The queue's ranking quality has **not** been established: owner usefulness grades for the first ten findings remain pending. No real paths, prompts, private records or local review output are published here.
+
+The feature's current local source and tests are **not yet reconciled to this public repository**, and documentation of its reported behavior is not publication or validation of that source. No standing file-operation authority was granted.
+
 ## CareBloomOS: a separate family passion project with shared HEXSEED roots
 
 [**🌈 CareBloomOS**](https://github.com/marloweg1-opal/CareBloomOS) deserves its own identity in this history. It is a fever-dream, nostalgia-fueled family passion project and love letter to childhood wonder, Saturday-morning cartoons, magic, fantasy, friendship and caring, brought to life as a character-driven computer UI experience. Its Carestone Bearers, original lore, living fantasy worlds, themed utilities and expressive interfaces aim to bring a sincere **“awwwww!!!!!!”** back into everyday computing. Its worldbuilding, visual canon, authored experience and production assets belong to **CareBloomOS**, not to Journey. These are creative ambitions with different levels of implementation maturity, not a claim that a complete operating system has shipped.
@@ -83,7 +93,7 @@ Some tests deliberately exercise and reject unsafe or invalid operations; a refu
 
 **Published in this repository:** the scope represented by the source, tests, contracts and dated checkpoints at the current commit. Its README and [Project Walkthrough](PROJECT_WALKTHROUGH.md) describe the public snapshot.
 
-**Reported locally, awaiting public reconciliation:** October Dashboard reasoning and Council integration, strengthened HTTP guard, real-image pilot code and receipts, plus the October 26 bounded grounded-model demonstration and its local implementation. Preserve those implementations on their source branch and audit/scrub them before publication. Publishing this history document **does not** publish or authenticate the underlying unpublished code.
+**Reported locally, awaiting public reconciliation:** October Dashboard reasoning and Council integration, strengthened HTTP guard, real-image pilot code and receipts, the October 26 bounded grounded-model demonstration, and the subsequent deterministic census-review queue with synthetic policy-integration verification. Preserve those implementations on their source branch and audit/scrub them before publication. Publishing this history document **does not** publish or authenticate the underlying unpublished code.
 
 **Still open:** frictionless independent terminal approval, evaluator hardening, full-suite baseline investigation, clean installation/reconciliation, broad drive-scale organization, and any general self-expanding tool capability. `UNKNOWN` and `HELD` are meaningful outcomes, not invisible successes.
 
@@ -105,4 +115,4 @@ Do not add raw personal files, inventories, prompt logs, private ledgers, authen
 
 ---
 
-*Status: chronology assembled from published repo files, earlier conversation records, and user-supplied local milestone reports through October 26, 2026. It must be revised when independently verified implementation, commits and sanitized reports are reconciled.*
+*Status: chronology assembled from published repo files, earlier conversation records, and user-supplied local milestone reports through October 28, 2026. It must be revised when independently verified implementation, commits and sanitized reports are reconciled.*
