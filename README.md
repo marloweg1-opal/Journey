@@ -188,4 +188,14 @@ Created and maintained by **Junior Gilmore**. Developed with material collaborat
 
 ---
 
+## Participation and the limits of this work
+
+Participation is a consideration from the beginning, not an afterthought. Journey currently offers a compact, browser-based Navigator and command-line workflows around a local, human-governed prototype. Those interfaces reflect the project's present implementation and the needs it was initially built to serve. They have **not** been established as accessible or effective for every person, communication method, assistive technology, or way of interacting with a computer. No universal accessibility or usability claim is made.
+
+Planned work documented in the [forward architecture](docs/JOURNEY_FORWARD_ARCHITECTURE.md) includes broader, explicitly authorized observation, more capable proposals and reasoning, and carefully governed capability expansion. These are **directions, not delivered features**. The current roadmap does not establish a tested plan for accommodating every interaction or communication need, and further interface or accessibility work would require understanding requirements that are not yet known or evaluated.
+
+This acknowledgment is neither an apology nor a promise that one project or its creator can resolve every unmet need. It is a commitment to describe the present system accurately, to distinguish what is unsupported from what is impossible, and not to mistake an untested experience for meaningful participation.
+
+**The boundaries of my work do not represent the boundaries of human possibility.**
+
 **Journey helps the system remain in relation without pretending that relation grants authority.**
