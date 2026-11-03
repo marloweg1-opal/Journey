@@ -21,6 +21,7 @@ Journey is being built to help a person and their computer maintain continuity a
 | Operate the local installation | [Operator handbook](docs/HANDBOOK.md) |
 | Understand where the project is going | [Forward architecture](docs/JOURNEY_FORWARD_ARCHITECTURE.md) |
 | Review its safety and authority boundaries | [Project boundaries](docs/PROJECT_BOUNDARIES.md) |
+| Understand our accessibility doctrine and current exclusions | [Accessibility and meaningful participation](docs/ACCESSIBILITY_AND_PARTICIPATION.md) |
 | Inspect the technical implementation | [Developer map](#developer-map) |
 | Ask a question or suggest a use case | [Open a question](https://github.com/marloweg1-opal/Journey/issues/new?template=question.yml) |
 
@@ -171,6 +172,12 @@ hand-written every line; he is accountable for the system's direction, the
 decisions accepted into the repository and whether its behavior matches the
 human-governed design. See the [project walkthrough](docs/PROJECT_WALKTHROUGH.md)
 for the working method, current limitations and common questions.
+
+## Accessibility and meaningful participation
+
+Journey's design treats **meaningful participation** as more than recognizing an input or offering a control. A person needs to be able to understand, influence, refuse, correct, and verify what the system does. Our documentation explicitly names who is not yet served by the present interface, distinguishing untested compatibility from unsupported behavior and planned improvements. The public prototype is **not** claimed to be comprehensively accessibility-tested.
+
+Read the [accessibility and participation doctrine](docs/ACCESSIBILITY_AND_PARTICIPATION.md) for current conditions, exclusions, and future directions.
 
 ## Questions and participation
 
