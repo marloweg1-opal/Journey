@@ -63,6 +63,14 @@ claim to have manually authored or memorized every line of code. His demonstrate
 role is human-centered product and system design, AI-assisted implementation,
 evaluation, constraint design and stewardship of the resulting work.
 
+## Accessibility and meaningful participation
+
+A central design practice is to identify **who cannot yet participate meaningfully**, not merely who can technically access an interface. The current prototype has not been comprehensively tested with assistive technology or every communication method. That limitation is documented rather than quietly transferred onto the person using it.
+
+Journey's designs preserve user correction, inspectable evidence, choice, and explicit uncertainty. Documentation names supported, unsupported, untested, and proposed interactions, including the people and contexts they affect. This reflects a human-centered design practice, **not** a claim that Journey is already a fully accessible product.
+
+For employment discussions, this work illustrates how the creator translates lived support-work experience and inclusion principles into requirements, acceptance criteria, AI evaluation, user controls, and transparent limits. See [Accessibility and Meaningful Participation](ACCESSIBILITY_AND_PARTICIPATION.md).
+
 ## How to discuss the AI collaboration
 
 **Did you write all of the code yourself?**
