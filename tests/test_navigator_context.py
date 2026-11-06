@@ -149,7 +149,7 @@ class NavigatorContextTests(unittest.TestCase):
         self.assertEqual(fingerprint(self.source), before)
 
         # New bytes and explicit misleading filename. The persisted rejection changes the result.
-        later = self.source / "Moonstone - later unrelated.png"
+        later = self.source / "Moonstone - later draft.png"
         make_board(later, "Design notes", color=COLORS[0], note="Not Moonstone", variation=2)
         control = self.base / "Unreviewed sample"
         control.mkdir()
