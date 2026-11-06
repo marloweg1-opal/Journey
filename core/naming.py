@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from core.file_paths import RESERVED_WINDOWS_NAMES, TEMP_SUFFIXES
 from core.token_registry import resolve_token
 
 
@@ -21,12 +22,6 @@ SCRIPT_SUFFIXES = {".ps1", ".py", ".js", ".ts", ".bat", ".cmd", ".sh", ".lua"}
 DOC_SUFFIXES = {".md", ".txt", ".docx", ".pdf"}
 DATA_SUFFIXES = {".json", ".csv", ".tsv", ".xlsx", ".sqlite", ".db"}
 MEDIA_SUFFIXES = {".mp3", ".wav", ".flac", ".mp4", ".mov", ".mkv", ".webm"}
-TEMP_SUFFIXES = {".tmp", ".temp", ".part", ".crdownload", ".download"}
-RESERVED_WINDOWS_NAMES = {
-    "con", "prn", "aux", "nul",
-    "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
-    "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
-}
 MAX_RECOMMENDED_PATH_LENGTH = 220
 
 

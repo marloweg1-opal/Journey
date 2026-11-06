@@ -1,8 +1,13 @@
 # Journey
 
-**A human-governed local AI system that learns how you work while keeping every meaningful action visible, reviewable, and under your control.**
+**A local-first workspace planner for deciding where your files belong and preserving those decisions.**
 
-Journey is being built to help a person and their computer maintain continuity across files, projects, conversations, tools, and time. It remembers where work came from, preserves decisions and relationships, and proposes useful next steps without quietly taking authority for itself.
+Journey 1.0 RC1 inspects a folder you choose, lets you group files into collections,
+and previews names and placements. Save those decisions and reopen them later, or
+export a checklist for manual use. [Try the Folder Planner](docs/FOLDER_PLANNER.md).
+
+The wider Journey project explores continuity across files, projects, tools, and
+time. Its local Navigator prototype and stewardship experiments are documented below.
 
 ![Journey — human-governed local AI](docs/images/journey-repository-preview.svg)
 
@@ -12,6 +17,7 @@ Journey is being built to help a person and their computer maintain continuity a
 
 | If you want to… | Go here |
 |---|---|
+| Run the standalone folder workflow | [Journey 1.0 RC1 Folder Planner](docs/FOLDER_PLANNER.md) |
 | Review Journey as a portfolio project | [Five-minute project walkthrough](docs/PROJECT_WALKTHROUGH.md) |
 | Explore the longer development history | [HEXSEED → Mini ARK → Journey](docs/DEVELOPMENT_HISTORY.md) |
 | Meet an independent family passion project | [🌈 CareBloomOS](https://github.com/marloweg1-opal/CareBloomOS) |
@@ -60,11 +66,13 @@ Sources, decisions, receipts, and changes are meant to remain inspectable. Attri
 
 ## Current state
 
-Journey is an active prototype—not a finished consumer application.
+The standalone Folder Planner is a release candidate. The older Navigator and
+stewardship components remain a local prototype.
 
 | Status | Capability |
 |---|---|
-| Working locally | Bounded inventory, reference evidence, privacy rules, classification, journaling, recovery protection, and a Navigator control surface |
+| RC1 Folder Planner | Selected-folder inventory, persistent collections, naming and placement previews, saved decisions, and checklist export |
+| Prototype working locally | Bounded inventory, reference evidence, privacy rules, classification, journaling, recovery protection, and a Navigator control surface |
 | Approval gated | Proposed file operations, asset intake, exports, and undo workflows |
 | Deliberately held | Default production moves, semantic providers, broad background observation, and new persistent personal-knowledge storage |
 | Active milestone | Project-neutral custody: ownership, provenance, contextual classification, and reviewable placement |
