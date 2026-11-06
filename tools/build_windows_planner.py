@@ -20,7 +20,7 @@ DOWNLOADS = {
     EMBED: (EMBED, "90905e64a840557d8c1bc4f5b74db3d7ee85e3ffb217611cac1c7813acea4159"),
     "tcltk.msi": ("amd64/tcltk.msi", "9642593510b188aa35dcdf1995cbe2b3c3c07446a0ac1dd0c1d1958bf25526f5"),
 }
-ZIP_NAME = "Journey-1.0-RC1-Windows-x64.zip"
+ZIP_NAME = "Journey-1.0-RC2-Windows-x64.zip"
 BUILD_FILES = ("launcher.c", "launcher.rc", "launcher.manifest")
 APP_FILES = ("__init__.py", "__main__.py", "catalog.py", "desktop.py", "plan_file.py")
 

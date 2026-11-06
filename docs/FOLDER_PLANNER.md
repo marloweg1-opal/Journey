@@ -1,4 +1,4 @@
-# Journey 1.0 RC1 Folder Planner
+# Journey 1.0 RC2 Folder Planner
 
 The Folder Planner helps a person decide where a selected collection of files
 belongs. It records their collections, naming choices, and decisions in a local
@@ -25,38 +25,51 @@ Journey mission and prototype remain described in the repository.
 ## First use
 
 1. Extract the whole Windows ZIP and double-click **Journey.exe**.
-2. Select **Choose folder** and pick a local folder containing a few files.
-3. Type a meaningful name in **New collection** and choose **Create**. Select
-   files in the table, choose the collection, then select **Assign selected**.
-4. Select a single file and edit **Proposed name** if needed. Choose **Set name**
-   and then **Include in checklist** or **Keep in place**. Files start in Review.
-5. Use **Save plan** and select a location outside the inspected folder. Close
-   Journey, reopen it, and use **Open plan** to check the restored decisions.
-6. Choose **Export checklist** and save the text outside the inspected folder.
+2. Select **Choose folder** and pick a local folder. **Scan details** shows the
+   stopping reason, skip counts by reason, and the path for each skipped entry.
+   **Scan subfolder** starts its picker in the current folder and opens a focused
+   plan in another window. The broader plan stays open with its own decisions.
+3. Select related files, using Ctrl or Shift for several. Type a name in **New
+   collection** and choose **Create & assign**. Use **Assign selected** to add
+   files to an existing collection.
+4. Select a single file to read or copy the full original and proposed paths.
+   Edit **Proposed name** if needed, then choose **Set name** and **Include in
+   checklist** or **Keep in place**. Files start in Review.
+5. Use **Save plan** and select a location outside the original inspected folder.
+   Close Journey, reopen it, and use **Open plan** to check the restored decisions.
+6. Choose **Export checklist** and save the text outside the original inspected folder.
    Verify its included source and destination, then compare the original folder.
+   A focused plan shows destinations relative to its subfolder and still protects
+   the broader folder from plan and checklist writes.
 
 The checklist is a historical record. Before making a manual change, verify
 the current paths and any dependencies. The preview never authorizes an operation.
 
 ## Acceptance and limits
 
-- A user can scan a real folder, assign files to collections, edit proposed
-  names, include or keep files, reopen the plan, and export a human-readable
-  checklist. The tests compare source file names, bytes, and modification times.
+- The desktop acceptance test copies the repository's `docs` folder into an
+  isolated workspace. It reaches a deliberately reduced entry limit, narrows the
+  scan in the app, checks full paths, creates the Getting started collection,
+  records Include and Keep decisions, then saves, closes, reopens, and exports.
+  It compares source file paths, bytes, and modification times.
 - A scan examines at most 10,000 entries or 20 seconds of enumeration. Links,
   junctions, inaccessible paths, and incompatible names are reported as gaps.
+  The entry limit includes directories and skipped entries. Unvisited paths
+  beyond a limit are outside the skipped-path count. Changed proposals in an
+  incomplete scan caused by a limit require a smaller scan to verify them.
   Network and device paths are outside this candidate's scope.
 - Plans and checklists contain names and paths. They are plain local files saved
   where the user chooses. An opened plan is a snapshot and needs no access to
   the original folder. Existing exports are preserved, and a stale plan save is
-  rejected.
+  rejected. RC2 opens RC1 plans. Saving uses the RC2 format, which persists the
+  precise limit reason and the broader read-only boundary of a focused plan.
 - This version uses a mouse-and-keyboard desktop interface and a text export.
   Keyboard navigation and platform-native dialogs are available. Screen reader
   compatibility, voice-only use, and high-contrast rendering still need direct
   testing. A person who relies on any of those modes may need assistance to
   complete the workflow.
 - Semantic inspection, thumbnail rendering, automatic grouping, and managed
-  file changes are outside RC1. The prototype's experimental paths are described
+  file changes are outside RC2. The prototype's experimental paths are described
   in the public checkpoint. The boundaries of this program are not the boundaries
   of human possibility.
 

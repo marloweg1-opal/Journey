@@ -1,25 +1,28 @@
-JOURNEY 1.0 RC1
+JOURNEY 1.0 RC2
 Folder Planner for Windows 10 and 11 (x64)
 
 1. Extract the entire ZIP. Open the Journey folder and double-click Journey.exe.
    Keep Journey.exe, app and runtime together. Python is bundled.
-2. Choose folder and select a local collection of files. Journey lists regular
-   files under that folder and shows a naming preview beside each original path.
-3. Type a name under New collection and select Create. Select files in the list
-   with Ctrl or Shift, choose the collection, and select Assign selected.
-4. Select a single file to edit its proposed name. Select Set name to keep the
-   edit, then Include in checklist, Keep in place, or Review later.
-5. Save plan in a separate folder. Open plan restores your collections and
-   decisions from that saved snapshot. Export checklist writes a text copy
-   with source paths, proposed destinations, and unresolved items.
+2. Choose folder and pick a local folder. Scan details explains limits and
+   lists each skipped path with a reason. Scan subfolder opens a smaller scan
+   in its own window and keeps your broader plan open.
+3. Select related files with Ctrl or Shift, enter a New collection name, then
+   choose Create & assign. Use Assign selected for an existing collection.
+4. Select one file to read or copy the full original and proposed paths below
+   the table. Edit the proposed name if needed and choose Set name. Record
+   Include in checklist, Keep in place, or Review later.
+5. Save plan outside the original inspected folder. Open plan restores your
+   collections and decisions. Export checklist writes a text copy with source
+   paths, proposed destinations, and unresolved items.
 
 The folder you choose is read-only to Journey. Plans and exports contain file
 names and paths and should be handled as you would the original inventory.
 They are saved only where you choose. The app works offline and uses names,
 sizes and timestamps. Preview decisions are yours and have no effect on files.
 
-The planner skips links, junctions and inaccessible paths. It displays scan
-limits or skipped entries and puts blocked proposals in a separate section.
+The entry limit counts files, folders, and skipped entries. Unvisited paths
+beyond a limit are outside the skipped-path count. A limited scan keeps proposed
+changes in review. RC2 opens RC1 plans and saves using the RC2 format.
 Confirm the current paths and any external references before using the
 checklist for manual changes. To remove the app, close it and remove this
 extracted Journey folder. Keep any saved plans you want to reopen.

@@ -3,6 +3,7 @@
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+import errno
 import ntpath
 import os
 from pathlib import Path, PurePosixPath
@@ -115,8 +116,13 @@ class Plan:
     files: dict[str, File] = field(default_factory=dict)
     directories: list[str] = field(default_factory=list)
     gaps: dict[str, str] = field(default_factory=dict)
-    limited: bool = False
+    scan_limit: str = ""
     collections: list[str] = field(default_factory=list)
+    protected_root: str = ""
+
+    @property
+    def limited(self):
+        return bool(self.scan_limit)
 
     def add_collection(self, label):
         label = component(label.strip())
@@ -180,7 +186,7 @@ class Plan:
             projected = ntpath.join(self.root, *new.parts)
             if change != "No change":
                 if self.limited:
-                    blocker = "Scan limit reached. Verify a smaller folder before planning changes."
+                    blocker = "Scan incomplete. Use Scan subfolder to verify changes in a smaller area."
                 elif old.suffix.lower() in TEMP_SUFFIXES:
                     blocker = "Temporary or incomplete file."
                 elif key in held or held.intersection(parents):
@@ -199,60 +205,87 @@ class Plan:
         return results
 
 
-def scan_folder(folder, *, max_entries=MAX_ENTRIES, max_seconds=MAX_SCAN_SECONDS):
+def _read_failure(error, what):
+    if isinstance(error, PermissionError):
+        return f"Access denied while reading {what}."
+    if isinstance(error, (FileNotFoundError, NotADirectoryError)):
+        return f"Path disappeared or changed while reading {what}."
+    if error.errno == errno.ENAMETOOLONG or getattr(error, "winerror", None) == 206:
+        return "Path is too long for the filesystem to read."
+    return f"Could not read {what} ({error.strerror or type(error).__name__})."
+
+
+def scan_folder(folder, *, protected_root="", max_entries=MAX_ENTRIES, max_seconds=MAX_SCAN_SECONDS):
     root = absolute_path(folder)
+    if protected_root:
+        protected_root = absolute_path(protected_root)
+        if root == protected_root or not root.is_relative_to(protected_root):
+            raise ValueError("Choose a subfolder inside the inspected folder.")
     check_local_drive(root)
     if not stat.S_ISDIR(safe_metadata(root).st_mode):
         raise ValueError("Choose a folder rather than a file.")
     root = root.resolve(strict=True)
     check_local_drive(root)
-    plan = Plan(str(root), datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    if protected_root and (root == protected_root or not root.is_relative_to(protected_root)):
+        raise ValueError("The subfolder no longer resolves inside the inspected folder.")
+    plan = Plan(str(root), datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                protected_root=str(protected_root))
     pending = [root]
     entries_seen = 0
     deadline = monotonic() + max_seconds
+    time_limit = f"Scan stopped at its {max_seconds:g}-second time limit."
 
     while pending:
         folder = pending.pop()
         relative = folder.relative_to(root).as_posix()
-        observed_files, child_folders = {}, []
+        observed_files, child_folders, skipped = {}, [], {}
         try:
             before = safe_metadata(folder)
             with os.scandir(folder) as entries:
                 for entry in entries:
-                    entries_seen += 1
-                    if entries_seen > max_entries or monotonic() >= deadline:
-                        plan.limited = True
+                    if entries_seen >= max_entries:
+                        plan.scan_limit = f"Scan stopped at its {max_entries:,}-entry limit."
                         break
+                    if monotonic() >= deadline:
+                        plan.scan_limit = time_limit
+                        break
+                    entries_seen += 1
                     path = Path(entry.path)
                     key = path.relative_to(root).as_posix()
                     try:
                         relative_path(key)
+                    except ValueError as error:
+                        skipped[key] = f"Incompatible Windows name. {error}"
+                        continue
+                    try:
                         info = entry.stat(follow_symlinks=False)
-                    except (OSError, ValueError):
-                        plan.gaps[key] = "Name or metadata could not be read as a Windows-compatible entry."
+                    except OSError as error:
+                        skipped[key] = _read_failure(error, "entry metadata")
                         continue
                     if is_link(info):
-                        plan.gaps[key] = "Link, junction, or reparse point skipped."
+                        skipped[key] = "Link, junction, or reparse point skipped."
                     elif stat.S_ISDIR(info.st_mode):
                         child_folders.append(path)
                     elif stat.S_ISREG(info.st_mode):
                         observed_files[key] = File(info.st_size, info.st_mtime_ns, suggested_name(path.name))
                     else:
-                        plan.gaps[key] = "Special filesystem entry skipped."
+                        skipped[key] = "Special filesystem entry skipped."
             if signature(safe_metadata(folder)) != signature(before):
-                raise ValueError("Folder changed during the scan.")
-        except (OSError, ValueError):
+                raise ValueError("Folder changed during inspection.")
+        except (OSError, ValueError) as error:
+            reason = _read_failure(error, "folder") if isinstance(error, OSError) else str(error)
             if folder == root:
-                raise ValueError("The selected folder could not be read reliably. Choose it again.") from None
-            plan.gaps[relative] = "Folder was inaccessible or changed during the scan."
+                raise ValueError(reason) from error
+            plan.gaps[relative] = reason
         else:
             plan.files.update(observed_files)
+            plan.gaps.update(skipped)
             plan.directories.extend(path.relative_to(root).as_posix() for path in child_folders)
             pending.extend(child_folders)
         if plan.limited:
             break
         if pending and monotonic() >= deadline:
-            plan.limited = True
+            plan.scan_limit = time_limit
             break
 
     plan.files = dict(sorted(plan.files.items(), key=lambda item: (item[0].casefold(), item[0])))

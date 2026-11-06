@@ -1,5 +1,6 @@
 """Persist and export planner documents outside their observed folder."""
 
+from collections import Counter
 from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import datetime
@@ -19,7 +20,7 @@ from journey_planner.catalog import (
 
 PLAN_SUFFIX = ".journey.json"
 FORMAT = "journey-folder-plan"
-SCHEMA = 1
+SCHEMA = 2
 
 
 def _unique_fields(pairs):
@@ -46,7 +47,8 @@ def open_plan(path):
     data = _read(path)
     try:
         document = json.loads(data.decode("utf-8"), object_pairs_hook=_unique_fields)
-        if document["format"] != FORMAT or type(document["schema"]) is not int or document["schema"] != SCHEMA:
+        schema = document["schema"]
+        if document["format"] != FORMAT or type(schema) is not int or schema not in (1, SCHEMA):
             raise ValueError("Unsupported Journey plan format or version.")
         source = document["plan"]
         plan = Plan(str(absolute_path(source["root"])), source["scanned_at"])
@@ -60,9 +62,21 @@ def open_plan(path):
         plan.directories = [relative_path(entry) for entry in directories]
         if len(set(plan.directories)) != len(plan.directories) or set(plan.directories).intersection(files):
             raise ValueError("Duplicate folder inventory entries.")
-        if type(source["limited"]) is not bool:
-            raise ValueError("Invalid scan status.")
-        plan.limited = source["limited"]
+        if schema == 1:
+            if type(source["limited"]) is not bool:
+                raise ValueError("Invalid scan status.")
+            if source["limited"]:
+                plan.scan_limit = "The scan reached its time or entry limit. The earlier plan did not record which."
+        else:
+            plan.scan_limit = source["scan_limit"]
+            if not isinstance(plan.scan_limit, str):
+                raise ValueError("Invalid scan status.")
+            if source["protected_root"] != "":
+                protected_root = absolute_path(source["protected_root"])
+                root = Path(plan.root)
+                if root == protected_root or not root.is_relative_to(protected_root):
+                    raise ValueError("Invalid protected source folder.")
+                plan.protected_root = str(protected_root)
         if not all(isinstance(reason, str) for reason in gaps.values()):
             raise ValueError("Invalid scan gaps.")
         plan.gaps = gaps
@@ -178,12 +192,27 @@ def save_plan(plan, path, *, expected=None):
     data = (json.dumps({"format": FORMAT, "schema": SCHEMA, "plan": asdict(plan)}, ensure_ascii=True) + "\n").encode("utf-8")
     if len(data) > MAX_PROJECT_BYTES:
         raise ValueError("This plan exceeds the 24 MiB size limit. Try a smaller folder.")
-    return _write(plan.root, path, PLAN_SUFFIX, data, expected)
+    return _write(plan.protected_root or plan.root, path, PLAN_SUFFIX, data, expected)
 
 
 def _display_path(path):
     # Quote exact spellings and keep filesystem control characters inert.
     return json.dumps(path, ensure_ascii=False).replace("/", "\\")
+
+
+def coverage_notes(plan):
+    if not (plan.limited or plan.gaps):
+        return ["The scan finished within its limits and reported no skipped paths."]
+    lines = ["Scan coverage is incomplete."]
+    if plan.limited:
+        lines.extend([plan.scan_limit, "Unvisited entries beyond the limit are outside the skipped-path count."])
+    if plan.gaps:
+        lines.extend(["", f"Skipped paths ({len(plan.gaps):,}). A skipped folder can contain additional files."])
+        for reason, count in sorted(Counter(plan.gaps.values()).items(), key=lambda item: (-item[1], item[0])):
+            lines.append(f"  {count:,} × {reason}")
+        lines.extend(["", "Skipped paths relative to the inspected folder"])
+        lines.extend(f"- {_display_path(path)}: {reason}" for path, reason in sorted(plan.gaps.items()))
+    return lines
 
 
 def export_text(plan):
@@ -212,11 +241,7 @@ def export_text(plan):
         "",
     ]
     if plan.limited or plan.gaps:
-        lines.append("Scan coverage is incomplete.")
-        if plan.limited:
-            lines.append("The scan reached its time or entry limit.")
-        lines.extend(f"- {_display_path(path)}: {reason}" for path, reason in plan.gaps.items())
-        lines.append("")
+        lines.extend([*coverage_notes(plan), ""])
     for heading, items in (
         ("Included changes", ready),
         ("Included items that need review", blocked),
@@ -229,4 +254,4 @@ def export_text(plan):
 
 def export_plan(plan, path):
     data = export_text(plan).encode("utf-8", errors="backslashreplace")
-    _write(plan.root, path, ".txt", data)
+    _write(plan.protected_root or plan.root, path, ".txt", data)

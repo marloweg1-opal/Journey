@@ -22,4 +22,4 @@ jobs:
           python -B tools/build_windows_planner.py dist --cache "$env:RUNNER_TEMP/journey-downloads"
       - name: Verify extracted Windows app
         run: |
-          tools/windows/verify_bundle.ps1 -Zip dist/Journey-1.0-RC1-Windows-x64.zip -Destination "$env:RUNNER_TEMP/Journey acceptance with spaces"
+          tools/windows/verify_bundle.ps1 -Zip dist/Journey-1.0-RC2-Windows-x64.zip -Destination "$env:RUNNER_TEMP/Journey acceptance with spaces"

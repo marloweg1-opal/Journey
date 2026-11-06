@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from journey_planner.catalog import scan_folder, suggested_name
-from journey_planner.plan_file import export_plan, export_text, open_plan, save_plan
+from journey_planner.plan_file import coverage_notes, export_plan, export_text, open_plan, save_plan
 
 
 class FolderPlannerTests(unittest.TestCase):
@@ -145,7 +145,63 @@ class FolderPlannerTests(unittest.TestCase):
         self.assertEqual(len(plan.files), 1)
         next(iter(plan.files.values())).decision = "Include"
         self.assertIn("Included changes (0)", export_text(plan))
-        self.assertIn("The scan reached its time or entry limit", export_text(plan))
+        self.assertIn("1-entry limit", export_text(plan))
+        with patch("journey_planner.catalog.monotonic", side_effect=[0, 0, 20]):
+            timed = scan_folder(self.source)
+        self.assertTrue(timed.limited)
+        self.assertEqual(len(timed.files), 1)
+        self.assertIn("20-second time limit", export_text(timed))
+
+    def test_scan_details_distinguish_skipped_folders_from_unvisited_paths(self):
+        self.file("private/unseen.txt")
+        self.file("visible.txt")
+        scandir = os.scandir
+
+        def read_folder(path):
+            if Path(path).name == "private":
+                raise PermissionError("Fixture for an unreadable folder")
+            return scandir(path)
+
+        with patch("journey_planner.catalog.os.scandir", side_effect=read_folder):
+            plan = scan_folder(self.source)
+        self.assertFalse(plan.limited)
+        self.assertEqual(set(plan.files), {"visible.txt"})
+        self.assertEqual(plan.gaps, {"private": "Access denied while reading folder."})
+        notes = "\n".join(coverage_notes(plan))
+        self.assertIn("Skipped paths (1)", notes)
+        self.assertIn("1 × Access denied", notes)
+        self.assertIn('"private": Access denied', notes)
+
+    def test_focused_plan_preserves_the_outer_read_only_boundary(self):
+        self.file("docs/notes.txt")
+        self.file("other/sibling.txt")
+        with self.assertRaisesRegex(ValueError, "Choose a subfolder"):
+            scan_folder(self.output, protected_root=self.source)
+        plan = scan_folder(self.source / "docs", protected_root=self.source)
+        self.assertEqual(set(plan.files), {"notes.txt"})
+        saved = self.output / "Focused.journey.json"
+        save_plan(plan, saved)
+        reopened, _ = open_plan(saved)
+        self.assertEqual(reopened, plan)
+        with self.assertRaisesRegex(ValueError, "outside the inspected folder"):
+            save_plan(reopened, self.source / "Rejected.journey.json")
+        with self.assertRaisesRegex(ValueError, "outside the inspected folder"):
+            export_plan(reopened, self.source / "other" / "Rejected.txt")
+        self.assertEqual(os.listdir(self.source / "other"), ["sibling.txt"])
+
+    def test_opens_rc1_plan_with_legacy_scan_limit(self):
+        self.file("asset.txt")
+        saved = self.output / "RC1.journey.json"
+        save_plan(scan_folder(self.source), saved)
+        old = json.loads(saved.read_text(encoding="utf-8"))
+        old["schema"] = 1
+        old["plan"]["limited"] = True
+        del old["plan"]["scan_limit"], old["plan"]["protected_root"]
+        saved.write_text(json.dumps(old), encoding="utf-8")
+        reopened, _ = open_plan(saved)
+        self.assertEqual(set(reopened.files), {"asset.txt"})
+        self.assertTrue(reopened.limited)
+        self.assertIn("The earlier plan did not record which", export_text(reopened))
 
     def test_refuses_source_output_existing_files_and_stale_saves(self):
         self.file("notes.txt")
