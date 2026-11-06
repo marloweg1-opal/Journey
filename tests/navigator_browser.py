@@ -47,6 +47,8 @@ def count(page, key):
 
 
 def completed(page, files, images):
+    expect(page.locator('[data-count="files"]')).to_have_text(f"{files:,}", timeout=90_000)
+    expect(page.locator('[data-count="analyzed"]')).to_have_text(f"{images:,}", timeout=90_000)
     expect(page.locator("#inspect-progress")).to_contain_text("Finished inspecting", timeout=90_000)
     assert count(page, "files") == files, count(page, "files")
     assert count(page, "analyzed") == images, count(page, "analyzed")
@@ -120,6 +122,7 @@ def run(browser, runtime, base):
         expect(page.locator("#inspect-approval")).to_contain_text(str(source))
         expect(page.locator("#inspect-review")).to_be_hidden()
         page.get_by_role("button", name="Authorize this destination").click()
+        expect(page.locator('[data-count="files"]')).not_to_have_text("0", timeout=15_000)
         expect(page.get_by_role("button", name="Pause", exact=True)).to_be_enabled(timeout=15_000)
         page.get_by_role("button", name="Pause", exact=True).click()
         expect(page.locator("#inspect-progress")).to_contain_text("paused")

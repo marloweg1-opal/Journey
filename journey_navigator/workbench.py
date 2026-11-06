@@ -334,16 +334,23 @@ class Workbench:
             if self.cursor is None or self.cursor[0] != key or self.cursor[2] != signature(before):
                 self.pause()
                 self.cursor = (key, os.scandir(path), signature(before))
-            for _ in range(ENTRY_BATCH):
-                entry = next(self.cursor[1], None)
-                if entry is None:
-                    self.pause()
-                    self.conn.execute("UPDATE dirs SET status='done' WHERE job=? AND physical_id=?", (job["id"], row["physical_id"]))
-                    break
-                self._discover_entry(job, row["scope"], entry)
-            if signature(safe_metadata(path, read_guard=self.policy.check)) != signature(before):
+            self.conn.execute("SAVEPOINT directory_batch")
+            try:
+                for _ in range(ENTRY_BATCH):
+                    entry = next(self.cursor[1], None)
+                    if entry is None:
+                        self.pause()
+                        self.conn.execute("UPDATE dirs SET status='done' WHERE job=? AND physical_id=?", (job["id"], row["physical_id"]))
+                        break
+                    self._discover_entry(job, row["scope"], entry)
+                if signature(safe_metadata(path, read_guard=self.policy.check)) != signature(before):
+                    raise ProtectedPath("The folder changed during inspection. Refresh to read it again.")
+            except (OSError, ValueError, sqlite3.Error):
                 self.pause()
-                self.conn.execute("UPDATE dirs SET status='pending' WHERE job=? AND physical_id=?", (job["id"], row["physical_id"]))
+                self.conn.execute("ROLLBACK TO directory_batch")
+                raise
+            finally:
+                self.conn.execute("RELEASE directory_batch")
         except (OSError, ValueError) as error:
             self.pause()
             self._gap(job, path, _message(error))

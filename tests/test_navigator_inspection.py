@@ -76,6 +76,18 @@ class NavigatorInspectionTests(unittest.TestCase):
         if os.name == "nt":
             self.assertTrue(any(item["kind"] == "junction" for item in links))
 
+    def test_ordinary_subfolder_accessed_through_junction_keeps_narrow_scope(self):
+        inner = self.source / "Inside"
+        inner.mkdir()
+        Image.new("RGB", (40, 40)).save(inner / "inner.png")
+        Image.new("RGB", (40, 40)).save(self.source / "outside the selected folder.png")
+        alias = make_link(self.base / "Folder alias", self.source, "junction")
+        pending = self.app.select(alias / "Inside")
+        self.assertEqual(Path(pending["target"]), inner)
+        job = self.app.approve(pending["ticket"])["job"]
+        self.assertEqual(self.finish(job)["analyzed"], 1)
+        self.assertEqual(self.app.images(job, 0)["items"][0]["filename"], "inner.png")
+
     def test_inaccessible_broken_and_retargeted_links(self):
         gone = self.base / "Missing target"
         gone.mkdir()

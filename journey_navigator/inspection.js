@@ -134,6 +134,11 @@
   async function run() {
     if (running || !job) return;
     running = true;
+    $("inspect-progress").textContent = "Starting inspection. Each batch saves its progress.";
+    panel.querySelector('[data-inspect="resume"]').disabled = true;
+    panel.querySelector('[data-inspect="pause"]').disabled = false;
+    panel.querySelector('[data-inspect="refresh"]').disabled = true;
+    panel.querySelector('[data-inspect="export"]').disabled = true;
     const id = ++sequence;
     const selected = job;
     let data;
@@ -148,6 +153,7 @@
       if (id === sequence) {
         running = false;
         if (data) coverage(data);
+        else coverage(await api("summary", {job}));
         await loadView();
       }
     }
@@ -174,6 +180,10 @@
       await run();
     } else {
       notice(`${label(result.status)} · ${result.reason}`);
+      if (job && view === "links") {
+        coverage(await api("summary", {job}));
+        await loadView();
+      }
     }
   }
 
@@ -215,7 +225,12 @@
     browse: () => browse(pathField.value ? pathField.value.trim().replace(/^"|"$/g, "") : ""),
     drives: () => browse(), folder: (path) => browse(path), "browse-page": (value) => browse(...JSON.parse(value)), choose,
     link: async (value) => selected(await api("select", {job, link: Number(value)})),
-    approve: async (ticket) => selected(await api("approve", {ticket})),
+    approve: async (ticket) => {
+      approval.querySelectorAll("button").forEach(button => { button.disabled = true; });
+      notice("Checking the destination and its permissions…");
+      try { await selected(await api("approve", {ticket})); }
+      catch (error) { approval.hidden = true; throw error; }
+    },
     "cancel-approval": () => { approval.hidden = true; notice("Current inspection scope retained."); },
     resume: run, pause,
     refresh: async () => { coverage(await api("refresh", {job})); await run(); },
