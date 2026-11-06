@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "tokens": {
+    "moonstone": {"display_name": "Moonstone", "type": "subject", "aliases": ["Moon Stone"], "owns": [], "routes": {}, "customization": {}},
+    "cloverstone": {"display_name": "Cloverstone", "type": "subject", "aliases": ["Clover Stone"], "owns": [], "routes": {}, "customization": {}},
+    "heartstone": {"display_name": "Heartstone", "type": "subject", "aliases": ["Heart Stone"], "owns": [], "routes": {}, "customization": {}},
+    "cloudstone": {"display_name": "Cloudstone", "type": "subject", "aliases": ["Cloud Stone"], "owns": [], "routes": {}, "customization": {}},
+    "wishstone": {"display_name": "Wishstone", "type": "subject", "aliases": ["Wish Stone"], "owns": [], "routes": {}, "customization": {}},
+    "corestone": {"display_name": "Corestone", "type": "subject", "aliases": ["Core Stone", "Opalstone", "Opal Stone"], "owns": [], "routes": {}, "customization": {}}
+  }
+}

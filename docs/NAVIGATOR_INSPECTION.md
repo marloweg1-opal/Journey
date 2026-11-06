@@ -1,75 +1,89 @@
 # Journey Navigator inspection candidate
 
-## Open Navigator
+## Start an inspection
 
-Extract the Windows x64 ZIP to a local test folder and open **Journey Navigator.exe**.
-Navigator opens in your browser. **Inspect** accepts a folder path or lets you
-browse local drives and select an existing folder shortcut, junction, or symbolic
-link. **Manage** opens saved inspections and closes the local app.
+1. Extract the Windows x64 ZIP and open **Journey Navigator.exe**. The
+   Navigator opens in your browser and runs on your computer.
+2. Under **Inspect**, choose a project folder or an existing shortcut,
+   junction, or symbolic link. Browse can show local folders for you to choose.
+   For a destination outside the current scope, review the path shown and
+   choose **Authorize this destination**. Each outside hop gets its own review.
+3. Choose **Keep a local checkpoint** if you want **Manage** to reopen the
+   results, thumbnails, extracted text, and corrections. An unchecked box
+   keeps this review in memory for the session. **Suggest names and draft a
+   plan** is a separate choice. For an added link destination, the approval
+   displays the review's retention mode and its own suggestions checkbox.
+   Select a link in a separate review to use a different retention mode.
+4. Use **Images** or **Find** to search filenames, paths, and text found in
+   images. Expand **Evidence and naming preview** to see the full source path,
+   clues and their origin, and a preliminary filename where warranted.
+   Resolve material conflicts by recording a correction. A confirmed subject
+   and purpose can produce a destination preview. Save a JSON plan from a
+   retained review with suggestions enabled.
+5. **Review or revoke permissions** shows the selected scope and each separately
+   authorized destination. You can turn suggestions on or off, revoke
+   inspection, or forget a checkpoint and its corrections. To continue
+   without retention after forgetting a checkpoint, start a temporary review.
+   An exported plan is a separate copy.
 
-Navigator shows the selected link and destination separately. For an out-of-scope
-destination, choose **Authorize this destination** to read it, or **Keep current
-scope**. A second out-of-scope hop gets its own review. **Links and destinations**
-shows resolved, duplicate, pending, broken, protected, and cyclic links.
+The selected source is read-only. Journey saves checkpoints and plan exports
+under `%LOCALAPPDATA%\Journey\Navigator Inspection` when authorized. Keep
+these files private. Closing the Navigator service from **Manage** ends a
+temporary review. A checkpoint from the earlier Navigator build needs explicit
+reselection. Reauthorizing an external target is separate from reopening its
+parent checkpoint.
 
-Discovery and image processing run in successive batches. You can pause and
-reopen an inspection from **Manage**. **Refresh source** detects new or changed
-files and reuses image analysis by content hash. **Images** and **Visual groups**
-show thumbnails, overlapping virtual memberships, and grouped questions. Record
-a correction on an image to update evidence for nearby examples. Set a naming
-convention and use **Save plan** for a reviewable JSON plan with provenance,
-coverage, and naming previews.
+## What Journey can observe
 
-Journey keeps its checkpoint database, thumbnails, review decisions, and plan
-exports in `%LOCALAPPDATA%\Journey\Navigator Inspection`. The selected source is
-read-only. Review files can contain paths and private visual evidence. The app
-can read the existing Journey source-hold and perception-policy records in read-only
-mode when the standard production stores exist. Explicit restrictions still apply.
-One Navigator session owns the review storage at a time. Close it from **Manage**
-when you are finished.
+- Image assessment uses pixels, filename and relative folder clues, the
+  bundled CareBloom profile vocabulary, text, and corrections from the same
+  scope. A registered reference can suggest a subject. Competing clues stay
+  visible, and only an explicit human decision confirms an identity. Visually
+  similar images can share a virtual group independently of identity. Names
+  preserve original extensions and recognized filename version and timestamp
+  tokens. Extracted dates and version text remain labeled as image evidence.
+- The bundled Windows text reader runs Tesseract OCR (optical character
+  recognition) locally with English language data. The reader receives a
+  resized image in memory, with a three-second timeout and one engine thread.
+  Text recognition works best for clear printed labels. Stylized, rotated,
+  tiny, multilingual, or densely arranged text can be missed or misread.
+  If the reader is unavailable, filename, folder, and visual assessment
+  remain available. A refresh can retry text reading or backfill it for
+  previously analyzed images.
+- The checkpoint caches pixels and image text by review, scope, and content
+  hash. The text cache also tracks the engine, language data, and processing
+  configuration. A warm scan checks source fingerprints again. Search results
+  identify whether a match came from image text. Plans carry relevant
+  evidence and provenance. Full extracted text is available in the review.
+- Images have the existing 16 MiB and 20-megapixel limits. Discovery and
+  analysis run in batches and can pause. **Links and destinations** and
+  **Skipped entries** describe coverage gaps. The first frame represents a
+  multi-frame image. Visual groups compare a bounded set of representatives.
+- This build works with local paths. Account access, source holds, system
+  directory protections, and applicable Journey perception policies still
+  apply. Drive-wide selection, network/device paths and shell-only links are
+  blocked. The link record and resolved destination are separate. Journey
+  validates the target again and prevents duplicate directory visits and
+  recursive cycles. Its inspection service offers no physical operation or
+  cross-scope reuse capability.
 
-## Integration and limits
+The interface uses standard browser controls with keyboard navigation and
+text labels. Extracted text helps with images that contain text. People who
+rely on nonvisual interpretation of unlabeled artwork or on screen-reader
+workflows still need direct usability testing. The boundaries of this program
+are not the boundaries of human possibility.
 
-The candidate uses the existing Navigator page and visual shell, RC2 path and
-naming checks, and Vision Lab's descriptors and review rules. Its isolated local
-service supports inspection, Find over the current inventory, and Manage for
-saved inspections. The production ledger search, action catalogue, and mutation
-routes belong to the existing production service. RC1, RC2, and Vision Lab data
-stay in their own formats. Import of those records is outside this candidate.
+## Reproduce
 
-The shortcut reader uses filesystem paths stored in Windows shortcut records.
-Network, device, shell-only, and tracking-dependent targets are reported as
-unsupported. A folder shortcut needs a readable local path. Windows account
-permissions, protected folders, and source holds remain in effect. Reopening
-checks the saved link chain and physical source before continuing. If a link
-changes, select it again and review the new destination. Directory identity is
-used to avoid duplicate scans, and cycle checks cover chained links and links
-back into the observed folder graph.
+Run `python -B -m journey_navigator` from the source checkout with Pillow.
+Linux source runs discover a local Tesseract installation with English data.
+Windows source runs can use a standard local Tesseract installation, while
+the package includes the pinned runtime and its third-party notices.
 
-Coverage is a live, checkpointed observation. Directory enumeration can repeat
-after interruption, with already recorded entries deduplicated. Image reads
-have the Vision Lab's per-file 16 MiB and 20-megapixel limits. Pixel-based grouping
-compares a bounded set of representatives. Grouping is approximate and visual
-similarity alone does not establish identity. Contextual names require confirmed
-subject and purpose. File changes remain previews. The workbench uses local
-Windows access controls and path revalidation, with no elevated privileges.
-
-The candidate uses standard keyboard-accessible browser controls. Thumbnails
-have filename text and classifications have evidence labels. Identifying the
-content of an unfamiliar image still relies on vision. Screen-reader usability
-and nonvisual descriptions require separate verification.
-
-## Verification
-
-The Windows acceptance workflow builds and extracts the ZIP into a path with
-spaces. It opens the bundled Navigator in a browser and selects a Windows-created
-shortcut. The fixture includes nested directories, 10,020 other files, more
-than 50 images, local shortcut and junction aliases, a cycle, and a destination
-outside the initial scope. It pauses and restarts the service, resumes from
-persisted counts, authorizes the outside target, applies a correction to a later
-look-alike, refreshes cached analyses, exports the plan, and compares source
-hashes and modification times. Targeted tests exercise malformed and broken
-shortcuts, permissions, retargeting, source holds, and separate local drives
-where the runner has them.
-
-The boundaries of this program are not the boundaries of human possibility.
+The Windows workflow builds the ZIP, extracts it to a folder with spaces, and
+exercises it in a browser. It covers existing Windows links, bounded resumption
+and reopening, OCR-only search, naming preview, retained correction, revocation,
+plan export and source integrity. The contextual tests generate 36 labeled
+and misleading reference boards for the six registered names, aliases,
+conflicting folder placement, image-only titles, and cold and warm OCR.
+The RC1/RC2 Folder Planner and standalone Vision Lab keep their own data formats.

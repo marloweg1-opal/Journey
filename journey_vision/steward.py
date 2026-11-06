@@ -16,8 +16,12 @@ PROPOSE_IDENTITY = 0.075
 CONFLICT_MARGIN = 0.012
 DEFAULT_RULE = {"project": "", "filename": "{subject} - {purpose}", "folder": "{subject}"}
 FIELDS = ("project", "subject", "purpose", "variation", "stamp")
-STAMP = re.compile(r"(?<!\d)20\d{2}-?\d{2}-?\d{2}(?:[T_ ]\d{2}-?\d{2}-?\d{2})?(?!\d)")
-VERSION_TOKEN = re.compile(r"(?<![a-zA-Z0-9])v\d{1,4}(?![a-zA-Z0-9])", re.I)
+STAMP = re.compile(
+    r"(?<!\d)20\d{2}[-_. ]?\d{2}[-_. ]?\d{2}(?:[T_ ]\d{2}[-_.]?\d{2}[-_.]?\d{2})?(?!\d)"
+    r"|\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?"
+    r"|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?) +\d{1,2},? +20\d{2}"
+    r"(?:,? +\d{1,2}[_-]\d{2}[_-]\d{2}(?: +[AP]M)?)?", re.I)
+VERSION_TOKEN = re.compile(r"(?<![a-zA-Z0-9])v\d{1,4}(?:\.\d{1,4}){0,3}(?![a-zA-Z0-9])", re.I)
 
 
 def pixel_distance(left, right):
@@ -225,6 +229,16 @@ def validate_rule(project, filename, folder):
     return {"project": project, "filename": filename, "folder": folder}
 
 
+def contextual_filename(original, template, values, versions, stamps):
+    if any(not values[field] for field in _fields(template)):
+        raise ValueError("The naming rule calls for a field with insufficient evidence.")
+    stem = template.format_map(values).strip()
+    for token in dict.fromkeys([values["variation"], *versions, *stamps]):
+        if token and token not in stem:
+            stem += f" - {token}"
+    return validate_name(original.name, stem + original.suffix)
+
+
 def draft_names(inventory, records, rule):
     draft = replace(inventory, collections=[], files={path: replace(file, name=PurePosixPath(path).name)
                                                        for path, file in inventory.files.items()})
@@ -243,14 +257,9 @@ def draft_names(inventory, records, rule):
         values = {"project": rule["project"], "subject": identity["label"], "purpose": purpose["label"],
                   "variation": review.get("variation") or " - ".join(versions), "stamp": " - ".join(stamps)}
         try:
-            required = _fields(rule["filename"]) | _fields(rule["folder"])
-            if any(not values[field] for field in required):
+            if any(not values[field] for field in _fields(rule["folder"])):
                 raise ValueError("The naming rule calls for a field with insufficient evidence.")
-            stem = rule["filename"].format_map(values).strip()
-            for token in dict.fromkeys([values["variation"], *versions, *stamps]):
-                if token and token not in stem:
-                    stem += f" - {token}"
-            name = validate_name(original.name, stem + original.suffix)
+            name = contextual_filename(original, rule["filename"], values, versions, stamps)
             folder = rule["folder"].format_map(values).strip()
             if folder:
                 existing = next((known for known in draft.collections if known.casefold() == folder.casefold()), None)

@@ -35,12 +35,18 @@ def slug(value: str) -> str:
     return "_".join(parts)
 
 
-def detected_token_ids(registry: dict[str, Any], text: str) -> list[str]:
-    lowered = text.lower()
+def detected_token_ids(registry: dict[str, Any], text: str, *, whole_tokens: bool = False) -> list[str]:
+    lowered = text.casefold() if whole_tokens else text.lower()
+    words = f" {' '.join(re.findall(r'[^\W_]+', lowered))} " if whole_tokens else ""
     found = []
     for token_id, token in registry.get("tokens", {}).items():
         candidates = [token_id, token.get("display_name", ""), *token.get("aliases", [])]
-        if any(str(candidate).lower() in lowered for candidate in candidates if candidate):
+        if whole_tokens:
+            phrases = [" ".join(re.findall(r"[^\W_]+", str(value).casefold())) for value in candidates if value]
+            matches = any(phrase and f" {phrase} " in words for phrase in phrases)
+        else:
+            matches = any(str(value).lower() in lowered for value in candidates if value)
+        if matches:
             resolved = resolve_token(registry, token_id)
             canonical_id = resolved[0] if resolved else token_id
             if canonical_id not in found:

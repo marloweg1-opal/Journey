@@ -14,12 +14,14 @@ from playwright.sync_api import expect, sync_playwright
 
 from journey_vision.demo import _icon, _portrait
 from navigator_fixtures import make_link
+from test_navigator_context import make_board
 
 
 ROOT = Path(__file__).resolve().parents[1]
 FIRST = "01-Aster_20261018_142351_v02.png"
 WRONG = "02-Lookalike.png"
 LATER = "03-Later.png"
+BOARD = "04-untitled.png"
 
 
 @contextmanager
@@ -70,7 +72,7 @@ def corrections(page, filename, decision, label, purpose=""):
     if purpose:
         card.get_by_label("Purpose", exact=True).fill(purpose)
     card.get_by_role("button", name="Save correction").click()
-    expect(page.locator("#inspect-notice")).to_contain_text("Correction saved")
+    expect(page.locator("#inspect-notice")).to_contain_text("Correction recorded")
 
 
 def run(browser, runtime, base):
@@ -85,7 +87,10 @@ def run(browser, runtime, base):
     initial = [source / FIRST, source / WRONG]
     _portrait(0).save(initial[0])
     _portrait(0, True).save(initial[1])
-    for index in range(72):
+    board = source / BOARD
+    make_board(board, "Moonstone", "Character reference sheet")
+    initial.append(board)
+    for index in range(71):
         path = artwork / f"symbol-{index:03}.png"
         _icon(index % 5, bool(index % 2)).save(path)
         initial.append(path)
@@ -118,6 +123,8 @@ def run(browser, runtime, base):
 
     with running_navigator(runtime, data, base) as url:
         page = open_page(url)
+        page.get_by_label("Keep a local checkpoint", exact=False).check()
+        page.get_by_label("Suggest names and draft a plan", exact=True).check()
         select_link(page, launch_folder, shortcut)
         expect(page.locator("#inspect-approval")).to_contain_text(str(source))
         expect(page.locator("#inspect-review")).to_be_hidden()
@@ -130,7 +137,7 @@ def run(browser, runtime, base):
         assert 0 < paused < 10_094, paused
         page.locator('.quick [data-select="manage"]').click()
         page.get_by_role("button", name="Close Navigator").click()
-        expect(page.get_by_text("Navigator is closed. Your review is saved.")).to_be_visible()
+        expect(page.get_by_text("Navigator is closed.", exact=True)).to_be_visible()
         page.close()
 
     with running_navigator(runtime, data, base) as url:
@@ -142,6 +149,16 @@ def run(browser, runtime, base):
         completed(page, 10_094, 74)
         assert count(page, "unsupported") == 10_020
         assert count(page, "skipped") == 0
+        assert count(page, "text_count") >= 1
+        page.get_by_label("Filter names, paths, or image text").fill("Moonstone")
+        page.get_by_role("button", name="Filter images").click()
+        titled = page.locator("[data-image]").filter(has=page.get_by_role("heading", name=BOARD, exact=True))
+        expect(titled).to_contain_text("Moonstone · proposed identity")
+        titled.get_by_text("Evidence and naming preview", exact=True).click()
+        expect(titled).to_contain_text("Preliminary filename · Moonstone - Character Reference.png")
+        expect(titled).to_contain_text("Image text")
+        page.get_by_label("Filter names, paths, or image text").fill("")
+        page.get_by_role("button", name="Filter images").click()
         page.get_by_role("button", name="Links and destinations").click()
         expect(page.locator("#inspect-results")).to_contain_text(str(shortcut))
         expect(page.locator("#inspect-results")).to_contain_text(str(source))
@@ -164,13 +181,13 @@ def run(browser, runtime, base):
         page.get_by_role("button", name="Refresh source").click()
         completed(page, 10_096, 76)
         assert count(page, "reused") == 75, count(page, "reused")
-        page.get_by_label("Filter image names or paths").fill(LATER)
+        page.get_by_label("Filter names, paths, or image text").fill(LATER)
         page.get_by_role("button", name="Filter images").click()
         later = page.locator("[data-image]").filter(has=page.get_by_role("heading", name=LATER, exact=True))
-        expect(later).to_contain_text("Identity open · unknown")
+        expect(later).to_contain_text("Identity open · explicitly rejected identity")
         later.get_by_text("Evidence and naming preview", exact=True).click()
         expect(later).to_contain_text("Rejected association · Aster")
-        page.get_by_label("Filter image names or paths").fill("")
+        page.get_by_label("Filter names, paths, or image text").fill("")
         page.get_by_role("button", name="Filter images").click()
         original = page.locator("[data-image]").filter(has=page.get_by_role("heading", name=FIRST, exact=True))
         expect(original).to_contain_text("Character Artwork")
@@ -185,6 +202,8 @@ def run(browser, runtime, base):
         named = next(image for image in plan["images"] if image["filename"] == FIRST)
         assert len(named["memberships"]) >= 3
         assert named["name"]["destination"].endswith("v02 - 20261018_142351.png")
+        titled = next(image for image in plan["images"] if image["filename"] == BOARD)
+        assert titled["identity"]["state"] == "proposed_identity" and titled["name"]["destination"] is None
         denied = page.evaluate("""async () => {
           const headers = {"Content-Type": "application/json", "X-Journey-Session": sessionStorage.getItem("journey-inspection-session")};
           return (await fetch('/api/proposals/1/apply', {method:'POST', headers, body:'{}'})).status;
@@ -192,6 +211,18 @@ def run(browser, runtime, base):
         assert denied == 404, denied
         page.locator("#command").fill("note-10019")
         expect(page.get_by_role("heading", name="note-10019.txt")).to_be_visible()
+        page.locator('.quick [data-select="inspect"]').click()
+        page.get_by_text("Review or revoke permissions", exact=True).click()
+        outside_scope = page.locator("#inspect-scopes .inspection-entry").filter(has_text=str(outside))
+        outside_scope.get_by_role("button", name="Revoke inspection").click()
+        expect(page.locator('[data-count="analyzed"]')).to_have_text("75")
+        assert not any("outside.png" in entry["title"] for entry in page.evaluate("""async () => {
+          const response = await fetch('/api/search?q=outside.png', {headers:{
+            'X-Journey-Session': sessionStorage.getItem('journey-inspection-session'),
+            'X-Journey-Inspection': sessionStorage.getItem('journey-current-inspection')
+          }});
+          return (await response.json()).results;
+        }"""))
         page.close()
     assert not errors, errors
     assert fingerprint(before) == before

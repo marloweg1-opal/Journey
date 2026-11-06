@@ -1,19 +1,24 @@
       <section class="panel" data-panel="inspect" id="inspection" aria-label="Folder inspection">
         <div class="inspection-card">
           <h2>Inspect an existing folder</h2>
-          <p>Choose a folder, Windows shortcut, or junction. Journey saves the review locally and reads the selected source.</p>
+          <p>Choose a folder, Windows shortcut, or junction for read-only inspection. Journey checks filenames, image contents, and readable image text in the authorized folder.</p>
           <form id="inspect-selection" class="inspection-bar">
             <label>Folder or shortcut path <input name="path" id="inspect-path" autocomplete="off" required></label>
             <button type="submit">Inspect selection</button>
             <button type="button" data-inspect="browse">Browse folders</button>
           </form>
+          <div class="inspection-options" aria-label="Inspection permissions">
+            <label><input type="checkbox" id="inspect-retain"> Keep a local checkpoint, including image text and corrections</label>
+            <label><input type="checkbox" id="inspect-propose"> Suggest names and draft a plan</label>
+          </div>
           <div id="inspect-browser" hidden></div>
           <div id="inspect-approval" hidden></div>
           <p id="inspect-notice" role="status" aria-live="polite"></p>
         </div>
         <div id="inspect-review" class="inspection-card" hidden>
-          <h2>Saved inspection</h2>
+          <h2>Inspection review</h2>
           <p id="inspect-root"></p>
+          <p id="inspect-mode"></p>
           <div id="inspect-counts" class="inspection-counts" aria-label="Coverage counts"></div>
           <p id="inspect-progress" role="status" aria-live="polite"></p>
           <div class="inspection-bar">
@@ -22,9 +27,13 @@
             <button type="button" data-inspect="refresh">Refresh source</button>
             <button type="button" data-inspect="export">Save plan</button>
           </div>
+          <details id="inspect-access">
+            <summary>Review or revoke permissions</summary>
+            <div id="inspect-scopes"></div>
+          </details>
           <details id="inspect-naming">
             <summary>Naming convention</summary>
-            <p>Use confirmed subject and purpose. Filename fields include {project}, {subject}, {purpose}, {variation}, and {stamp}.</p>
+            <p>Supported clues can produce a preliminary filename. A destination preview requires a confirmed subject and purpose. Filename fields include {project}, {subject}, {purpose}, {variation}, and {stamp}.</p>
             <form id="inspect-rule" class="inspection-bar">
               <label>Project label <input name="project"></label>
               <label>Filename pattern <input name="filename" required></label>
@@ -40,7 +49,7 @@
           </div>
           <div id="inspect-questions"></div>
           <form id="inspect-filter" class="inspection-bar">
-            <label>Filter image names or paths <input name="query"></label>
+            <label>Filter names, paths, or image text <input name="query"></label>
             <button type="submit">Filter images</button>
           </form>
           <div id="inspect-results" aria-label="Inspection results"></div>

@@ -187,15 +187,16 @@ class Boundaries:
             raise ProtectedPath("An existing Journey source hold covers this destination.")
         return path
 
-    def check_image(self, path):
+    def check_image(self, path, *, retain=False, learn=False):
         path = self.check(path)
         for scope, mode, permissions, purposes in self.perception:
             if path.is_relative_to(scope):
                 if (not isinstance(permissions, dict) or not isinstance(purposes, list)
-                    or permissions.get("semantic_retention_permission") is not True
-                    or permissions.get("learning_permission") is not True
+                    or permissions.get("inference_permission") is False
+                    or (retain and permissions.get("semantic_retention_permission") is not True)
+                    or (learn and permissions.get("learning_permission") is not True)
                     or (mode != "OPEN" and not (mode == "LIMITED" and "visual stewardship" in purposes))):
-                    raise ProtectedPath("An existing Journey perception policy restricts this image's analysis or retention.")
+                    raise ProtectedPath("An existing Journey perception policy restricts this image's analysis, retention, or learning.")
                 break
         return path
 

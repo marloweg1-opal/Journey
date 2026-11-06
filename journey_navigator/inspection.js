@@ -44,37 +44,48 @@
 
   async function showJobs() {
     const {items} = await api("jobs");
-    manage.innerHTML = `<div class="inspection-card"><h2>Saved inspections</h2><p>Journey saves progress, thumbnails, and review decisions as you work.</p>
-      ${items.map(item => `<div class="inspection-entry"><p>${esc(item.root)}</p>${action("saved", "Open saved inspection", item.id)}</div>`).join("") || "<p>Choose a folder to begin.</p>"}
+    manage.innerHTML = `<div class="inspection-card"><h2>Saved inspections</h2><p>Reviews appear here when you choose to keep a local checkpoint.</p>
+      ${items.map(item => `<div class="inspection-entry"><p>${esc(item.root)}</p>${item.active ?
+        action("saved", "Open saved inspection", item.id) : action("reauthorize", "Review access settings", item.id)}</div>`).join("") || "<p>Choose a folder to begin.</p>"}
       ${action("exit", "Close Navigator")}</div>`;
   }
 
   function coverage(data) {
     const names = [["files", "Files found"], ["analyzed", "Images examined"], ["pending", "Images waiting"], ["pending_folders", "Folders waiting"],
-      ["unsupported", "Other file types"], ["skipped", "Skipped"], ["reused", "Cached analyses reused"], ["link_attention", "Links needing attention"]];
+      ["unsupported", "Other file types"], ["skipped", "Skipped"], ["reused", "Cached analyses reused"],
+      ["text_count", "Images with readable text"], ["link_attention", "Links needing attention"]];
     $("inspect-counts").innerHTML = names.map(([key, title]) => `<div><strong data-count="${key}">${data[key].toLocaleString()}</strong><span>${title}</span></div>`).join("");
     const waiting = data.pending || data.pending_folders;
-    $("inspect-progress").textContent = running ? "Inspecting in the background. Each batch saves its progress." :
-      waiting ? "Inspection paused. Resume to continue from saved progress." : "Finished inspecting the available scope. See links and skipped entries for coverage gaps.";
+    $("inspect-progress").textContent = running ? "Inspecting in batches. You can pause after the current batch." :
+      waiting ? "Inspection paused. Resume to continue." : "Finished inspecting the available scope. See links and skipped entries for coverage gaps.";
+    $("inspect-mode").textContent = (data.retains ? "Local checkpoint enabled." : "Temporary review for this session.") +
+      (data.ocr_available ? " Image text reading is available." : " Image text reading is unavailable. Filename, folder, and visual evidence are available.");
+    $("inspect-naming").hidden = !data.proposals;
     panel.querySelector('[data-inspect="resume"]').disabled = running || !waiting;
     panel.querySelector('[data-inspect="pause"]').disabled = !running;
     panel.querySelector('[data-inspect="refresh"]').disabled = running;
-    panel.querySelector('[data-inspect="export"]').disabled = running;
+    panel.querySelector('[data-inspect="export"]').disabled = running || !data.retains || !data.proposals;
   }
 
   function showImages(items) {
     const questions = new Map();
     for (const image of items) {
-      const question = image.identity.state === "proposed_identity" ? `Which images in this series depict ${image.identity.label}?` :
-        image.purpose.state === "unknown" ? "What purpose does this visual series serve?" : "";
+      const question = image.identity.state === "conflicting_evidence" ?
+        `Which subject fits this series? The evidence points to ${image.identity.conflicts.join(" or ")}.` :
+        image.purpose.state === "conflicting_evidence" ? "What purpose fits this series? Its labels disagree." : "";
       if (question) questions.set(`${image.series}:${question}`, {question, series: image.series});
     }
     $("inspect-questions").innerHTML = questions.size ? `<div class="inspection-entry"><strong>Review questions in this view</strong>
       ${[...questions.values()].slice(0, 6).map(item => `<p>${esc(item.question)} ${action("group", "Show series", item.series)}</p>`).join("")}</div>` : "";
     results.innerHTML = `<div class="inspection-gallery">${items.map(image => {
       const identity = image.identity;
-      const rejected = (identity.rejections || identity.suppressed || []).map(item => item.label).join(", ");
+      const rejected = (identity.rejections || []).map(item => item.label).join(", ");
       const name = image.name;
+      const ocr = image.ocr;
+      const reasons = image.signals.map(signal => `<li><strong>${esc(signal.source)}</strong> · ${esc(signal.text)}
+        ${signal.subjects.length ? ` · ${esc(signal.subjects.join(", "))}` : ""}
+        ${signal.purposes.length ? ` · ${esc(signal.purposes.join(", "))}` : ""}
+        ${signal.source === "Image text" ? ` · ${esc(signal.strength)}` : ""}</li>`).join("");
       return `<article class="inspection-entry" data-image="${image.id}">
         <img src="data:image/webp;base64,${esc(image.thumbnail)}" alt="Thumbnail of ${esc(image.filename)}">
         <h3>${esc(image.filename)}</h3><small>${esc(image.path)}</small>
@@ -82,8 +93,17 @@
         <p>${esc(identity.label || "Identity open")} · ${esc(label(identity.state))}</p>
         <p><small>${image.memberships.map(esc).join(" · ")}</small></p>
         <details><summary>Evidence and naming preview</summary><p>${esc(image.purpose.reason)}</p><p>${esc(identity.reason)}</p>
+        ${reasons ? `<ul>${reasons}</ul>` : ""}
+        ${identity.visual ? `<p>Visual match · ${esc(identity.visual.label)} · ${esc(identity.visual.reason)}</p>` : ""}
         ${rejected ? `<p>Rejected association · ${esc(rejected)}</p>` : ""}
-        <p><strong>${esc(name.destination || "Name needs identification")}</strong></p><p>${esc(name.reason)} ${esc(name.blocker || "")}</p></details>
+        ${image.suggestion ? `<p><strong>Preliminary filename · ${esc(image.suggestion.filename)}</strong></p><p>${esc(image.suggestion.reason)}</p>` : ""}
+        ${name.destination ? `<p><strong>Destination preview · ${esc(name.destination)}</strong></p>` : ""}
+        <p>${esc(name.reason)} ${esc(name.blocker || "")}</p>
+        <details><summary>Text read from the image · ${esc(label(ocr.status))}</summary>
+          ${ocr.provider ? `<p>${esc(ocr.provider)} · ${esc(ocr.language || "eng")} · local</p>` : ""}
+          ${ocr.lines ? `<ul>${ocr.lines.map(line => `<li>${esc(line.text)}</li>`).join("")}</ul>` : ""}
+          ${ocr.refresh_available || ocr.status === "retry" || ocr.status === "pending_refresh" ? "<p>Refresh source to run the current text reader.</p>" : ""}
+        </details></details>
         <details><summary>Record a correction</summary><form data-image-review="${image.id}">
           <label>Decision <select name="decision"><option value="confirm">Confirm identity</option><option value="reject">Reject identity</option><option value="purpose">Record purpose</option></select></label>
           <label>Identity <input name="label" value="${esc(identity.label)}"></label>
@@ -119,22 +139,54 @@
   }
 
   async function openJob(id) {
+    const data = await api("summary", {job: id});
     job = id;
     sessionStorage.setItem("journey-current-inspection", job);
     setMode("inspect");
     $("inspect-review").hidden = false;
-    const data = await api("summary", {job});
     $("inspect-root").textContent = data.root;
     const form = $("inspect-rule");
     for (const name of ["project", "filename", "folder"]) form.elements[name].value = data.rule[name];
     coverage(data);
+    await showAccess();
     await loadView();
+  }
+
+  async function showAccess() {
+    const data = await api("permissions", {job});
+    $("inspect-scopes").innerHTML = `<p>Reuse in another scope and physical changes require separate authority. This review grants neither.</p>
+      ${data.scopes.map(scope => `<div class="inspection-entry"><p><strong>${esc(scope.path)}</strong></p>
+      <p>${scope.inspect ? "Inspection allowed" : "Inspection inactive"} · ${scope.retain ? "Local checkpoint" : "Temporary data"} ·
+        ${scope.propose ? "Suggestions enabled" : "Suggestions off"}</p><div class="inspection-bar">
+      ${scope.inspect ? action("allow-plans", scope.propose ? "Turn off suggestions" : "Allow suggestions",
+        JSON.stringify([scope.path, !scope.propose])) : ""}
+      ${scope.inspect ? action("revoke-read", "Revoke inspection", scope.path) : ""}
+      ${action("forget", scope.retain ? "Forget checkpoint for this scope" : "Clear temporary results", scope.path)}</div></div>`).join("")}`;
+  }
+
+  async function revoke(scope, permission) {
+    if (permission === "retain" && !confirm("Remove this scope's results and corrections from Navigator? Exported plan files are separate.")) return;
+    await pause();
+    const data = await api("revoke", {job, scope, permission});
+    if (data.closed) {
+      job = "";
+      sessionStorage.removeItem("journey-current-inspection");
+      results.replaceChildren();
+      $("inspect-scopes").replaceChildren();
+      $("inspect-review").hidden = true;
+    } else {
+      offset = 0;
+      coverage(await api("summary", {job}));
+      await showAccess();
+      await loadView();
+    }
+    notice(permission === "retain" ? "Review data cleared for this scope." : "Inspection permission revoked.");
   }
 
   async function run() {
     if (running || !job) return;
     running = true;
-    $("inspect-progress").textContent = "Starting inspection. Each batch saves its progress.";
+    $("inspect-progress").textContent = "Starting inspection.";
     panel.querySelector('[data-inspect="resume"]').disabled = true;
     panel.querySelector('[data-inspect="pause"]').disabled = false;
     panel.querySelector('[data-inspect="refresh"]').disabled = true;
@@ -171,6 +223,9 @@
     approval.hidden = result.status !== "approval_required";
     if (result.status === "approval_required") {
       approval.innerHTML = `<h3>Allow read-only inspection?</h3>${provenance(result)}<p>${esc(result.reason)}</p>
+        <p>${result.retains ? "Authorizing this destination will also keep its image text and corrections in the local checkpoint." :
+          "Results for this destination stay in this temporary review."}</p>
+        <label><input type="checkbox" id="inspect-link-plans" ${result.proposals ? "checked" : ""}> Suggest names and draft a plan for this destination</label>
         ${action("approve", "Authorize this destination", result.ticket)} ${action("cancel-approval", "Keep current scope")}`;
       approval.querySelector("button").focus();
     } else if (result.status === "ready") {
@@ -195,7 +250,8 @@
     offset = 0;
     view = "images";
     panel.querySelectorAll("[data-view]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.view === view)));
-    await selected(await api("select", {path: path.trim().replace(/^"|"$/g, "")}));
+    await selected(await api("select", {path: path.trim().replace(/^"|"$/g, ""),
+      retain: $("inspect-retain").checked, proposals: $("inspect-propose").checked}));
   }
 
   $("inspect-selection").addEventListener("submit", (event) => {
@@ -215,7 +271,7 @@
         notice("Naming convention saved.");
       } else if (event.target.dataset.imageReview) {
         await api("review", {job, asset: Number(event.target.dataset.imageReview), ...data});
-        notice("Correction saved. Related image suggestions have been updated.");
+        notice("Correction recorded. Related suggestions within this scope have been updated.");
       }
       await loadView();
     } catch (error) { failure(error); }
@@ -228,13 +284,29 @@
     approve: async (ticket) => {
       approval.querySelectorAll("button").forEach(button => { button.disabled = true; });
       notice("Checking the destination and its permissions…");
-      try { await selected(await api("approve", {ticket})); }
+      try { await selected(await api("approve", {ticket, proposals: $("inspect-link-plans").checked})); }
       catch (error) { approval.hidden = true; throw error; }
     },
     "cancel-approval": () => { approval.hidden = true; notice("Current inspection scope retained."); },
     resume: run, pause,
     refresh: async () => { coverage(await api("refresh", {job})); await run(); },
     export: async () => { const output = await api("export", {job}); notice(`Plan saved to ${output.path}`); },
+    "allow-plans": async (value) => {
+      const [scope, allowed] = JSON.parse(value);
+      await api("proposals", {job, scope, allowed});
+      coverage(await api("summary", {job}));
+      await showAccess();
+      await loadView();
+    },
+    "revoke-read": (scope) => revoke(scope, "inspect"),
+    forget: (scope) => revoke(scope, "retain"),
+    reauthorize: async (id) => {
+      const data = await api("permissions", {job: id});
+      pathField.value = data.root;
+      $("inspect-retain").checked = true;
+      setMode("inspect");
+      notice("Choose your permissions and inspect this folder to reopen the checkpoint.");
+    },
     previous: async () => { offset = Math.max(0, offset - 24); await loadView(); },
     next: async () => { offset += 24; await loadView(); },
     group: async (value) => {
@@ -244,7 +316,7 @@
       await loadView();
     },
     saved: async (value) => { await pause(); view = "images"; series = query = ""; offset = 0; $("inspect-filter").reset(); await openJob(value); },
-    exit: async () => { await pause(); await api("exit"); manage.innerHTML = '<p>Navigator is closed. Your review is saved.</p>'; }
+    exit: async () => { await pause(); await api("exit"); manage.innerHTML = '<p>Navigator is closed.</p>'; }
   };
 
   document.addEventListener("click", async (event) => {
@@ -263,9 +335,9 @@
 
   document.querySelector(".titlebar .subtitle").textContent = "Read-only folder and image stewardship";
   document.querySelector('[data-panel="home"]').innerHTML = `<div class="inspection-card"><h2>Navigator inspection</h2><p>Open Inspect to choose a folder or shortcut. Manage reopens saved inspections.</p></div>`;
-  document.querySelector('[data-panel="find"]').innerHTML = `<div class="inspection-card"><h2>Find inspected files</h2><p>Search file names and paths in the current inspection.</p></div>`;
+  document.querySelector('[data-panel="find"]').innerHTML = `<div class="inspection-card"><h2>Find inspected files</h2><p>Search filenames, paths, and text read from images in the current inspection.</p></div>`;
   document.querySelector('[data-panel="guide"]').innerHTML = `<div class="inspection-card"><h2>Inspect and review</h2>
     <p>Browse to the folder or select an existing shortcut. Navigator shows the link and destination separately. Approve a destination when it falls outside the current scope.</p>
-    <p>Pause at any time and reopen from Manage. Review images, grouped questions, and proposed names. Save plan records previews in Journey's local review storage.</p></div>`;
+    <p>Pause at any time. Turn on a local checkpoint to reopen from Manage. Name suggestions are optional, and a saved plan records previews in Journey's local review storage.</p></div>`;
   setMode("inspect");
 })();

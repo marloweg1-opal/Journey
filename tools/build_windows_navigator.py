@@ -9,11 +9,12 @@ import sys
 from tempfile import TemporaryDirectory
 from zipfile import ZIP_DEFLATED, ZipFile
 
+from build_windows_ocr import stage_ocr
 from build_windows_planner import EMBED, PYTHON_VERSION, ROOT, fetch
 from build_windows_vision_lab import PILLOW_SHA
 
 
-ZIP_NAME = "Journey-Navigator-Inspection-Windows-x64.zip"
+ZIP_NAME = "Journey-Navigator-Context-Windows-x64.zip"
 
 
 def build(output, cache, wheel, zig):
@@ -32,11 +33,13 @@ def build(output, cache, wheel, zig):
         (runtime / "python314._pth").write_text("python314.zip\n.\n../app\n", encoding="ascii")
         with ZipFile(wheel) as archive:
             archive.extractall(app)
+        stage_ocr(package / "ocr", cache / "ocr")
         modules = {
-            "journey_navigator": ("__init__.py", "__main__.py", "links.py", "workbench.py", "inspection.html", "inspection.js", "inspection.css"),
+            "journey_navigator": ("__init__.py", "__main__.py", "context.py", "links.py", "ocr.py", "workbench.py",
+                                  "inspection.html", "inspection.js", "inspection.css"),
             "journey_planner": ("__init__.py", "catalog.py"),
             "journey_vision": ("__init__.py", "observe.py", "steward.py"),
-            "core": ("file_paths.py", "process_lock.py"),
+            "core": ("file_paths.py", "naming.py", "process_lock.py", "token_registry.py"),
         }
         for module, names in modules.items():
             destination = app / module
@@ -44,10 +47,13 @@ def build(output, cache, wheel, zig):
             for name in names:
                 shutil.copyfile(ROOT / module / name, destination / name)
         shutil.copyfile(ROOT / "index.html", app / "index.html")
+        profile = app / "examples" / "carebloom"
+        profile.mkdir(parents=True)
+        shutil.copyfile(ROOT / "examples" / "carebloom" / "project_tokens.json", profile / "project_tokens.json")
         shutil.copyfile(ROOT / "docs/NAVIGATOR_INSPECTION.md", package / "START-HERE.md")
         shutil.copyfile(ROOT / "LICENSE", package / "LICENSE.txt")
         commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
-        (package / "BUILD.txt").write_text(f"Journey source commit {commit}\nCPython {PYTHON_VERSION}\nPillow 12.2.0\n", encoding="utf-8")
+        (package / "BUILD.txt").write_text(f"Journey source commit {commit}\nCPython {PYTHON_VERSION}\nPillow 12.2.0\nTesseract OCR 5.5.4 (English)\n", encoding="utf-8")
         resources = staging / "navigator.res"
         subprocess.run([*zig, "rc", f"/fo{resources}", "tools/windows/navigator.rc"], cwd=ROOT, check=True)
         subprocess.run([*zig, "cc", "-target", "x86_64-windows-gnu", "-municode", "-Wl,--subsystem,windows", "-Os", "-s",

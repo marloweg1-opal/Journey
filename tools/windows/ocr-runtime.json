@@ -1,0 +1,444 @@
+[
+  {
+    "file": "mingw-w64-ucrt-x86_64-brotli-1.2.1-1-any.pkg.tar.zst",
+    "sha256": "e3257d4303fc0aca4c64f702d4c8cd766a321351c5e61927631c30bfdf2e7536",
+    "license": [
+      "spdx:MIT"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-brotli-1.2.1-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libbrotlicommon.dll",
+      "ucrt64/bin/libbrotlidec.dll",
+      "ucrt64/share/licenses/brotli/LICENSE"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-bzip2-1.0.8-4-any.pkg.tar.zst",
+    "sha256": "f03a2174034ddd2d96cecd34f617c5f8e2ef86c812b8d2bb3b8875257f2c8bfa",
+    "license": [
+      "custom"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-bzip2-1.0.8-4.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libbz2-1.dll",
+      "ucrt64/share/licenses/bzip2/LICENSE"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-curl-8.23.0-1-any.pkg.tar.zst",
+    "sha256": "cb1b4e7c0aa8e6e39ac88af83f083d36fb9ea4c50377e795fdb7c3e97ac9fda5",
+    "license": [
+      "spdx:MIT"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-curl-8.23.0-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libcurl-4.dll",
+      "ucrt64/share/licenses/curl/LICENSE"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-gettext-runtime-1.0-1-any.pkg.tar.zst",
+    "sha256": "ba693dda4ac375af76ce481ff3a6e7481286546cc7dc6d56c7021dae34084157",
+    "license": [
+      "spdx:GPL-3.0-or-later AND LGPL-2.1-or-later"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-gettext-1.0-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libintl-8.dll",
+      "ucrt64/share/licenses/gettext-runtime/COPYING",
+      "ucrt64/share/licenses/gettext-runtime/intl/COPYING.LIB",
+      "ucrt64/share/licenses/gettext-runtime/libasprintf/COPYING",
+      "ucrt64/share/licenses/gettext-runtime/libasprintf/COPYING.LIB"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-giflib-6.1.3-1-any.pkg.tar.zst",
+    "sha256": "9e7ac8feb0e2af6e0fce3c8ead1bd7bcaf018661d08033858c1e2657a04f6f1a",
+    "license": [
+      "spdx:MIT"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-giflib-6.1.3-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libgif-7.dll"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-jbigkit-2.1-6-any.pkg.tar.zst",
+    "sha256": "9e237d1041350e7436294cfa13d4bd3d1606d1f2a32ade2eb2958b4d4e79b7ad",
+    "license": [
+      "spdx:GPL-2.0"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-jbigkit-2.1-6.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libjbig-0.dll",
+      "ucrt64/share/licenses/jbigkit/COPYING"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-leptonica-1.87.0-2-any.pkg.tar.zst",
+    "sha256": "2bdd380afc8d0eadb510224b470f1d7655990d34de67dffd3f1d85298008c16d",
+    "license": [
+      "spdx:BSD-2-Clause"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-leptonica-1.87.0-2.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libleptonica-6.dll",
+      "ucrt64/share/licenses/leptonica/LICENSE"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-lerc-4.1.1-1-any.pkg.tar.zst",
+    "sha256": "c0afbf4832488d67030c6f313349cd814946c9a7bc3ae9fd54524825c9ca055d",
+    "license": [
+      "spdx:Apache-2.0"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-lerc-4.1.1-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libLerc.dll",
+      "ucrt64/share/licenses/lerc/LICENSE"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libarchive-3.8.11-1-any.pkg.tar.zst",
+    "sha256": "e883f65d1fd9f06a8d03f35b2668826d7fa1407a2baf1eca050f34eb0f6f0927",
+    "license": [
+      "spdx:BSD-2-Clause"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-libarchive-3.8.11-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libarchive-13.dll",
+      "ucrt64/share/licenses/libarchive/LICENSE"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libb2-0.98.1-3-any.pkg.tar.zst",
+    "sha256": "dfb554635119d3c46adb00c9d0c589bb38d1cb0781b10ecf31de07ce388bd0c0",
+    "license": [
+      "custom:CC0"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-libb2-0.98.1-3.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libb2-1.dll",
+      "ucrt64/share/licenses/libb2/LICENSE"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libdeflate-1.26-1-any.pkg.tar.zst",
+    "sha256": "17720c77bd01641a3554801cafd71d96fb7fff7427f4cc20ac9f36efb8cb3da0",
+    "license": [
+      "spdx:MIT"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-libdeflate-1.26-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libdeflate.dll",
+      "ucrt64/share/licenses/libdeflate/COPYING"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libgcc-16.2.0-6-any.pkg.tar.zst",
+    "sha256": "80b2497f019977dd9528b1abc8621b1328a0115ab1f724047ccbb56bf323f11d",
+    "license": [
+      "spdx:GPL-3.0-or-later WITH GCC-exception-3.1 AND GFDL-1.3-or-later"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-gcc-16.2.0-6.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libgcc_s_seh-1.dll",
+      "ucrt64/share/licenses/libgcc/COPYING.RUNTIME",
+      "ucrt64/share/licenses/libgcc/COPYING3"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libgomp-16.2.0-6-any.pkg.tar.zst",
+    "sha256": "809b95086d8d3ba145e041bb36d5756b4407d1d97c0524ef731d3b94548faa69",
+    "license": [
+      "spdx:GPL-3.0-or-later WITH GCC-exception-3.1 AND GFDL-1.3-or-later"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-gcc-16.2.0-6.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libgomp-1.dll",
+      "ucrt64/share/licenses/libgomp/COPYING.RUNTIME",
+      "ucrt64/share/licenses/libgomp/COPYING3"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libiconv-1.19.1-1-any.pkg.tar.zst",
+    "sha256": "8a45dc317a285a036bddd79e01505d67b79e44ff49fc3f6e7177a5ea98d098cf",
+    "license": [
+      "spdx:LGPL-2.1-or-later",
+      "documentation:spdx:GPL-3.0-or-later"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-libiconv-1.19.1-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libiconv-2.dll",
+      "ucrt64/share/licenses/libiconv/COPYING",
+      "ucrt64/share/licenses/libiconv/COPYING.LIB",
+      "ucrt64/share/licenses/libiconv/README",
+      "ucrt64/share/licenses/libiconv/libcharset/COPYING.LIB"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libidn2-2.3.8-4-any.pkg.tar.zst",
+    "sha256": "d5f4b5e9d99ff7b2a986d1dc0c73da2bcd93ba68462be7b1debbd6ef76371f57",
+    "license": [
+      "spdx:GPL-2.0-or-later",
+      "spdx:LGPL-3.0-or-later"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-libidn2-2.3.8-4.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libidn2-0.dll"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libjpeg-turbo-3.2.1-1-any.pkg.tar.zst",
+    "sha256": "8eed77c1e0d6de7f8822687f7b1dfa32cda09394806ef67b23399e63de1a92a6",
+    "license": [
+      "custom:BSD-like"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-libjpeg-turbo-3.2.1-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libjpeg-8.dll",
+      "ucrt64/share/licenses/libjpeg-turbo/LICENSE.md",
+      "ucrt64/share/licenses/libjpeg-turbo/README.ijg",
+      "ucrt64/share/licenses/libjpeg-turbo/README.md",
+      "ucrt64/share/licenses/libjpeg-turbo/simd/jsimdext.inc"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libpng-1.6.59-2-any.pkg.tar.zst",
+    "sha256": "6cc296f5029220e1a226c4bc50294212b20ab8fcabeb00b5a002667f4a882edc",
+    "license": [
+      "custom"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-libpng-1.6.59-2.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libpng16-16.dll",
+      "ucrt64/share/licenses/libpng/LICENSE"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libpsl-0.21.5-3-any.pkg.tar.zst",
+    "sha256": "d96e0bb50ac3f8b6e44a39ea8de8d186f7b08f6938b0676eb69a7ba1f127bcf4",
+    "license": [
+      "spdx:MIT"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-libpsl-0.21.5-3.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libpsl-5.dll",
+      "ucrt64/share/licenses/libpsl/COPYING"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libssh2-1.11.1-2-any.pkg.tar.zst",
+    "sha256": "0e91316dfa4979dcabbfa9e71528ec9882ece619ce549cb25312089b4754fa65",
+    "license": [
+      "spdx:BSD-3-Clause"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-libssh2-1.11.1-2.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libssh2-1.dll",
+      "ucrt64/share/licenses/libssh2/LICENSE"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libstdc++-16.2.0-6-any.pkg.tar.zst",
+    "sha256": "33c5e58a85a538cf843a8672991cce591f0231d66da3b66a57629712d64be17f",
+    "license": [
+      "spdx:GPL-3.0-or-later WITH GCC-exception-3.1 AND GFDL-1.3-or-later"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-gcc-16.2.0-6.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libstdc++-6.dll",
+      "ucrt64/share/licenses/libstdc++/COPYING.RUNTIME",
+      "ucrt64/share/licenses/libstdc++/COPYING3"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libtiff-4.7.2-2-any.pkg.tar.zst",
+    "sha256": "258e08a91e6b1703d41730ffe6080c2a40968fe90896b45716c1b41042775076",
+    "license": [
+      "spdx:MIT"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-libtiff-4.7.2-2.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libtiff-6.dll",
+      "ucrt64/share/licenses/libtiff/LICENSE.md"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libunistring-1.4.2-1-any.pkg.tar.zst",
+    "sha256": "e784273da19bbdcc91cbb510b5e27c3ac021b026140734eefcce5ccbd878bd97",
+    "license": [
+      "spdx:LGPL-3.0-or-later OR GPL-3.0-or-later"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-libunistring-1.4.2-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libunistring-5.dll",
+      "ucrt64/share/licenses/libunistring/LICENSE",
+      "ucrt64/share/licenses/libunistring/LICENSE.LIB"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libwebp-1.6.0-1-any.pkg.tar.zst",
+    "sha256": "34ff8396c403d484c8777ad49ad0fc06dfb94fadf6f14bcf84d50c45bc6fd17e",
+    "license": [
+      "spdx:BSD-3-Clause"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-libwebp-1.6.0-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libsharpyuv-0.dll",
+      "ucrt64/bin/libwebp-7.dll",
+      "ucrt64/bin/libwebpmux-3.dll",
+      "ucrt64/share/licenses/libwebp/COPYING"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-libwinpthread-14.0.0.r598.ge3d18511f-1-any.pkg.tar.zst",
+    "sha256": "c35d6be83d141c8cfbb61f1637dd4b53aac8f5562d766aa26d0741c40bad4e4d",
+    "license": [
+      "spdx:MIT AND BSD-3-Clause"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-winpthreads-14.0.0.r598.ge3d18511f-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libwinpthread-1.dll",
+      "ucrt64/share/licenses/libwinpthread/COPYING"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-lz4-1.11.0-1-any.pkg.tar.zst",
+    "sha256": "83a8d234445f4d8b79424799d025df27a3b969415b7418fbe78fcdcb3cd98a0d",
+    "license": [
+      "spdx:BSD-2-Clause AND GPL-2.0-or-later"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-lz4-1.11.0-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/liblz4.dll"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-nghttp2-1.71.0-1-any.pkg.tar.zst",
+    "sha256": "ce394855ca96785b75ec9b8bf03de29cded23770228131c1dc459f96a2ff087e",
+    "license": [
+      "spdx:MIT"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-nghttp2-1.71.0-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libnghttp2-14.dll",
+      "ucrt64/share/licenses/nghttp2/COPYING"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-nghttp3-1.19.0-1-any.pkg.tar.zst",
+    "sha256": "d2917a08bea179c0de58023d57fe8572f905b90f5d2f8d8798789bedfbbe5634",
+    "license": [
+      "spdx:MIT"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-nghttp3-1.19.0-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libnghttp3-9.dll",
+      "ucrt64/share/licenses/nghttp3/COPYING"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-ngtcp2-1.26.0-1-any.pkg.tar.zst",
+    "sha256": "59d3bde1b148e996d92cb09e708fa94a2467d447982f77abf0f1adf4117f6c24",
+    "license": [
+      "spdx:MIT"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-ngtcp2-1.26.0-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libngtcp2-16.dll",
+      "ucrt64/bin/libngtcp2_crypto_ossl-0.dll",
+      "ucrt64/share/licenses/ngtcp2/COPYING"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-openjpeg2-2.5.4-2-any.pkg.tar.zst",
+    "sha256": "2a4c148052b6f8e47abe5e98b29fd8942e2e3c17722ff00f172b1630897a10b9",
+    "license": [
+      "spdx:BSD-2-Clause"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-openjpeg2-2.5.4-2.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libopenjp2-7.dll",
+      "ucrt64/share/licenses/openjpeg/LICENSE"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-openssl-3.6.5-1-any.pkg.tar.zst",
+    "sha256": "773e021ebad83f14b5c103db467411e8ff064663e1c7e7f730e2be72f4117064",
+    "license": [
+      "spdx:Apache-2.0"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-openssl-3.6.5-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libcrypto-3-x64.dll",
+      "ucrt64/bin/libssl-3-x64.dll",
+      "ucrt64/share/licenses/openssl/LICENSE"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-tesseract-data-eng-4.1.0-3-any.pkg.tar.zst",
+    "sha256": "543111e842aeebe248839902945b3883f9bf79b58787a1696d6ac211c13f7029",
+    "license": [
+      "spdx:Apache-2.0"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-tesseract-data-4.1.0-3.src.tar.zst",
+    "members": [
+      "ucrt64/share/tessdata/eng.traineddata"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-tesseract-ocr-5.5.4-1-any.pkg.tar.zst",
+    "sha256": "a38f3f00d23ff9e05f2e6df87a65ec7f10b6735b131548e87aa15016a79538b2",
+    "license": [
+      "spdx:Apache-2.0"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-tesseract-ocr-5.5.4-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libtesseract-5.5.dll",
+      "ucrt64/bin/tesseract.exe",
+      "ucrt64/share/licenses/tesseract-ocr/LICENSE",
+      "ucrt64/share/tessdata/configs/tsv"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-xz-5.8.4-1-any.pkg.tar.zst",
+    "sha256": "a9d771f816d8c0c5bde152ffb27a687ede91079b8e77e5b8297efa3b5a835934",
+    "license": [
+      "spdx:0BSD AND LGPL-2.1-or-later AND GPL-2.0-or-later"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-xz-5.8.4-1.src.tar.zst",
+    "members": [
+      "ucrt64/bin/liblzma-5.dll",
+      "ucrt64/share/licenses/xz/COPYING",
+      "ucrt64/share/licenses/xz/COPYING.0BSD",
+      "ucrt64/share/licenses/xz/COPYING.GPLv2",
+      "ucrt64/share/licenses/xz/COPYING.GPLv3",
+      "ucrt64/share/licenses/xz/COPYING.LGPLv2.1"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-zlib-1.3.2-3-any.pkg.tar.zst",
+    "sha256": "130e6ef04c654fc2150a177600aa5ed0035087665a893479d2c85ba7485d5704",
+    "license": [
+      "spdx:Zlib"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-zlib-1.3.2-3.src.tar.zst",
+    "members": [
+      "ucrt64/bin/zlib1.dll",
+      "ucrt64/share/licenses/zlib/LICENSE"
+    ]
+  },
+  {
+    "file": "mingw-w64-ucrt-x86_64-zstd-1.5.7-2-any.pkg.tar.zst",
+    "sha256": "dbdb8427280046a2b41697780aa4c52983b708082b0da4755951dc3bea96ca89",
+    "license": [
+      "spdx:BSD-3-Clause OR GPL-2.0-or-later"
+    ],
+    "source": "https://repo.msys2.org/mingw/sources/mingw-w64-zstd-1.5.7-2.src.tar.zst",
+    "members": [
+      "ucrt64/bin/libzstd.dll",
+      "ucrt64/share/licenses/zstd/LICENSE"
+    ]
+  }
+]

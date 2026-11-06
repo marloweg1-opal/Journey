@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, urlsplit
 import webbrowser
 
 from journey_navigator.links import ProtectedPath
+from journey_navigator.ocr import find_local_ocr
 from journey_navigator.workbench import Workbench
 from journey_planner.catalog import check_local_drive
 
@@ -74,6 +75,8 @@ class Navigator(ThreadingHTTPServer):
     def __init__(self, workbench, port=0):
         super().__init__(("127.0.0.1", port), Handler)
         self.workbench = workbench
+        self.temporary = Workbench(workbench.data_dir, ocr=workbench.ocr, temporary=True)
+        self.temporary.policy = workbench.policy
         self.token = secrets.token_urlsafe(32)
         self.lock = Lock()
         self.host = f"127.0.0.1:{self.server_address[1]}"
@@ -85,6 +88,14 @@ class Navigator(ThreadingHTTPServer):
     @property
     def url(self):
         return f"{self.origin}/#session={self.token}"
+
+    def review_store(self, key):
+        return self.temporary if isinstance(key, str) and key.startswith("session-") else self.workbench
+
+    def server_close(self):
+        super().server_close()
+        if hasattr(self, "temporary"):
+            self.temporary.close()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -132,7 +143,7 @@ class Handler(BaseHTTPRequestHandler):
             job = self.headers.get("X-Journey-Inspection", "")
             with self.server.lock:
                 try:
-                    return self._json({"results": self.server.workbench.search(job, query) if job and query else []})
+                    return self._json({"results": self.server.review_store(job).search(job, query) if job and query else []})
                 except (OSError, ValueError) as error:
                     return self._json({"error": str(error)}, 400)
         return self._json({"error": "This resource is unavailable in the inspection candidate."}, 404)
@@ -163,8 +174,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"error": str(error)}, 400)
 
     def _run(self, action, body):
-        app = self.server.workbench
         job, offset = body.get("job"), body.get("offset", 0)
+        app = self.server.review_store(job)
         if type(offset) is not int or not 0 <= offset <= 1_000_000:
             raise ValueError("Choose a valid results page.")
         if action == "drives":
@@ -172,11 +183,17 @@ class Handler(BaseHTTPRequestHandler):
         if action == "browse":
             return app.browse(body["path"], offset)
         if action == "select":
-            return app.select(body.get("path"), job_id=job, link_id=body.get("link"))
+            if job is None:
+                retain = body.get("retain", False)
+                if type(retain) is not bool:
+                    raise ValueError("Choose whether to keep a local checkpoint.")
+                app = self.server.workbench if retain else self.server.temporary
+            return app.select(body.get("path"), job_id=job, link_id=body.get("link"), proposals=body.get("proposals", False))
         if action == "approve":
-            return app.approve(body["ticket"])
+            ticket = body["ticket"]
+            return self.server.review_store(ticket).approve(ticket, proposals=body.get("proposals"))
         if action == "jobs":
-            return {"items": app.jobs()}
+            return {"items": self.server.workbench.jobs()}
         if action == "summary":
             return app.summary(job)
         if action == "step":
@@ -192,6 +209,12 @@ class Handler(BaseHTTPRequestHandler):
             return app.images(job, offset, body.get("series", ""), body.get("query", ""))
         if action == "review":
             return app.review(job, body["asset"], body["decision"], body.get("label", ""), body.get("purpose", ""))
+        if action == "permissions":
+            return app.permissions(job)
+        if action == "proposals":
+            return app.permit_proposals(job, body["scope"], body["allowed"])
+        if action == "revoke":
+            return app.revoke(job, body["scope"], body["permission"])
         if action == "rule":
             return app.rule(job, body["project"], body["filename"], body["folder"])
         if action == "export":
@@ -212,7 +235,8 @@ def main():
     hold_store = Path(r"C:\mini_ark\private\media_recovery\inventory-v2.sqlite") if os.name == "nt" else None
     perception_store = Path(r"C:\mini_ark\ark.sqlite") if os.name == "nt" else None
     try:
-        app = Workbench(data.absolute(), blocked=(APP,), hold_store=hold_store, perception_store=perception_store)
+        app = Workbench(data.absolute(), blocked=(APP, APP.parent / "ocr"), hold_store=hold_store,
+                        perception_store=perception_store, ocr=find_local_ocr())
     except (OSError, ValueError) as error:
         if os.name != "nt" or args.no_browser:
             raise
