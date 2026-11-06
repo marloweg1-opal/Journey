@@ -1,0 +1,53 @@
+      <section class="panel" data-panel="inspect" id="inspection" aria-label="Folder inspection">
+        <div class="inspection-card">
+          <h2>Inspect an existing folder</h2>
+          <p>Choose a folder, Windows shortcut, or junction. Journey saves the review locally and reads the selected source.</p>
+          <form id="inspect-selection" class="inspection-bar">
+            <label>Folder or shortcut path <input name="path" id="inspect-path" autocomplete="off" required></label>
+            <button type="submit">Inspect selection</button>
+            <button type="button" data-inspect="browse">Browse folders</button>
+          </form>
+          <div id="inspect-browser" hidden></div>
+          <div id="inspect-approval" hidden></div>
+          <p id="inspect-notice" role="status" aria-live="polite"></p>
+        </div>
+        <div id="inspect-review" class="inspection-card" hidden>
+          <h2>Saved inspection</h2>
+          <p id="inspect-root"></p>
+          <div id="inspect-counts" class="inspection-counts" aria-label="Coverage counts"></div>
+          <p id="inspect-progress" role="status" aria-live="polite"></p>
+          <div class="inspection-bar">
+            <button type="button" data-inspect="resume">Resume scan</button>
+            <button type="button" data-inspect="pause" disabled>Pause</button>
+            <button type="button" data-inspect="refresh">Refresh source</button>
+            <button type="button" data-inspect="export">Save plan</button>
+          </div>
+          <details id="inspect-naming">
+            <summary>Naming convention</summary>
+            <p>Use confirmed subject and purpose. Filename fields include {project}, {subject}, {purpose}, {variation}, and {stamp}.</p>
+            <form id="inspect-rule" class="inspection-bar">
+              <label>Project label <input name="project"></label>
+              <label>Filename pattern <input name="filename" required></label>
+              <label>Destination folder pattern <input name="folder"></label>
+              <button type="submit">Save convention</button>
+            </form>
+          </details>
+          <div class="inspection-bar" aria-label="Review views">
+            <button type="button" data-view="images" aria-pressed="true">Images</button>
+            <button type="button" data-view="groups" aria-pressed="false">Visual groups</button>
+            <button type="button" data-view="links" aria-pressed="false">Links and destinations</button>
+            <button type="button" data-view="issues" aria-pressed="false">Skipped entries</button>
+          </div>
+          <div id="inspect-questions"></div>
+          <form id="inspect-filter" class="inspection-bar">
+            <label>Filter image names or paths <input name="query"></label>
+            <button type="submit">Filter images</button>
+          </form>
+          <div id="inspect-results" aria-label="Inspection results"></div>
+          <div class="inspection-bar" id="inspect-pages">
+            <button type="button" data-inspect="previous">Previous</button>
+            <span id="inspect-page"></span>
+            <button type="button" data-inspect="next">Next</button>
+          </div>
+        </div>
+      </section>

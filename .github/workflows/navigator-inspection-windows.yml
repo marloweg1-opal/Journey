@@ -1,0 +1,48 @@
+name: Navigator linked inspection acceptance
+
+on:
+  push:
+    branches: [work/navigator-linked-inspection]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install test and build dependencies
+        run: |
+          python -m pip install Pillow==12.2.0 ziglang==0.15.2 playwright==1.62.0
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed.' }
+          python -m playwright install chromium --only-shell
+          if ($LASTEXITCODE -ne 0) { throw 'Browser installation failed.' }
+      - name: Build isolated Windows candidate
+        run: |
+          python -m pip download --only-binary=:all: --platform win_amd64 --python-version 3.14 --implementation cp --abi cp314 --dest "$env:RUNNER_TEMP" Pillow==12.2.0
+          if ($LASTEXITCODE -ne 0) { throw 'Pillow download failed.' }
+          python -B tools/build_windows_navigator.py dist --cache "$env:RUNNER_TEMP" --pillow-wheel "$env:RUNNER_TEMP/pillow-12.2.0-cp314-cp314-win_amd64.whl"
+          if ($LASTEXITCODE -ne 0) { throw 'Navigator build failed.' }
+      - name: Test native links and release compatibility
+        run: |
+          python -B -m unittest discover -s tests -p 'test_navigator_inspection.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Native Windows link tests failed.' }
+          python -B -m unittest discover -s tests -p 'test_folder_planner.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Planner regressions.' }
+          python -B -m unittest discover -s tests -p 'test_vision_lab.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Vision Lab regressions.' }
+      - name: Exercise the bundled Navigator in a browser
+        timeout-minutes: 6
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:PYTHONPATH = (Get-Location).Path
+          $destination = Join-Path $env:RUNNER_TEMP 'Navigator acceptance with spaces'
+          Expand-Archive -LiteralPath dist/Journey-Navigator-Inspection-Windows-x64.zip -DestinationPath $destination
+          $runtime = Join-Path $destination 'Journey Navigator/runtime/python.exe'
+          python -B tests/navigator_browser.py --runtime $runtime
+          if ($LASTEXITCODE -ne 0) { throw 'Navigator browser acceptance failed.' }

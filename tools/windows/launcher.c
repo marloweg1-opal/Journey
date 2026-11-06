@@ -3,6 +3,12 @@
 #include <wchar.h>
 
 #define PATH_CAPACITY 32768
+#ifndef JOURNEY_MODULE
+#define JOURNEY_MODULE L"journey_planner"
+#endif
+#ifndef JOURNEY_TITLE
+#define JOURNEY_TITLE L"Journey Folder Planner"
+#endif
 
 static WCHAR directory[PATH_CAPACITY];
 static WCHAR runtime[PATH_CAPACITY];
@@ -12,7 +18,7 @@ static int launch_error(void)
 {
     MessageBoxW(NULL,
         L"Journey could not open. Extract the entire ZIP to a local folder and try again.",
-        L"Journey Folder Planner", MB_OK | MB_ICONERROR);
+        JOURNEY_TITLE, MB_OK | MB_ICONERROR);
     return 1;
 }
 
@@ -32,7 +38,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previous, PWSTR arguments, int
     }
     *separator = L'\0';
     if (swprintf(runtime, PATH_CAPACITY, L"%ls\\runtime\\pythonw.exe", directory) < 0
-        || swprintf(command, PATH_CAPACITY + 64, L"\"%ls\" -B -m journey_planner", runtime) < 0) {
+        || swprintf(command, PATH_CAPACITY + 64, L"\"%ls\" -B -m " JOURNEY_MODULE, runtime) < 0) {
         return launch_error();
     }
 
