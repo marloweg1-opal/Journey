@@ -21,5 +21,6 @@ jobs:
           python -m pip install ziglang==0.15.2
           python -B tools/build_windows_planner.py dist --cache "$env:RUNNER_TEMP/journey-downloads"
       - name: Verify extracted Windows app
+        timeout-minutes: 2
         run: |
           tools/windows/verify_bundle.ps1 -Zip dist/Journey-1.0-RC2-Windows-x64.zip -Destination "$env:RUNNER_TEMP/Journey acceptance with spaces"

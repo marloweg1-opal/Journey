@@ -14,6 +14,12 @@ from journey_planner.desktop import Desktop, configure_runtime
 
 
 class FolderPlannerDesktopTests(unittest.TestCase):
+    def setUp(self):
+        errors = self.enterContext(patch("journey_planner.desktop.messagebox.showerror"))
+        unsaved = self.enterContext(patch("journey_planner.desktop.messagebox.askyesnocancel", return_value=None))
+        self.addCleanup(errors.assert_not_called)
+        self.addCleanup(unsaved.assert_not_called)
+
     def window(self):
         configure_runtime()
         try:
@@ -99,7 +105,7 @@ class FolderPlannerDesktopTests(unittest.TestCase):
 
     def test_focus_real_project_docs_then_save_close_reopen_and_export(self):
         with tempfile.TemporaryDirectory() as folder:
-            base = Path(folder)
+            base = Path(folder).resolve()
             source = base / "Journey project sample"
             sample = source / "Public Journey documentation"
             shutil.copytree(Path(__file__).resolve().parents[1] / "docs", sample)

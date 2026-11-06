@@ -13,7 +13,7 @@ class FolderPlannerTests(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
-        self.base = Path(temp.name)
+        self.base = Path(temp.name).resolve()
         self.source = self.base / "Studio source"
         self.source.mkdir()
         self.output = self.base / "Planning"
@@ -175,9 +175,10 @@ class FolderPlannerTests(unittest.TestCase):
     def test_focused_plan_preserves_the_outer_read_only_boundary(self):
         self.file("docs/notes.txt")
         self.file("other/sibling.txt")
+        broader = scan_folder(self.source)
         with self.assertRaisesRegex(ValueError, "Choose a subfolder"):
-            scan_folder(self.output, protected_root=self.source)
-        plan = scan_folder(self.source / "docs", protected_root=self.source)
+            scan_folder(self.output, broader_plan=broader)
+        plan = scan_folder(self.source / "docs", broader_plan=broader)
         self.assertEqual(set(plan.files), {"notes.txt"})
         saved = self.output / "Focused.journey.json"
         save_plan(plan, saved)

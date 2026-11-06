@@ -215,21 +215,21 @@ def _read_failure(error, what):
     return f"Could not read {what} ({error.strerror or type(error).__name__})."
 
 
-def scan_folder(folder, *, protected_root="", max_entries=MAX_ENTRIES, max_seconds=MAX_SCAN_SECONDS):
+def scan_folder(folder, *, broader_plan=None, max_entries=MAX_ENTRIES, max_seconds=MAX_SCAN_SECONDS):
     root = absolute_path(folder)
-    if protected_root:
-        protected_root = absolute_path(protected_root)
-        if root == protected_root or not root.is_relative_to(protected_root):
-            raise ValueError("Choose a subfolder inside the inspected folder.")
     check_local_drive(root)
     if not stat.S_ISDIR(safe_metadata(root).st_mode):
         raise ValueError("Choose a folder rather than a file.")
     root = root.resolve(strict=True)
     check_local_drive(root)
-    if protected_root and (root == protected_root or not root.is_relative_to(protected_root)):
-        raise ValueError("The subfolder no longer resolves inside the inspected folder.")
+    protected_root = ""
+    if broader_plan is not None:
+        parent = Path(broader_plan.root)
+        if root == parent or not root.is_relative_to(parent):
+            raise ValueError(f"Choose a subfolder inside {parent}.")
+        protected_root = broader_plan.protected_root or broader_plan.root
     plan = Plan(str(root), datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                protected_root=str(protected_root))
+                protected_root=protected_root)
     pending = [root]
     entries_seen = 0
     deadline = monotonic() + max_seconds

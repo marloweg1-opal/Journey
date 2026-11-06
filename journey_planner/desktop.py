@@ -9,7 +9,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from journey_planner import VERSION
-from journey_planner.catalog import DECISIONS, MAX_ENTRIES, MAX_SCAN_SECONDS, absolute_path, scan_folder
+from journey_planner.catalog import DECISIONS, MAX_ENTRIES, MAX_SCAN_SECONDS, scan_folder
 from journey_planner.plan_file import PLAN_SUFFIX, coverage_notes, export_plan, open_plan, save_plan
 
 
@@ -313,19 +313,10 @@ class Desktop:
     def focus_subfolder(self):
         if self.scanning or not self.plan:
             return
-        root = Path(self.plan.root)
         folder = filedialog.askdirectory(parent=self.root, title="Choose a subfolder for a focused scan",
-                                         initialdir=root, mustexist=True)
-        if not folder:
-            return
-        try:
-            path = absolute_path(folder)
-            if path == root or not path.is_relative_to(root):
-                raise ValueError(f"Choose a subfolder inside {root}.")
-        except ValueError as error:
-            self.show_error("Could not focus the scan", error)
-            return
-        self.start_scan(path, protected_root=self.plan.protected_root or self.plan.root)
+                                         initialdir=self.plan.root, mustexist=True)
+        if folder:
+            self.start_scan(folder, broader_plan=self.plan)
 
     def scan_details(self):
         if self.scanning or not self.plan:
@@ -353,7 +344,7 @@ class Desktop:
         window.grab_set()
         close_button.focus_set()
 
-    def start_scan(self, folder, *, protected_root=""):
+    def start_scan(self, folder, *, broader_plan=None):
         self.scanning = True
         self.status.set(f"Inspecting names and metadata  ·  Up to {MAX_ENTRIES:,} entries or {MAX_SCAN_SECONDS} seconds")
         self.progress.pack(side="right")
@@ -363,7 +354,7 @@ class Desktop:
 
         def run_scan():
             try:
-                results.put(scan_folder(folder, protected_root=protected_root))
+                results.put(scan_folder(folder, broader_plan=broader_plan))
             except (OSError, ValueError) as error:
                 results.put(error)
 
@@ -383,7 +374,7 @@ class Desktop:
                 self.status.set("Folder inspection stopped.")
                 self.refresh()
                 self.show_error("Could not inspect folder", result)
-            elif protected_root:
+            elif broader_plan is not None:
                 self.status.set("Focused scan opened in a separate window.")
                 self.refresh()
                 primary = self.primary or self
