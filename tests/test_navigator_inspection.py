@@ -31,6 +31,10 @@ class NavigatorInspectionTests(unittest.TestCase):
                 return summary
         self.fail("Discovery did not finish within its expected batches.")
 
+    def test_second_writer_cannot_open_same_review_storage(self):
+        with self.assertRaisesRegex(ValueError, "already open"):
+            Workbench(self.app.data_dir)
+
     def test_native_shortcut_selection_records_target_and_respects_scope(self):
         Image.new("RGB", (50, 60), "purple").save(self.source / "an image.png")
         alias = make_link(self.base / "Source shortcut.lnk", self.source)

@@ -25,6 +25,8 @@ exports in `%LOCALAPPDATA%\Journey\Navigator Inspection`. The selected source is
 read-only. Review files can contain paths and private visual evidence. The app
 can read the existing Journey source-hold and perception-policy records in read-only
 mode when the standard production stores exist. Explicit restrictions still apply.
+One Navigator session owns the review storage at a time. Close it from **Manage**
+when you are finished.
 
 ## Integration and limits
 

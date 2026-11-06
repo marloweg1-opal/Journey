@@ -1,5 +1,6 @@
 """Durable, bounded discovery and review for Navigator's selected folders."""
 
+from contextlib import ExitStack, closing
 from hashlib import sha256
 import json
 import os
@@ -12,6 +13,7 @@ from time import monotonic
 from uuid import uuid4
 
 from core.file_paths import safe_metadata, signature
+from core.process_lock import ProcessBusyError, process_lock
 from journey_navigator.links import Boundaries, ProtectedPath, identity, kind_of, path_key, resolve_folder
 from journey_planner.catalog import File, Plan, absolute_path, check_local_drive, component
 from journey_vision.observe import IMAGE_FORMATS, decode_image, describe, image_bytes
@@ -93,19 +95,26 @@ class Workbench:
         self.data_dir = _prepare_data_dir(data_dir)
         self.policy = Boundaries((self.data_dir, *blocked), hold_store=hold_store, perception_store=perception_store)
         self.database = self.data_dir / "navigator-inspection.sqlite"
-        for suffix in ("", "-journal", "-wal", "-shm"):
-            path = self.database.with_name(self.database.name + suffix)
+        lock_path = self.data_dir / "navigator-inspection.lock"
+        sidecars = [self.database.with_name(self.database.name + suffix) for suffix in ("", "-journal", "-wal", "-shm")]
+        for path in (lock_path, *sidecars):
             if os.path.lexists(path) and not stat.S_ISREG(safe_metadata(path).st_mode):
                 raise ValueError("Journey's review storage contains an unexpected file type.")
-        self.conn = sqlite3.connect(self.database, check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row
-        self.conn.executescript(SCHEMA)
+        with ExitStack() as setup:
+            try:
+                setup.enter_context(process_lock(lock_path))
+            except ProcessBusyError as error:
+                raise ValueError("This review storage is already open in another Navigator session.") from error
+            self.conn = setup.enter_context(closing(sqlite3.connect(self.database, check_same_thread=False)))
+            self.conn.row_factory = sqlite3.Row
+            self.conn.executescript(SCHEMA)
+            self.resources = setup.pop_all()
         self.tickets = {}
         self.cursor = None
 
     def close(self):
         self.pause()
-        self.conn.close()
+        self.resources.close()
 
     def pause(self):
         if self.cursor:

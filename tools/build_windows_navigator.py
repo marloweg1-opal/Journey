@@ -36,7 +36,7 @@ def build(output, cache, wheel, zig):
             "journey_navigator": ("__init__.py", "__main__.py", "links.py", "workbench.py", "inspection.html", "inspection.js", "inspection.css"),
             "journey_planner": ("__init__.py", "catalog.py"),
             "journey_vision": ("__init__.py", "observe.py", "steward.py"),
-            "core": ("file_paths.py",),
+            "core": ("file_paths.py", "process_lock.py"),
         }
         for module, names in modules.items():
             destination = app / module

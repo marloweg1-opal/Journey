@@ -211,7 +211,15 @@ def main():
     data = args.data_dir or local / "Journey" / "Navigator Inspection"
     hold_store = Path(r"C:\mini_ark\private\media_recovery\inventory-v2.sqlite") if os.name == "nt" else None
     perception_store = Path(r"C:\mini_ark\ark.sqlite") if os.name == "nt" else None
-    app = Workbench(data.absolute(), blocked=(APP,), hold_store=hold_store, perception_store=perception_store)
+    try:
+        app = Workbench(data.absolute(), blocked=(APP,), hold_store=hold_store, perception_store=perception_store)
+    except (OSError, ValueError) as error:
+        if os.name != "nt" or args.no_browser:
+            raise
+        import ctypes
+
+        ctypes.windll.user32.MessageBoxW(None, str(error), "Journey Navigator", 0x10)
+        return
     try:
         with Navigator(app) as server:
             if args.no_browser:
