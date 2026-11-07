@@ -107,6 +107,9 @@ def run(browser,base):
         expect(page.locator('.patrol-name').first).to_be_visible(timeout=15000)
         if os.name=='nt':
             page.locator('.patrol-name').first.check()
+            # A review refresh must preserve an intentional checked selection.
+            page.locator('.journey-tools').get_by_role('button',name='Review',exact=True).click()
+            expect(page.locator('.patrol-name:checked')).to_have_count(1)
             page.get_by_role('button',name='Review selected naming changes').click()
             expect(page.locator('#patrol-batch-details')).to_contain_text('rename')
             page.get_by_role('button',name='Authorize exact batch with my Windows account').click()
@@ -118,6 +121,9 @@ def run(browser,base):
             expect(page.locator('#patrol-state')).to_have_text('Awaiting clarification',timeout=90000)
         expect(page.locator('.status-pill')).to_contain_text('Awaiting clarification')
         expect(page.locator('#journey-alert')).not_to_contain_text('Complete account verification')
+        page.locator('.journey-tools').get_by_role('button',name='Patrol',exact=True).click()
+        page.locator('#patrol-collections button').filter(has_text='human confirmed identity · Cloverstone').click()
+        expect(page.locator('.patrol-asset')).to_have_count(2)
         screenshot=os.environ.get('JOURNEY_ACCEPTANCE_SCREENSHOT')
         if screenshot:
             page.screenshot(path=screenshot,full_page=True)

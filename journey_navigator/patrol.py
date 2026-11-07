@@ -311,7 +311,7 @@ class Patrol:
         outcome=self.conn.execute('SELECT * FROM destination_outcomes WHERE destination=? AND binding=? ORDER BY id DESC LIMIT 1',(destination,outcome_binding)).fetchone()
         need=Need(row['id'],row['objective'],row['why']).assess({key:True for key in ('capability','environment','resources','authority','policy','evidence')},
             outcome_verified=outcome is not None,evidence_refs=(f'owner-outcome:{outcome["id"]}',) if outcome else ())
-        return dict(row) | {'coverage':coverage,'metrics':{'proposed':states['proposed_identity'],'confirmed':states['human_confirmed_identity'],
+        return dict(row) | {'coverage':coverage,'inspection_epoch':self.app.job(row['job'])['epoch'],'metrics':{'proposed':states['proposed_identity'],'confirmed':states['human_confirmed_identity'],
             'unresolved':unresolved,'collections':len(collections),'memberships':sum(value['members'] for value in collections),
             'physical_verified':sum(value['status']=='applied' for value in receipts)},'questions':questions,'collections':collections,
             'batches':batches,'batches_waiting':sum(value['status'] in ('review_required','authorizing') for value in batches),

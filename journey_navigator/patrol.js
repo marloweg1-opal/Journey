@@ -4,6 +4,9 @@
   const api = (name, body = {}) => apiPost(`/api/inspect/${name}`, body);
   const notify = value => { $("inspect-notice").textContent = value; const alert=$("journey-alert"); if (alert) alert.textContent=value; };
   let destination = "", current = null, offset = 0, polling = false, collection = "", questionMembers = null, batchId = "";
+  let imageRequest=0, statusRequest=0, renderedSnapshot='', pollAgain=false;
+  const selections={'.patrol-asset':new Set(),'.patrol-name':new Set()};
+  const clearSelections=()=>Object.values(selections).forEach(values=>values.clear());
   const client = sessionStorage.getItem("journey-window") || crypto.randomUUID();
   sessionStorage.setItem("journey-window", client);
   const toolbar = document.createElement("nav");
@@ -25,7 +28,15 @@
     fetch('/api/inspect/detach', {method:'POST', keepalive:true, headers:{'Content-Type':'application/json',
       'X-Journey-Session':sessionStorage.getItem('journey-inspection-session') || ''},body:JSON.stringify({client})}).catch(() => {});
   });
-  const selected = selector => [...document.querySelectorAll(selector + ':checked')].map(input => Number(input.value));
+  const selected = selector => [...selections[selector]];
+  document.addEventListener('change',event=>{
+    for (const [selector,values] of Object.entries(selections)) {
+      if (event.target.matches(selector)) {
+        const id=Number(event.target.value);
+        if (event.target.checked) values.add(id); else values.delete(id);
+      }
+    }
+  });
   const failure = error => notify(error.error || error.message || String(error));
 
   async function list() {
@@ -39,18 +50,27 @@
 
   async function images() {
     if (!current) return;
-    const page = await api("destination-images", {destination, offset, collection, assets:questionMembers});
+    const request=++imageRequest, requestedDestination=destination, snapshot=current.outcome_binding;
+    $("patrol-naming-batch").disabled=true;
+    $("patrol-answer").querySelector('button[type="submit"]').disabled=true;
+    const page = await api("destination-images", {destination:requestedDestination, offset, collection, assets:questionMembers});
+    if (request !== imageRequest || requestedDestination !== destination) return;
     if (page.reason) throw new Error(page.reason);
-    $("patrol-review-images").innerHTML = page.items.map(image => `<label class="inspection-entry"><input type="checkbox" class="patrol-asset" value="${image.id}">
+    const available=new Set(page.items.map(image=>image.id));
+    for (const values of Object.values(selections)) for (const id of values) if (!available.has(id)) values.delete(id);
+    $("patrol-review-images").innerHTML = page.items.map(image => `<label class="inspection-entry"><input type="checkbox" class="patrol-asset" value="${image.id}"${selections['.patrol-asset'].has(image.id) ? ' checked' : ''}>
       <img src="data:image/webp;base64,${esc(image.thumbnail)}" alt="${esc(image.filename)}"><strong>${esc(image.filename)}</strong>
       <span>${esc(image.identity.label || 'Subject open')} · ${esc(image.identity.state.replaceAll('_',' '))}</span>
       <span>${esc(image.identity.reason)}</span></label>`).join("");
     $("patrol-names").innerHTML = page.items.filter(image => image.name.state === 'proposed').map(image => `<label class="inspection-entry">
-      <input type="checkbox" class="patrol-name" value="${image.id}"><strong>${esc(image.filename)}</strong> → ${esc(image.name.destination)}
+      <input type="checkbox" class="patrol-name" value="${image.id}"${selections['.patrol-name'].has(image.id) ? ' checked' : ''}><strong>${esc(image.filename)}</strong> → ${esc(image.name.destination)}
       <p>${esc(image.name.reason)}</p></label>`).join("") || '<p>Confirmed subject and purpose can support physical naming proposals. Preliminary suggestions are available in Inspect.</p>';
     $("review-page").textContent = `Page ${Math.floor(offset / 24)+1}`;
     $("review-previous").disabled = offset === 0;
     $("review-next").disabled = !page.more;
+    $("patrol-naming-batch").disabled=false;
+    $("patrol-answer").querySelector('button[type="submit"]').disabled=false;
+    renderedSnapshot=snapshot;
   }
 
   async function viewBatch(id) {
@@ -68,7 +88,15 @@
 
   async function status() {
     if (!destination) return;
-    current = await api("patrol-status", {destination});
+    const request=++statusRequest, requestedDestination=destination;
+    const value=await api("patrol-status", {destination:requestedDestination});
+    if (request !== statusRequest || requestedDestination !== destination) return current;
+    if (current && current.id === value.id && current.inspection_epoch !== value.inspection_epoch) {
+      clearSelections(); questionMembers=null; offset=0; imageRequest++; renderedSnapshot='';
+      $("patrol-review-images").innerHTML='<p>The source inventory is refreshing. Select current images after assessment.</p>';
+      $("patrol-names").innerHTML='';
+    }
+    current=value;
     const approving=current.batches.some(batch => batch.status === 'authorizing');
     const pill=document.querySelector('.status-pill');
     pill.innerHTML=`<span class="status-dot"></span>${esc(current.state)}`;
@@ -96,11 +124,13 @@
       ${receipt.action_type === 'file_move' && receipt.status === 'applied' ? `<button type="button" data-undo="${receipt.id}">Review safe reversal</button>` : ''}</div>`).join('') || '<p>Account-approved operations will appear here with their verification evidence.</p>';
     $("patrol-work").textContent = `${current.coverage.pending} images and ${current.coverage.pending_folders} folders waiting. ${current.metrics.unresolved} assets remain unresolved. ` + current.tasks.map(task => `${task.kind}: ${task.status}${task.reason ? " · " + task.reason : ""}`).join(". ");
     if (batchId) await viewBatch(batchId);
+    if (document.querySelector('[data-panel="review"]').classList.contains('active') &&
+        !['Inspecting','Assessing','Working','Verifying'].includes(current.state) && renderedSnapshot !== current.outcome_binding) await images();
     return current;
   }
 
   async function poll() {
-    if (polling) return;
+    if (polling) { pollAgain=true; return; }
     polling = true;
     try {
       while (destination) {
@@ -109,7 +139,7 @@
         await new Promise(resolve => setTimeout(resolve, 800));
       }
     } catch (error) { failure(error); }
-    finally { polling = false; }
+    finally { polling = false; if (pollAgain) { pollAgain=false; poll(); } }
   }
 
   $("destination-form").addEventListener('submit', async event => {
@@ -117,7 +147,7 @@
     try {
       const data = Object.fromEntries(new FormData(event.target));
       const result = await api('destination-create', {...data,job:sessionStorage.getItem('journey-current-inspection'),max_files:Number(data.max_files),max_seconds:Number(data.max_seconds)});
-      destination = result.id; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status();
+      destination = result.id; clearSelections(); renderedSnapshot=''; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status();
     } catch (error) { failure(error); }
   });
   $("patrol-start").onclick = async () => { try { await api('patrol-begin',{destination}); poll(); } catch(error) { failure(error); } };
@@ -150,21 +180,23 @@
       await status(); await viewBatch(batch.id);
     } catch(error) { failure(error); }
   };
-  $("review-previous").onclick = async () => { offset=Math.max(0,offset-24); await images(); };
-  $("review-next").onclick = async () => { offset+=24; await images(); };
+  $("review-previous").onclick = async () => { clearSelections(); offset=Math.max(0,offset-24); await images(); };
+  $("review-next").onclick = async () => { clearSelections(); offset+=24; await images(); };
   document.addEventListener('click', async event => {
     const button=event.target.closest('button');
     if (!button) return;
     try {
-      if (button.dataset.destination) { destination=button.dataset.destination; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status(); poll(); }
-      else if (button.dataset.collection) { collection=button.dataset.collection; questionMembers=null; offset=0; setMode('review'); await images(); }
+      if (button.dataset.destination) { destination=button.dataset.destination; clearSelections(); renderedSnapshot=''; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status(); poll(); }
+      else if (button.dataset.collection) { clearSelections(); collection=button.dataset.collection; questionMembers=null; offset=0; setMode('review'); await images(); }
       else if (button.dataset.batch) await viewBatch(button.dataset.batch);
       else if (button.dataset.authorizeBatch) { await api('batch-authorize',{destination,batch:button.dataset.authorizeBatch}); notify('Complete account verification in the Journey Windows dialog.'); poll(); }
       else if (button.dataset.undo) { const batch=await api('batch-undo',{destination,receipt:Number(button.dataset.undo)}); await viewBatch(batch.id); }
       else if (button.dataset.question) {
         const members=JSON.parse(button.dataset.question);
+        clearSelections();
+        members.forEach(id=>selections['.patrol-asset'].add(id));
         questionMembers=members; collection=''; offset=0;
-        await images(); document.querySelectorAll('.patrol-asset').forEach(input => { input.checked=members.includes(Number(input.value)); });
+        await images();
         $('patrol-review-images').closest('details').open=true;
       } else if (button.dataset.select === 'destination') await list();
       else if (button.dataset.select === 'patrol') { await list(); await status(); poll(); }
