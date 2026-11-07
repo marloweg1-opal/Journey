@@ -46,7 +46,8 @@ source holds. Setup does not replace its files or services.
    after verification. Cancel when a dependency or intended change is unclear.
 7. Patrol revalidates each operation, uses the existing executor and journal,
    verifies the resulting identity, and records the receipt. It then refreshes
-   its inventory and continues eligible work. Original paths and confirmed
+   its inventory and continues eligible work. An approved batch runs before
+   remaining unrelated indexing, within the foreground time limit. Original paths and confirmed
    context remain traceable after a move. Approved batches expire after ten
    minutes and require review again after a restart.
 8. **Review** shows operation history and offers an exact, account-approved

@@ -87,6 +87,20 @@ class OperationalPatrolTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'occupied'):
             self.patrol.guided.prepare(self.job,[{'kind':'mkdir','destination':str(target)}])
 
+    def test_approved_work_does_not_wait_behind_unrelated_pending_inspection(self):
+        self.finish()
+        target=self.source/'Approved work first'
+        batch=self.patrol.guided.prepare(self.job,[{'kind':'mkdir','destination':str(target)}])
+        with self.lock:
+            self.patrol.begin(self.destination,refresh=True)
+            self.assertGreater(self.app.summary(self.job)['pending_folders'],0)
+            binding,description=self.patrol.guided.begin_approval(batch['id'])
+            self.patrol.guided.accept(batch['id'],FixtureConsent().verify(binding,description))
+            self.patrol.cycle(self.destination)
+            self.assertTrue(target.is_dir())
+            self.assertEqual(self.patrol.guided.view(batch['id'])['status'],'completed')
+            self.assertGreater(self.app.summary(self.job)['pending_folders'],0)
+
     def test_outcome_review_is_bound_to_the_result_and_never_authorizes_actions(self):
         value=self.finish()
         self.assertIsNone(value['outcome'])

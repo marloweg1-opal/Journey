@@ -213,8 +213,21 @@ class Patrol:
             return
         coverage=self.app.summary(row['job'])
         entries=coverage['files']+coverage['folders']-self.start_counts.get(destination,0)
-        if monotonic()-self.started.get(destination,monotonic())>row['max_seconds'] or entries>row['max_files']:
+        if monotonic()-self.started.get(destination,monotonic())>row['max_seconds']:
             self._state(destination,'Partially completed','Resource budget reached. Resume for another bounded cycle.')
+            return
+        batch=self.guided.conn.execute("SELECT id FROM guided_batches WHERE job=? AND status='approved' ORDER BY created LIMIT 1",(row['job'],)).fetchone()
+        if batch:
+            self._state(destination,'Working','Executing the exact account-approved batch.')
+            try:
+                self.guided.step(batch['id'])
+            except (OSError,ValueError) as error:
+                with self.guided.conn:
+                    self.guided.conn.execute("UPDATE guided_batches SET status='review_required',reason=? WHERE id=?",(str(error),batch['id']))
+            self._state(destination,'Verifying','Recording verification and any operation that requires recovery.')
+            return
+        if entries>row['max_files']:
+            self._state(destination,'Partially completed','Inspection entry budget reached. Resume for another bounded cycle.')
             return
         task=self.conn.execute("SELECT * FROM patrol_tasks WHERE destination=? AND status='pending' ORDER BY CASE kind WHEN 'inspect' THEN 0 ELSE 1 END LIMIT 1",(destination,)).fetchone()
         if task and task['kind']=='inspect':
@@ -234,16 +247,6 @@ class Patrol:
         if task:
             self._state(destination,'Assessing','Updating evidence-linked collections, naming work and grouped review questions.')
             self._assess(destination,row)
-            return
-        batch=self.guided.conn.execute("SELECT id FROM guided_batches WHERE job=? AND status='approved' ORDER BY created LIMIT 1",(row['job'],)).fetchone()
-        if batch:
-            self._state(destination,'Working','Executing the exact account-approved batch.')
-            try:
-                self.guided.step(batch['id'])
-            except (OSError,ValueError) as error:
-                with self.guided.conn:
-                    self.guided.conn.execute("UPDATE guided_batches SET status='review_required',reason=? WHERE id=?",(str(error),batch['id']))
-            self._state(destination,'Verifying','Recording verification and any operation that requires recovery.')
             return
         self._finish(destination)
 
