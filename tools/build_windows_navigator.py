@@ -37,7 +37,7 @@ def build(output, cache, wheel, zig):
         modules = {
             "journey_navigator": ("__init__.py", "__main__.py", "context.py", "links.py", "ocr.py", "workbench.py",
                                   "inspection.html", "inspection.js", "inspection.css", "approval.py", "guided.py", "migrations.py",
-                                  "patrol.py", "patrol.html", "patrol.js", "session.py"),
+                                  "patrol.py", "patrol.html", "patrol.js", "session.py", "install.py"),
             "journey_planner": ("__init__.py", "catalog.py"),
             "journey_vision": ("__init__.py", "observe.py", "steward.py"),
             "core": tuple(item.name for item in (ROOT / 'core').glob('*.py')),
@@ -52,7 +52,7 @@ def build(output, cache, wheel, zig):
         profile = app / "examples" / "carebloom"
         profile.mkdir(parents=True)
         shutil.copyfile(ROOT / "examples" / "carebloom" / "project_tokens.json", profile / "project_tokens.json")
-        shutil.copyfile(ROOT / "docs/NAVIGATOR_INSPECTION.md", package / "START-HERE.md")
+        shutil.copyfile(ROOT / "docs/NAVIGATOR_PATROL.md", package / "START-HERE.md")
         shutil.copyfile(ROOT / "LICENSE", package / "LICENSE.txt")
         commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         (package / "BUILD.txt").write_text(f"Journey source commit {commit}\nCPython {PYTHON_VERSION}\nPillow 12.2.0\nTesseract OCR 5.5.4 (English)\n", encoding="utf-8")
@@ -66,6 +66,16 @@ def build(output, cache, wheel, zig):
         subprocess.run([*zig, "cc", "-target", "x86_64-windows-gnu", "-municode", "-Wl,--subsystem,windows", "-Os", "-s",
                         '-DJOURNEY_MODULE=L"journey_navigator"', '-DJOURNEY_TITLE=L"Journey Navigator"',
                         "tools/windows/launcher.c", str(resources), "-o", str(package / "Journey Navigator.exe")], cwd=ROOT, check=True)
+        subprocess.run([*zig, 'cc', '-target', 'x86_64-windows-gnu', '-municode', '-Wl,--subsystem,windows', '-Os', '-s',
+                        '-DJOURNEY_MODULE=L"journey_navigator.install"', '-DJOURNEY_TITLE=L"Journey Setup"',
+                        'tools/windows/launcher.c',str(resources),'-o',str(package/'Setup Journey.exe')],cwd=ROOT,check=True)
+        import json
+        checksums={}
+        for item in sorted(package.rglob('*')):
+            if item.is_file():
+                with item.open('rb') as source:
+                    checksums[item.relative_to(package).as_posix()]=file_digest(source,'sha256').hexdigest()
+        (package/'MANIFEST.json').write_text(json.dumps(checksums,indent=2)+'\n',encoding='utf-8')
         destination = output / ZIP_NAME
         with ZipFile(destination, "w", ZIP_DEFLATED, compresslevel=6) as archive:
             for item in sorted(package.rglob("*")):

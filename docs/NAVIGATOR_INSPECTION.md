@@ -1,5 +1,7 @@
 # Journey Navigator inspection candidate
 
+This records the earlier inspection release. See [Guided Patrol](NAVIGATOR_PATROL.md) for the current operational candidate.
+
 ## Start an inspection
 
 1. Extract the Windows x64 ZIP and open **Journey Navigator.exe**. The

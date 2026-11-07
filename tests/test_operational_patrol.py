@@ -145,6 +145,33 @@ class OperationalPatrolTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             WindowsApprover().verify('0'*64,'Fixture cannot authorize as the owner.')
 
+    def test_new_hold_blocks_affected_action_while_other_approved_work_continues(self):
+        self.finish()
+        held=self.source/'Held after approval'
+        eligible=self.source/'Eligible folder'
+        batch=self.patrol.guided.prepare(self.job,[{'kind':'mkdir','destination':str(held)},
+                                                  {'kind':'mkdir','destination':str(eligible)}])
+        binding,description=self.patrol.guided.begin_approval(batch['id'])
+        self.patrol.guided.accept(batch['id'],FixtureConsent().verify(binding,description))
+        self.app.policy.blocked=(*self.app.policy.blocked,held)
+        self.patrol.guided.step(batch['id'])
+        outcome=self.patrol.guided.step(batch['id'])
+        self.assertEqual(outcome['status'],'partially_completed')
+        self.assertFalse(held.exists())
+        self.assertTrue(eligible.is_dir())
+
+    def test_changed_core_proposal_cannot_reuse_native_batch_approval(self):
+        self.finish()
+        target=self.source/'Exact approved folder'
+        batch=self.patrol.guided.prepare(self.job,[{'kind':'mkdir','destination':str(target)}])
+        binding,description=self.patrol.guided.begin_approval(batch['id'])
+        self.patrol.guided.accept(batch['id'],FixtureConsent().verify(binding,description))
+        with self.patrol.guided.conn:
+            self.patrol.guided.conn.execute("UPDATE proposals SET description='Changed after approval'")
+        with self.assertRaisesRegex(ValueError,'proposal changed'):
+            self.patrol.guided.step(batch['id'])
+        self.assertFalse(target.exists())
+
 
 if __name__=='__main__':
     unittest.main()

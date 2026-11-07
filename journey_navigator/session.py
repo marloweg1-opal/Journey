@@ -72,9 +72,13 @@ def build_info():
     if metadata.is_file():
         commit = metadata.read_text(encoding="utf-8").splitlines()[0].removeprefix("Journey source commit ")
     digest = sha256()
+    digest.update(commit.encode())
     for folder in (root / "journey_navigator", root / "core"):
-        for file in sorted(folder.glob("*.py")):
+        for file in sorted(item for item in folder.iterdir() if item.suffix in ('.py','.html','.js','.css')):
             digest.update(file.name.encode())
+            digest.update(file.read_bytes())
+    for file in (root/'index.html',root/'examples'/'carebloom'/'project_tokens.json',root.parent/'approval.sha256'):
+        if file.is_file():
             digest.update(file.read_bytes())
     return {"application": APP_ID, "version": VERSION, "commit": commit, "build": digest.hexdigest()[:16],
             "location": str(root.parent if metadata.is_file() else root), "executable": str(Path(sys.executable).resolve()),

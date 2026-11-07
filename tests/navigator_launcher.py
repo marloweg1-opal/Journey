@@ -38,7 +38,7 @@ def stop(record):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--application',required=True,type=Path)
     args=parser.parse_args()
-    with TemporaryDirectory(prefix='journey-normal-launch-') as temp:
+    with TemporaryDirectory(prefix='journey-normal-launch-',ignore_cleanup_errors=True) as temp:
         root=Path(temp).resolve()
         env=os.environ | {'LOCALAPPDATA':str(root)}
         path=root/'Journey'/'Navigator Inspection'/'navigator-session.dat'
@@ -57,6 +57,8 @@ def main():
             assert next_record['session']!=record['session']
             stop(next_record);third.wait(timeout=30)
             assert third.returncode==0
+            import shutil
+            shutil.rmtree(root/'Journey')
             print('Normal EXE launch, compatible instance reopening, authenticated shutdown, lock release and clean relaunch passed.')
         finally:
             if first.poll() is None and record is not None:

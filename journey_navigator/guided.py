@@ -304,6 +304,7 @@ class Guided:
         if pending is None:
             return self.view(batch_id)
         operation = payload['operations'][pending['position']]
+        previous_receipt=self.conn.execute('SELECT coalesce(max(id),0) FROM action_log').fetchone()[0]
         receipt, status, reason = None, 'failed', ''
         try:
             self.validate_operation(batch, operation, source=True)
@@ -333,12 +334,16 @@ class Guided:
                     raise ValueError(result.get('reason') or str(result.get('failed', 'Execution was blocked.')))
         except (OSError,ValueError,PermissionError) as error:
             reason = str(error)
+            if receipt is None:
+                saved=self.conn.execute('SELECT id FROM action_log WHERE id>? ORDER BY id DESC LIMIT 1',(previous_receipt,)).fetchone()
+                receipt=saved['id'] if saved else None
         with self.conn:
             self.conn.execute('UPDATE guided_operations SET status=?,receipt=?,reason=? WHERE batch=? AND position=?',
                               (status,receipt,reason,batch_id,pending['position']))
             left = self.conn.execute("SELECT count(*) FROM guided_operations WHERE batch=? AND status='pending'",(batch_id,)).fetchone()[0]
             failures = self.conn.execute("SELECT count(*) FROM guided_operations WHERE batch=? AND status='failed'",(batch_id,)).fetchone()[0]
-            final = 'approved' if left else ('partially_completed' if failures else 'completed')
+            verified=self.conn.execute("SELECT count(*) FROM guided_operations WHERE batch=? AND status='verified'",(batch_id,)).fetchone()[0]
+            final = 'approved' if left else ('partially_completed' if failures and verified else ('failed' if failures and receipt else ('blocked' if failures else 'completed')))
             self.conn.execute('UPDATE guided_batches SET status=?,reason=? WHERE id=?',(final,reason,batch_id))
         if status=='verified' and 'source' in operation:
             with self.workbench.conn:

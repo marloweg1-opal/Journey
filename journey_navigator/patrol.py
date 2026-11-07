@@ -51,6 +51,7 @@ class Patrol:
         self.stop = Event()
         self.wake = Event()
         self.started = {}
+        self.start_counts = {}
         self.closed = False
         self.approval_threads = []
         self.worker = Thread(target=self._run, name='Journey foreground Patrol', daemon=False)
@@ -118,6 +119,10 @@ class Patrol:
             with self.conn:
                 self.conn.execute("UPDATE patrol_tasks SET status='pending',cursor=0,attempts=0 WHERE destination=?",(destination,))
         self.started[destination]=monotonic()
+        baseline=self.app.summary(row['job'])
+        self.start_counts[destination]=baseline['files']+baseline['folders']
+        with self.conn:
+            self.conn.execute("UPDATE patrol_tasks SET status='pending',attempts=0 WHERE destination=? AND status='failed'",(destination,))
         self._state(destination,'Inspecting')
         self.wake.set()
         return self.status(destination)
@@ -180,9 +185,11 @@ class Patrol:
 
     def _finish(self,destination):
         status=self.status(destination)
-        state='Partially completed' if status['metrics']['unresolved'] or status['coverage']['skipped'] or status['coverage']['unsupported'] or status['coverage']['link_attention'] else 'Completed'
+        state='Partially completed' if status['metrics']['unresolved'] or status['coverage']['skipped'] or status['coverage']['unsupported'] or status['coverage']['link_attention'] or any(task['status']=='failed' for task in status['tasks']) else 'Completed'
         if status['questions']:
             state='Awaiting clarification'
+        if any(batch['status'] in ('blocked','failed','partially_completed') for batch in status['batches']):
+            state='Partially completed'
         if status['batches_waiting']:
             state='Awaiting authorization'
         if any(batch['status']=='approved' for batch in status['batches']):
@@ -194,7 +201,8 @@ class Patrol:
         if read_state(self.conn)['paused'] or row['state']=='Paused':
             return
         coverage=self.app.summary(row['job'])
-        if monotonic()-self.started.get(destination,monotonic())>row['max_seconds'] or coverage['files']>row['max_files']:
+        entries=coverage['files']+coverage['folders']-self.start_counts.get(destination,0)
+        if monotonic()-self.started.get(destination,monotonic())>row['max_seconds'] or entries>row['max_files']:
             self._state(destination,'Partially completed','Resource budget reached. Resume for another bounded cycle.')
             return
         task=self.conn.execute("SELECT * FROM patrol_tasks WHERE destination=? AND status='pending' ORDER BY CASE kind WHEN 'inspect' THEN 0 ELSE 1 END LIMIT 1",(destination,)).fetchone()
@@ -205,7 +213,8 @@ class Patrol:
                 with self.conn:
                     self.conn.execute("UPDATE patrol_tasks SET status='complete' WHERE destination=? AND kind='inspect'",(destination,))
             return
-        if self.signature(row['job'])!=row['signature'] and not task:
+        failed=self.conn.execute("SELECT 1 FROM patrol_tasks WHERE destination=? AND status='failed'",(destination,)).fetchone()
+        if self.signature(row['job'])!=row['signature'] and not task and not failed:
             with self.conn:
                 self.conn.execute("UPDATE patrol_tasks SET status='pending',cursor=0 WHERE destination=? AND kind='assess'",(destination,))
                 self.conn.execute('DELETE FROM patrol_assets WHERE destination=?',(destination,))
@@ -241,7 +250,20 @@ class Patrol:
                             break
                         try:
                             self.cycle(row['id'])
-                        except (OSError,ValueError) as error:
+                        except PermissionError as error:
+                            self._state(row['id'],'Blocked',str(error))
+                        except OSError as error:
+                            task=self.conn.execute("SELECT * FROM patrol_tasks WHERE destination=? AND status='pending' ORDER BY kind DESC LIMIT 1",(row['id'],)).fetchone()
+                            if task:
+                                attempts=task['attempts']+1
+                                with self.conn:
+                                    self.conn.execute('UPDATE patrol_tasks SET attempts=?,status=?,reason=? WHERE destination=? AND kind=?',
+                                        (attempts,'pending' if attempts<2 else 'failed',str(error),row['id'],task['kind']))
+                                if attempts>=2:
+                                    self._state(row['id'],'Assessing','A task reached its retry limit. Other eligible assessment continues.')
+                            else:
+                                self._state(row['id'],'Failed','A technical I/O failure stopped this cycle.')
+                        except ValueError as error:
                             self._state(row['id'],'Blocked',str(error))
                         except Exception as error:
                             self._state(row['id'],'Failed',f'{type(error).__name__}: Patrol could not complete this checkpoint.')
@@ -252,8 +274,8 @@ class Patrol:
         coverage=self.app.summary(row['job'])
         visible=set(self.app._visible(self.app.job(row['job'])))
         records=[]
-        for record, in self.conn.execute('SELECT record FROM patrol_assets WHERE destination=?',(destination,)):
-            image=json.loads(record)
+        for value in self.conn.execute("SELECT asset,json_extract(record,'$.path') AS path,json_extract(record,'$.scope') AS scope,json_extract(record,'$.identity.state') AS state FROM patrol_assets WHERE destination=?",(destination,)):
+            image={'id':value['asset'],'path':value['path'],'scope':value['scope'],'identity':{'state':value['state']}}
             if image['scope'] not in visible:
                 continue
             try:
@@ -271,12 +293,13 @@ class Patrol:
         batches=[dict(value) for value in self.guided.conn.execute('SELECT id,status,reason FROM guided_batches WHERE job=? ORDER BY created DESC LIMIT 25',(row['job'],))]
         unresolved=sum(states.get(key,0) for key in ('unknown','conflicting_evidence','possibly_related','explicitly_rejected_identity'))
         receipts=self.guided.history(row['job'])
+        tasks=[dict(task) for task in self.conn.execute('SELECT kind,status,cursor,attempts,reason FROM patrol_tasks WHERE destination=?',(destination,))]
         need=Need(row['id'],row['objective'],row['why']).assess({key:True for key in ('capability','environment','resources','authority','policy','evidence')},outcome_verified=row['state']=='Completed',evidence_refs=(row['id'],) if records else ())
         return dict(row) | {'coverage':coverage,'metrics':{'proposed':states['proposed_identity'],'confirmed':states['human_confirmed_identity'],
             'unresolved':unresolved,'collections':len(collections),'memberships':sum(value['members'] for value in collections),
             'physical_verified':sum(value['status']=='applied' for value in receipts)},'questions':questions,'collections':collections,
             'batches':batches,'batches_waiting':sum(value['status'] in ('review_required','authorizing') for value in batches),
-            'need':need,'authority':{'capability':'Inspect, organize virtual collections, and Guided Patrol',
+            'need':need,'tasks':tasks,'authority':{'capability':'Inspect, organize virtual collections, and Guided Patrol',
                 'ceiling':'Exact account-approved batch','active':'Read and retain' if row['state']!='Working' else 'Exact approved operation',
                 'scope':coverage['root']},'history':receipts}
 
@@ -291,18 +314,22 @@ class Patrol:
             self.app.review(row['job'],asset,action,label,purpose)
         return self.begin(destination)
 
-    def images(self,destination,offset,collection=''):
+    def images(self,destination,offset,collection='',assets=None):
         row=self.row(destination)
-        selected=None
+        selected=assets
         if collection:
             selected=[asset for asset, in self.conn.execute('SELECT asset FROM virtual_memberships WHERE destination=? AND name=?',(destination,collection))]
         return self.app.images(row['job'],offset,asset_ids=selected)
 
     def authorize(self,destination,batch):
         row=self.row(destination)
+        if self.guided.conn.execute("SELECT 1 FROM guided_batches WHERE status='authorizing'").fetchone():
+            raise ValueError('An account approval is already open. Finish or cancel that Windows dialog first.')
         if self.guided.row(batch)['job']!=row['job']:
             raise PermissionError('This batch belongs to another Destination.')
         binding,description=self.guided.begin_approval(batch)
+        if row['state'] not in ACTIVE:
+            self._state(destination,'Awaiting authorization','Review and authorize the exact batch in the Windows account dialog.')
         def request():
             try:
                 consent=self.approver.verify(binding,description)

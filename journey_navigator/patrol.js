@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const api = (name, body = {}) => apiPost(`/api/inspect/${name}`, body);
   const notify = value => { $("inspect-notice").textContent = value; const alert=$("journey-alert"); if (alert) alert.textContent=value; };
-  let destination = "", current = null, offset = 0, polling = false, collection = "";
+  let destination = "", current = null, offset = 0, polling = false, collection = "", questionMembers = null;
   const client = sessionStorage.getItem("journey-window") || crypto.randomUUID();
   sessionStorage.setItem("journey-window", client);
   const toolbar = document.createElement("nav");
@@ -39,7 +39,7 @@
 
   async function images() {
     if (!current) return;
-    const page = await api("destination-images", {destination, offset, collection});
+    const page = await api("destination-images", {destination, offset, collection, assets:questionMembers});
     $("patrol-review-images").innerHTML = page.items.map(image => `<label class="inspection-entry"><input type="checkbox" class="patrol-asset" value="${image.id}">
       <img src="data:image/webp;base64,${esc(image.thumbnail)}" alt="${esc(image.filename)}"><strong>${esc(image.filename)}</strong>
       <span>${esc(image.identity.label || 'Subject open')} · ${esc(image.identity.state.replaceAll('_',' '))}</span>
@@ -83,7 +83,7 @@
     $("patrol-history").innerHTML = current.history.map(receipt => `<div class="inspection-entry"><strong>OP-${String(receipt.id).padStart(6,'0')} · ${esc(receipt.status)}</strong>
       <p>${esc(receipt.action_type)} · ${esc(receipt.target_path)}</p><details><summary>Verification receipt</summary><pre>${esc(JSON.stringify(JSON.parse(receipt.new_state || '{}'),null,2))}</pre></details>
       ${receipt.action_type === 'file_move' && receipt.status === 'applied' ? `<button type="button" data-undo="${receipt.id}">Review safe reversal</button>` : ''}</div>`).join('') || '<p>Account-approved operations will appear here with their verification evidence.</p>';
-    $("patrol-work").textContent = `${current.coverage.pending} images and ${current.coverage.pending_folders} folders waiting. ${current.metrics.unresolved} assets remain unresolved.`;
+    $("patrol-work").textContent = `${current.coverage.pending} images and ${current.coverage.pending_folders} folders waiting. ${current.metrics.unresolved} assets remain unresolved. ` + current.tasks.map(task => `${task.kind}: ${task.status}${task.reason ? " · " + task.reason : ""}`).join(". ");
     return current;
   }
 
@@ -141,12 +141,13 @@
     if (!button) return;
     try {
       if (button.dataset.destination) { destination=button.dataset.destination; setMode('patrol'); await status(); poll(); }
-      else if (button.dataset.collection) { collection=button.dataset.collection; offset=0; setMode('review'); await images(); }
+      else if (button.dataset.collection) { collection=button.dataset.collection; questionMembers=null; offset=0; setMode('review'); await images(); }
       else if (button.dataset.batch) await viewBatch(button.dataset.batch);
       else if (button.dataset.authorizeBatch) { await api('batch-authorize',{destination,batch:button.dataset.authorizeBatch}); notify('Complete account verification in the Journey Windows dialog.'); poll(); }
       else if (button.dataset.undo) { const batch=await api('batch-undo',{destination,receipt:Number(button.dataset.undo)}); await viewBatch(batch.id); }
       else if (button.dataset.question) {
         const members=JSON.parse(button.dataset.question);
+        questionMembers=members; collection=''; offset=0;
         await images(); document.querySelectorAll('.patrol-asset').forEach(input => { input.checked=members.includes(Number(input.value)); });
         $('patrol-review-images').closest('details').open=true;
       } else if (button.dataset.select === 'destination') await list();

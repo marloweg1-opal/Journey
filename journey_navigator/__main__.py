@@ -251,7 +251,7 @@ class Handler(BaseHTTPRequestHandler):
         if action == 'patrol-answer':
             return patrol.answer(destination,body['assets'],body.get('label',''),body.get('purpose',''),body.get('decision','confirm'))
         if action == 'destination-images':
-            return patrol.images(destination,offset,body.get('collection',''))
+            return patrol.images(destination,offset,body.get('collection',''),body.get('assets'))
         if action == 'batch-suggestions':
             return patrol.suggested_batch(destination,body['assets'])
         if action == 'batch-prepare':

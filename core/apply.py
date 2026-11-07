@@ -511,7 +511,7 @@ def execute_apply(conn, plan: dict, tier: int = 3, verbose: bool = True, *, move
 
             destination_identity = file_identity(dest, read_guard=guard) if action == 'move' else None
             if action == 'move':
-                verified = verified and destination_identity is not None and destination_identity['sha256'] == identity['sha256']
+                verified = verified and destination_identity == identity
             journal.complete_operation(conn, op_id, new_state={"path": str(dest), 'identity':destination_identity}, verified=verified, read_guard=guard)
             if not verified:
                 raise RuntimeError("Filesystem result did not verify; manual recovery required")
