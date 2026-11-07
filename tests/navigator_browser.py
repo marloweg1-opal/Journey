@@ -118,7 +118,7 @@ def run(browser, runtime, base):
         page = browser.new_page()
         page.on("pageerror", lambda error: errors.append(str(error)))
         page.goto(url)
-        expect(page.get_by_role("heading", name="mini_ark Navigator")).to_be_visible()
+        expect(page.get_by_role("heading", name="Journey Navigator",exact=True)).to_be_visible()
         return page
 
     with running_navigator(runtime, data, base) as url:
