@@ -140,6 +140,7 @@ class Boundaries:
         self.perception_store = perception_store
         self.holds = ()
         self.perception = ()
+        self.expected_stores = set()
 
     @staticmethod
     def _rows(store, query, table, *, optional_table=False):
@@ -166,6 +167,16 @@ class Boundaries:
         import json
 
         try:
+            for store in (self.hold_store,self.perception_store):
+                if store is None:
+                    continue
+                try:
+                    safe_metadata(store)
+                except FileNotFoundError:
+                    if store in self.expected_stores:
+                        raise ProtectedPath('An existing Journey policy store disappeared. Restore it before continuing.')
+                else:
+                    self.expected_stores.add(store)
             self.holds = tuple(absolute_path(scope) for scope, in self._rows(
                 self.hold_store, "SELECT scope FROM media_source_holds", "media_source_holds"))
             records = self._rows(self.perception_store,

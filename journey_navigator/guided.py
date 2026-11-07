@@ -37,6 +37,11 @@ def encoded(value):
     return json.dumps(value, sort_keys=True, separators=(',', ':'), ensure_ascii=True)
 
 
+def receipt_binding(row):
+    fields=('id','action_type','target_path','previous_state','new_state','performed_at')
+    return sha256(encoded({key:row[key] for key in fields}).encode()).hexdigest()
+
+
 class GuidedVerifier(MoveEvidenceVerifier):
     def __init__(self, owner, batch):
         self.owner, self.batch = owner, batch
@@ -51,7 +56,7 @@ class GuidedVerifier(MoveEvidenceVerifier):
             raise MoveEvidenceDenied('This operation is absent from the account-approved batch')
         self.owner.validate_operation(batch, operation, source=True)
         return MoveEvidence(receipt_id=batch['id'], approval_reference=approval['account'],
-            approval_binding=approval_binding(conn.execute('SELECT * FROM proposals WHERE id=?', (batch['proposal'],)).fetchone()),
+            approval_binding=approval['proposal_binding'],
             evidence_references=(f"account-verified-dependency-disposition:{batch['binding']}",),
             proposal_id=batch['proposal'],item_id=item['id'],source=operation['source'],destination=operation['destination'],
             source_scope=batch['scope'],destination_scope=batch['scope'],identity=MoveIdentity(**operation['identity']),
@@ -100,14 +105,16 @@ class Guided:
         if not (path.is_relative_to(scope) or scope.is_relative_to(path)):
             raise PermissionError('This path is outside the reviewed execution scope.')
         app.policy.check(path)
+        if os.name=='nt' and Path(r'C:\mini_ark\ARK_EXECUTION_DISABLED.flag').exists():
+            raise PermissionError('The existing Journey execution kill switch is active.')
         registry = app.policy.perception_store
         for query, table in (("SELECT path FROM protected_paths", 'protected_paths'),
                              ("SELECT canonical_path FROM file_dependents WHERE active=1", 'file_dependents')):
             for protected, in app.policy._rows(registry, query, table, optional_table=True):
                 if path == Path(protected) or (table == 'protected_paths' and path.is_relative_to(protected)):
                     raise PermissionError('An existing Journey protection or active dependency blocks this path.')
-        if executor.is_protected(self.conn, str(path)):
-            raise PermissionError('This path is protected.')
+        if executor.is_protected(self.conn, str(path)) or executor.get_active_dependents(self.conn,str(path)):
+            raise PermissionError('This path is protected or has an active registered dependency.')
 
     def validate_operation(self, batch, operation, *, source):
         scope = Path(batch['scope'])
@@ -214,6 +221,7 @@ class Guided:
         previous,current=json.loads(row['previous_state']),json.loads(row['new_state'])
         parent=safe_metadata(Path(previous['path']).parent,read_guard=self.workbench.policy.check)
         operation={'kind':'undo','receipt':receipt,'source':current['path'],'destination':previous['path'],
+                   'original_receipt_binding':receipt_binding(row),
                    'identity':current['identity'],'parent':[parent.st_dev,parent.st_ino],
                    'reason':'Reverse this exact verified operation while preserving any new occupants.'}
         payload={'job':job_id,'scope':known['scope'],'operations':[operation]}
@@ -260,10 +268,12 @@ class Guided:
             self.validate_operation(batch, operation, source=True)
         approval = asdict(consent) | {'expires_at': consent.verified_at + EXPIRY,
                                      'dependency_disposition': 'Account-approved exact-source assessment'}
-        proof = hmac.new(self.key, (batch['payload']+encoded(approval)).encode(), 'sha256').hexdigest()
         with self.conn:
-            self.conn.execute("UPDATE guided_batches SET status='approved',approval=?,proof=? WHERE id=?",(encoded(approval),proof,batch_id))
             self.conn.execute("UPDATE proposals SET status='approved',resolved_at=datetime('now') WHERE id=?",(batch['proposal'],))
+            if batch['proposal'] is not None:
+                approval['proposal_binding']=approval_binding(self.conn.execute('SELECT * FROM proposals WHERE id=?',(batch['proposal'],)).fetchone())
+            proof = hmac.new(self.key, (batch['payload']+encoded(approval)).encode(), 'sha256').hexdigest()
+            self.conn.execute("UPDATE guided_batches SET status='approved',approval=?,proof=? WHERE id=?",(encoded(approval),proof,batch_id))
         return self.view(batch_id)
 
     def authorized(self, batch_id):
@@ -276,6 +286,15 @@ class Guided:
             raise MoveEvidenceDenied('Approval integrity or expiry requires a new review.')
         if sha256(batch['payload'].encode()).hexdigest() != batch['binding']:
             raise MoveEvidenceDenied('The reviewed batch changed.')
+        if batch['proposal'] is not None:
+            proposal=self.conn.execute('SELECT * FROM proposals WHERE id=?',(batch['proposal'],)).fetchone()
+            if not proposal or proposal['status']!='approved' or approval_binding(proposal)!=approval['proposal_binding']:
+                raise MoveEvidenceDenied('The approved operation proposal changed.')
+        for operation in json.loads(batch['payload'])['operations']:
+            if operation['kind']=='undo':
+                receipt=self.conn.execute('SELECT * FROM action_log WHERE id=?',(operation['receipt'],)).fetchone()
+                if not receipt or receipt_binding(receipt)!=operation['original_receipt_binding']:
+                    raise MoveEvidenceDenied('The original operation receipt changed after reversal review.')
         self.guard(batch_id, Path(batch['scope']))
         return batch,json.loads(batch['payload']),approval
 
@@ -321,6 +340,16 @@ class Guided:
             failures = self.conn.execute("SELECT count(*) FROM guided_operations WHERE batch=? AND status='failed'",(batch_id,)).fetchone()[0]
             final = 'approved' if left else ('partially_completed' if failures else 'completed')
             self.conn.execute('UPDATE guided_batches SET status=?,reason=? WHERE id=?',(final,reason,batch_id))
+        if status=='verified' and 'source' in operation:
+            with self.workbench.conn:
+                self.workbench.conn.execute('INSERT INTO asset_transitions(job,scope,digest,from_path,to_path,receipt) VALUES(?,?,?,?,?,?)',
+                    (batch['job'],batch['scope'],operation['identity']['sha256'],operation['source'],operation['destination'],receipt))
+        if not left and self.conn.execute("SELECT 1 FROM guided_operations WHERE batch=? AND status='verified'",(batch_id,)).fetchone():
+            self.workbench.refresh(batch['job'])
+            tables={row[0] for row in self.workbench.conn.execute("SELECT name FROM sqlite_schema WHERE type='table'")}
+            if 'patrol_tasks' in tables:
+                with self.workbench.conn:
+                    self.workbench.conn.execute("UPDATE patrol_tasks SET status='pending',cursor=0 WHERE destination IN (SELECT id FROM destinations WHERE job=?)",(batch['job'],))
         return self.view(batch_id)
 
     def history(self, job_id):

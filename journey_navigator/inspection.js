@@ -48,6 +48,7 @@
       ${items.map(item => `<div class="inspection-entry"><p>${esc(item.root)}</p>${item.active ?
         action("saved", "Open saved inspection", item.id) : action("reauthorize", "Review access settings", item.id)}</div>`).join("") || "<p>Choose a folder to begin.</p>"}
       ${action("exit", "Close Navigator")}</div>`;
+    window.dispatchEvent(new Event('journey-manage'));
   }
 
   function coverage(data) {

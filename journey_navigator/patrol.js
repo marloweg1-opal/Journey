@@ -154,5 +154,24 @@
       else if (button.dataset.select === 'review') { await list(); await status(); await images(); }
     } catch(error) { failure(error); }
   });
+  window.addEventListener('journey-manage', async () => {
+    try {
+      const {items}=await api('checkpoints');
+      const panel=document.querySelector('[data-panel="manage"]');
+      panel.querySelector('#journey-recovery')?.remove();
+      const section=document.createElement('div'); section.id='journey-recovery'; section.className='inspection-card';
+      section.innerHTML=`<h2>Work, permissions and recovery</h2><p>Inspect contains scope controls. Review contains exact batches, account approvals and operation receipts.</p>
+        <button type="button" data-select="destination">Open saved Destinations</button> <button type="button" data-select="review">Review operations and recovery</button>
+        <p>Inspection recovery snapshots restore reviewed data with scope access inactive. Action receipts stay current. Forgetting retained observations also clears old inspection recovery snapshots.</p>
+        ${items.map(item=>`<div class="inspection-entry"><p>${esc(item.created)} · ${esc(item.backup)}</p><button type="button" data-restore="${item.version}">Restore inspection checkpoint</button></div>`).join('')}`;
+      panel.append(section);
+    } catch(error) { failure(error); }
+  });
+  document.addEventListener('click',async event=>{
+    const button=event.target.closest('[data-restore]');
+    if (!button || !confirm('Restore this inspection checkpoint? Current inspection data is backed up, scope access needs reselection, and action receipts stay current.')) return;
+    try { await api('restore-checkpoint',{version:Number(button.dataset.restore)}); notify('Restoring the inspection checkpoint. Navigator will reopen.'); }
+    catch(error) { failure(error); }
+  });
   list().catch(failure);
 })();

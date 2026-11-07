@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 import secrets
 import sqlite3
+import subprocess
+import sys
 from threading import RLock, Thread, Timer
 from urllib.parse import parse_qs, urlsplit
 import webbrowser
@@ -86,6 +88,7 @@ class Navigator(ThreadingHTTPServer):
         self.info = owner.info if owner else build_info()
         self.clients = set()
         self.closing = False
+        self.restore_checkpoint = None
         self.patrol = Patrol(workbench, self.lock, approver=approver)
         self.host = f"127.0.0.1:{self.server_address[1]}"
         self.origin = f"http://{self.host}"
@@ -218,6 +221,17 @@ class Handler(BaseHTTPRequestHandler):
         destination = body.get('destination')
         if action == 'build':
             return self.server.info
+        if action == 'checkpoints':
+            from journey_navigator.migrations import checkpoints
+            return {'items':checkpoints(self.server.workbench)}
+        if action == 'restore-checkpoint':
+            from journey_navigator.migrations import checkpoints
+            selected=next((row['backup'] for row in checkpoints(self.server.workbench) if row['version']==body['version']),None)
+            if not selected:
+                raise ValueError('Choose a saved Journey recovery checkpoint.')
+            self.server.restore_checkpoint=selected
+            self.server.request_close()
+            return {'restarting':True}
         if action == 'attach':
             self.server.clients.add(str(body['client'])[:100])
             return {'attached':True}
@@ -346,7 +360,13 @@ def main():
             server.serve_forever()
     finally:
         app.close()
+        restore = server.restore_checkpoint if 'server' in locals() else None
+        if restore:
+            from journey_navigator.migrations import restore_inspection
+            restore_inspection(data,restore)
         owner.close()
+        if restore:
+            subprocess.Popen([sys.executable,'-B','-m','journey_navigator',*sys.argv[1:]],cwd=APP)
 
 
 if __name__ == "__main__":

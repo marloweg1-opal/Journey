@@ -600,6 +600,11 @@ def undo_apply(conn, op_id: int, *, read_guard=None, authorize=None) -> dict:
             # Windows rename refuses an occupied destination atomically. Cross-volume
             # undo is held rather than falling back to a potentially overwriting copy.
             try:
+                if authorize is not None:
+                    authorize()
+                if read_guard is not None:
+                    read_guard(current_path)
+                    read_guard(original_path)
                 os.rename(current_path, original_path)
             except FileExistsError:
                 raise journal.UndoConflict({'reason':'Original path became occupied during undo; no overwrite',

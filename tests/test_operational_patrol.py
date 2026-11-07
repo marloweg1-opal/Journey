@@ -104,6 +104,8 @@ class OperationalPatrolTests(unittest.TestCase):
         self.assertEqual(result['status'],'completed',result)
         self.assertEqual(source.read_bytes(),original)
         self.assertFalse(target.exists())
+        self.finish()
+        image=next(image for image in self.app.images(self.job,0)['items'] if image['path']==str(source))
         # Another real operation, followed by an occupied original path.
         batch=self.patrol.guided.prepare(self.job,[{'kind':'rename','asset':image['id'],'destination':str(target)}])
         moved=self.approve(batch)

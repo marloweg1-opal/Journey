@@ -64,6 +64,10 @@ CREATE TABLE IF NOT EXISTS gaps (
 CREATE TABLE IF NOT EXISTS reviews (
     id INTEGER PRIMARY KEY, job TEXT NOT NULL, event TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS asset_transitions (
+    id INTEGER PRIMARY KEY,job TEXT NOT NULL,scope TEXT NOT NULL,digest TEXT NOT NULL,
+    from_path TEXT NOT NULL,to_path TEXT NOT NULL,receipt INTEGER NOT NULL
+);
 CREATE INDEX IF NOT EXISTS directory_queue ON dirs(job,epoch,status);
 CREATE INDEX IF NOT EXISTS file_queue ON files(job,epoch,status,id);
 CREATE INDEX IF NOT EXISTS scoped_visual_buckets ON observations(job,scope,bucket,representative);
@@ -359,12 +363,26 @@ class Workbench:
         self.pause()
         self.tickets.clear()
         markers, params = _markers(affected), (job_id, *affected)
+        if permission == 'retain':
+            from journey_navigator.migrations import clear_inspection_backups
+            clear_inspection_backups(self.data_dir)
         with self.conn:
             self.conn.execute(f"UPDATE scope_access SET inspect=0,propose=0 WHERE job=? AND path IN ({markers})", params)
             self.conn.execute(f"""UPDATE links SET record=json_set(record,'$.status','approval_required',
                 '$.physical_id','','$.reason','Inspection permission for this destination was revoked.')
                 WHERE job=? AND json_extract(record,'$.target') IN ({markers}) AND json_extract(record,'$.status') IN ('ready','already_covered')""", params)
             if permission == "retain":
+                self.conn.execute(f'DELETE FROM asset_transitions WHERE job=? AND scope IN ({markers})',params)
+                tables={row[0] for row in self.conn.execute("SELECT name FROM sqlite_schema WHERE type='table'")}
+                if 'patrol_assets' in tables:
+                    self.conn.execute(f"""DELETE FROM virtual_memberships WHERE asset IN
+                        (SELECT asset FROM patrol_assets WHERE json_extract(record,'$.scope') IN ({markers}))""",affected)
+                    self.conn.execute(f"DELETE FROM patrol_assets WHERE json_extract(record,'$.scope') IN ({markers})",affected)
+                    self.conn.execute('DELETE FROM patrol_questions WHERE destination IN (SELECT id FROM destinations WHERE job=?)',(job_id,))
+                    if scope==job['root']:
+                        for table in ('patrol_tasks','virtual_collections','virtual_memberships'):
+                            self.conn.execute(f'DELETE FROM {table} WHERE destination IN (SELECT id FROM destinations WHERE job=?)',(job_id,))
+                        self.conn.execute('DELETE FROM destinations WHERE job=?',(job_id,))
                 for table in ("dirs", "files", "observations", "links", "gaps"):
                     self.conn.execute(f"DELETE FROM {table} WHERE job=? AND scope IN ({markers})", params)
                 self.conn.execute(f"DELETE FROM reviews WHERE job=? AND json_extract(event,'$.scope') IN ({markers})", params)
@@ -617,7 +635,12 @@ class Workbench:
                                     (job["id"], scope, event["digest"])).fetchone()
             if row:
                 cache[event["digest"]] = {"features": json.loads(row["features"])}
-        return review_index([event for event in allowed if event["digest"] in cache]), cache
+        identities,purposes=review_index([event for event in allowed if event["digest"] in cache])
+        for transition in self.conn.execute('SELECT * FROM asset_transitions WHERE job=? AND scope=? ORDER BY id',(job['id'],scope)):
+            source=(Path(transition['from_path']).as_posix(),transition['digest'])
+            if source in purposes:
+                purposes[(Path(transition['to_path']).as_posix(),transition['digest'])]=purposes[source]
+        return (identities,purposes), cache
 
     def _image_view(self, job, row, reviews, evidence, *, thumbnails, proposals):
         path = self.policy.check_image(Path(row["path"]), retain=self.retains)
