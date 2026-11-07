@@ -67,6 +67,11 @@
   async function status() {
     if (!destination) return;
     current = await api("patrol-status", {destination});
+    const approving=current.batches.some(batch => batch.status === 'authorizing');
+    const pill=document.querySelector('.status-pill');
+    pill.innerHTML=`<span class="status-dot"></span>${esc(current.state)}`;
+    pill.title=current.reason;
+    if (!approving && $("journey-alert").textContent === 'Complete account verification in the Journey Windows dialog.') notify('');
     $("patrol-objective").textContent = current.objective;
     $("patrol-intent").textContent = `${current.why} Success looks like ${current.success} ${current.objective_outcome}`;
     $("patrol-state").textContent = current.state;
@@ -80,7 +85,8 @@
     $("patrol-metrics").innerHTML = Object.entries(metrics).map(([label,count]) => `<div><strong>${count.toLocaleString()}</strong><span>${esc(label)}</span></div>`).join('');
     $("patrol-collections").innerHTML = current.collections.map(value => `<button type="button" data-collection="${esc(value.name)}">${esc(value.name)} · ${value.members}</button>`).join('') || '<p>Collections will appear as evidence is assessed.</p>';
     $("patrol-questions").innerHTML = current.questions.map(question => `<div class="inspection-entry"><strong>${esc(question.prompt)}</strong>
-      <p>${question.members.length} images share this review question.</p><button type="button" data-question="${esc(JSON.stringify(question.members))}">Select these images</button></div>`).join('') || '<p>No material conflicts have been queued for this view.</p>';
+      <p>${question.members.length} images share this review question.</p><button type="button" data-question="${esc(JSON.stringify(question.members))}">Select these images</button></div>`).join('') ||
+      (['Inspecting','Assessing','Working','Verifying'].includes(current.state) ? '<p>Assessment is continuing. Review questions update at the next checkpoint.</p>' : '<p>No material conflicts have been queued for this view.</p>');
     $("patrol-batches").innerHTML = current.batches.map(batch => `<div class="inspection-entry">${esc(batch.status)} · ${esc(batch.reason)}
       <button type="button" data-batch="${esc(batch.id)}">Review exact batch</button></div>`).join('');
     $("patrol-history").innerHTML = current.history.map(receipt => `<div class="inspection-entry"><strong>OP-${String(receipt.id).padStart(6,'0')} · ${esc(receipt.status)}</strong>

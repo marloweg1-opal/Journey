@@ -112,6 +112,9 @@ def run(browser,base):
             expect(page.locator('#patrol-batch-details')).to_contain_text('undo')
             page.get_by_role('button',name='Authorize exact batch with my Windows account').click()
             expect(page.locator('#patrol-history')).to_contain_text('undo:file_move',timeout=30000)
+            expect(page.locator('#patrol-state')).to_have_text('Awaiting clarification',timeout=90000)
+        expect(page.locator('.status-pill')).to_contain_text('Awaiting clarification')
+        expect(page.locator('#journey-alert')).not_to_contain_text('Complete account verification')
         screenshot=os.environ.get('JOURNEY_ACCEPTANCE_SCREENSHOT')
         if screenshot:
             page.screenshot(path=screenshot,full_page=True)
