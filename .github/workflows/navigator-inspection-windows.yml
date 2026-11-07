@@ -54,8 +54,10 @@ jobs:
           python -B tests/navigator_launcher.py --application (Join-Path $destination 'Journey Navigator/Journey Navigator.exe')
           if ($LASTEXITCODE -ne 0) { throw 'Normal launcher lifecycle failed.' }
           $env:JOURNEY_ACCEPTANCE_SCREENSHOT = Join-Path $env:RUNNER_TEMP 'patrol-review.png'
-          python -B tests/patrol_browser.py
-          if ($LASTEXITCODE -ne 0) { throw 'Operational Patrol browser acceptance failed.' }
+          foreach ($attempt in 1..2) {
+            python -B tests/patrol_browser.py
+            if ($LASTEXITCODE -ne 0) { throw "Operational Patrol browser acceptance failed on pass $attempt." }
+          }
           python -B tests/navigator_browser.py --runtime $runtime
           if ($LASTEXITCODE -ne 0) { throw 'Navigator browser acceptance failed.' }
       - name: Preserve generated acceptance screenshot

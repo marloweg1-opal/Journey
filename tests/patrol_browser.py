@@ -98,7 +98,10 @@ def run(browser,base):
         answer=page.locator('#patrol-answer')
         answer.get_by_label('Identity',exact=True).fill('Cloverstone')
         answer.get_by_label('Purpose',exact=True).fill('Character Reference')
-        answer.get_by_role('button',name='Apply grouped correction').click()
+        with page.expect_response(lambda response:response.url.endswith('/api/inspect/patrol-answer') and response.request.method=='POST') as correction:
+            answer.get_by_role('button',name='Apply grouped correction').click()
+        assert correction.value.ok
+        expect(page.locator('#patrol-metrics > div').filter(has_text='Confirmed identities')).to_contain_text('2',timeout=30000)
         expect(page.locator('#patrol-state')).to_have_text('Awaiting clarification',timeout=30000)
         page.locator('.journey-tools').get_by_role('button',name='Review',exact=True).click()
         expect(page.locator('.patrol-name').first).to_be_visible(timeout=15000)

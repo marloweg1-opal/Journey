@@ -54,8 +54,10 @@
   }
 
   async function viewBatch(id) {
-    const batch = await api('batch-view', {destination, batch:id});
+    const requestedDestination=destination;
     batchId=id;
+    const batch = await api('batch-view', {destination:requestedDestination, batch:id});
+    if (batchId !== id || destination !== requestedDestination) return;
     $("patrol-batch-details").innerHTML = `<div class="inspection-entry"><h3>Exact batch · ${esc(batch.status)}</h3>
       <p>Scope ${esc(batch.scope)}</p><p>Review binding ${esc(batch.binding)}</p>
       ${batch.operations.map(op => `<p><strong>${esc(op.kind)}</strong> · ${esc(op.source || 'New folder')} → ${esc(op.destination)}</p><p>${esc(op.reason)}</p>`).join('')}
