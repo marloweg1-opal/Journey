@@ -91,6 +91,7 @@ def run(browser,base):
         page.get_by_role('button',name='Authorize exact batch with my Windows account').click()
         expect(page.locator('#patrol-history')).to_contain_text('directory_create',timeout=30000)
         assert folder.is_dir()
+        expect(page.locator('#patrol-state')).to_have_text('Awaiting clarification',timeout=90000)
         # Group a correction, then get an actual contextual rename proposal.
         page.get_by_role('button',name='Select these images',exact=True).first.click()
         expect(page.locator('.patrol-asset:checked')).to_have_count(2)
@@ -130,6 +131,11 @@ def main():
             options['args']=['--no-sandbox']
         browser=playwright.chromium.launch(**options)
         try: run(browser,Path(temporary).resolve())
+        except Exception:
+            screenshot=os.environ.get('JOURNEY_ACCEPTANCE_SCREENSHOT')
+            if screenshot and browser.contexts and browser.contexts[-1].pages:
+                browser.contexts[-1].pages[-1].screenshot(path=screenshot,full_page=True)
+            raise
         finally: browser.close()
 
 

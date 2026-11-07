@@ -87,6 +87,32 @@ class OperationalPatrolTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'occupied'):
             self.patrol.guided.prepare(self.job,[{'kind':'mkdir','destination':str(target)}])
 
+    def test_outcome_review_is_bound_to_the_result_and_never_authorizes_actions(self):
+        value=self.finish()
+        self.assertIsNone(value['outcome'])
+        with self.lock:
+            accepted=self.patrol.accept_outcome(self.destination,value['outcome_binding'],'I can find the work I need.')
+            self.assertIsNotNone(accepted['outcome'])
+            self.assertFalse(accepted['batches'])
+            image=self.app.images(self.job,0)['items'][0]
+            self.app.review(self.job,image['id'],'confirm','Moonstone','Character Reference')
+            self.assertIsNone(self.patrol.status(self.destination)['outcome'])
+            with self.assertRaisesRegex(ValueError,'results are changing'):
+                self.patrol.accept_outcome(self.destination,value['outcome_binding'],'Stale result')
+
+    def test_physical_change_removes_old_virtual_records_before_refresh(self):
+        self.finish()
+        self.assertGreater(self.app.conn.execute('SELECT count(*) FROM patrol_assets').fetchone()[0],0)
+        batch=self.patrol.guided.prepare(self.job,[{'kind':'mkdir','destination':str(self.source/'New references')}])
+        with self.lock:
+            result=self.approve(batch)
+            self.assertEqual(result['status'],'completed')
+            self.assertEqual(self.app.conn.execute('SELECT count(*) FROM patrol_assets').fetchone()[0],0)
+            self.assertEqual(self.app.conn.execute('SELECT count(*) FROM virtual_memberships').fetchone()[0],0)
+        value=self.finish()
+        self.assertEqual(value['coverage']['analyzed'],30)
+        self.assertGreater(value['metrics']['memberships'],0)
+
     @unittest.skipUnless(os.name=='nt','Windows no-overwrite move and reversal')
     def test_real_move_native_executor_receipt_undo_and_new_occupant(self):
         self.finish()

@@ -40,6 +40,7 @@
   async function images() {
     if (!current) return;
     const page = await api("destination-images", {destination, offset, collection, assets:questionMembers});
+    if (page.reason) throw new Error(page.reason);
     $("patrol-review-images").innerHTML = page.items.map(image => `<label class="inspection-entry"><input type="checkbox" class="patrol-asset" value="${image.id}">
       <img src="data:image/webp;base64,${esc(image.thumbnail)}" alt="${esc(image.filename)}"><strong>${esc(image.filename)}</strong>
       <span>${esc(image.identity.label || 'Subject open')} · ${esc(image.identity.state.replaceAll('_',' '))}</span>
@@ -66,6 +67,7 @@
     if (!destination) return;
     current = await api("patrol-status", {destination});
     $("patrol-objective").textContent = current.objective;
+    $("patrol-intent").textContent = `${current.why} Success looks like ${current.success} ${current.objective_outcome}`;
     $("patrol-state").textContent = current.state;
     $("patrol-reason").textContent = current.reason;
     $("patrol-authority").textContent = `Scope ${current.authority.scope} · Active authority ${current.authority.active} · Ceiling ${current.authority.ceiling}`;
@@ -111,6 +113,10 @@
   $("patrol-start").onclick = async () => { try { await api('patrol-begin',{destination}); poll(); } catch(error) { failure(error); } };
   $("patrol-refresh").onclick = async () => { try { await api('patrol-begin',{destination,refresh:true}); poll(); } catch(error) { failure(error); } };
   $("patrol-pause").onclick = async () => { try { await api('patrol-pause',{destination}); await status(); } catch(error) { failure(error); } };
+  $("patrol-accept-outcome").onclick = async () => {
+    try { await api('destination-outcome',{destination,binding:current.outcome_binding}); await status(); }
+    catch(error) { failure(error); }
+  };
   $("patrol-review").onclick = async () => { setMode('review'); await status(); await images(); };
   $("patrol-answer").onsubmit = async event => {
     event.preventDefault();

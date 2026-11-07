@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import time
+from threading import Event
 
 
 @dataclass(frozen=True)
@@ -19,12 +20,16 @@ class Consent:
 class WindowsApprover:
     def __init__(self):
         self.active = None
+        self.cancelled = Event()
 
     def cancel(self):
+        self.cancelled.set()
         if self.active is not None and self.active.poll() is None:
             self.active.terminate()
 
     def verify(self, binding, description):
+        if self.cancelled.is_set():
+            raise PermissionError('Navigator is closing. Account approval was canceled.')
         if os.name != "nt":
             raise PermissionError("Guided execution requires this candidate's Windows account verification.")
         root = Path(__file__).resolve().parents[2]
@@ -41,6 +46,8 @@ class WindowsApprover:
         process = subprocess.Popen([str(helper), binding], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, cwd=root, creationflags=subprocess.CREATE_NO_WINDOW)
         self.active = process
+        if self.cancelled.is_set():
+            process.terminate()
         try:
             output, _ = process.communicate(description.encode("utf-8"), timeout=300)
         except subprocess.TimeoutExpired:

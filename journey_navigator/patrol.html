@@ -15,12 +15,14 @@
       <section class="panel" data-panel="patrol" aria-label="Patrol">
         <div class="inspection-card"><h2>Foreground Patrol</h2>
           <p id="patrol-objective">Choose a saved Destination.</p>
+          <details><summary>Purpose and success criterion</summary><p id="patrol-intent"></p></details>
           <p id="patrol-state" role="status" aria-live="polite">Not started</p>
           <p id="patrol-reason"></p><div id="patrol-authority"></div>
           <div class="inspection-bar"><button type="button" id="patrol-start">Begin or resume Patrol</button>
             <button type="button" id="patrol-pause">Pause Patrol</button>
             <button type="button" id="patrol-refresh">Refresh source and Patrol</button>
             <button type="button" id="patrol-review">Open Review</button></div>
+          <button type="button" id="patrol-accept-outcome">This meets my success criterion</button>
           <div id="patrol-metrics" class="inspection-counts"></div>
           <h3>Virtual collections</h3><div id="patrol-collections"></div>
           <h3>Work and remaining decisions</h3><div id="patrol-work"></div>

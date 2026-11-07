@@ -19,6 +19,7 @@ from core.patrol_state import read_state
 from core.recovery_inspection import file_identity, inspect_operation
 from db.database import initialize_schema
 from journey_navigator.session import protect
+from journey_planner.catalog import component
 
 
 MAX_BATCH = 20
@@ -155,6 +156,7 @@ class Guided:
             if kind not in ('rename', 'move', 'mkdir'):
                 raise ValueError('Guided Patrol supports creating a folder, renaming a file, or moving a file within one scope.')
             target = Path(request['destination'])
+            component(target.name)
             if not target.is_absolute() or '..' in target.parts or not target.is_relative_to(scope):
                 raise ValueError('Choose an exact destination inside this scope.')
             operation = {'kind': kind, 'destination': str(target), 'reason': str(request.get('reason','Improve findability'))[:500]}
@@ -343,7 +345,11 @@ class Guided:
             left = self.conn.execute("SELECT count(*) FROM guided_operations WHERE batch=? AND status='pending'",(batch_id,)).fetchone()[0]
             failures = self.conn.execute("SELECT count(*) FROM guided_operations WHERE batch=? AND status='failed'",(batch_id,)).fetchone()[0]
             verified=self.conn.execute("SELECT count(*) FROM guided_operations WHERE batch=? AND status='verified'",(batch_id,)).fetchone()[0]
-            final = 'approved' if left else ('partially_completed' if failures and verified else ('failed' if failures and receipt else ('blocked' if failures else 'completed')))
+            final = 'completed'
+            if left:
+                final = 'approved'
+            elif failures:
+                final = 'partially_completed' if verified else ('failed' if receipt else 'blocked')
             self.conn.execute('UPDATE guided_batches SET status=?,reason=? WHERE id=?',(final,reason,batch_id))
         if status=='verified' and 'source' in operation:
             with self.workbench.conn:
@@ -355,6 +361,8 @@ class Guided:
             if 'patrol_tasks' in tables:
                 with self.workbench.conn:
                     self.workbench.conn.execute("UPDATE patrol_tasks SET status='pending',cursor=0 WHERE destination IN (SELECT id FROM destinations WHERE job=?)",(batch['job'],))
+                    for table in ('patrol_assets','virtual_memberships'):
+                        self.workbench.conn.execute(f'DELETE FROM {table} WHERE destination IN (SELECT id FROM destinations WHERE job=?)',(batch['job'],))
         return self.view(batch_id)
 
     def history(self, job_id):

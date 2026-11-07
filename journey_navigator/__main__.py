@@ -250,6 +250,8 @@ class Handler(BaseHTTPRequestHandler):
             return patrol.pause(destination)
         if action == 'patrol-answer':
             return patrol.answer(destination,body['assets'],body.get('label',''),body.get('purpose',''),body.get('decision','confirm'))
+        if action == 'destination-outcome':
+            return patrol.accept_outcome(destination,body['binding'],body.get('notes',''))
         if action == 'destination-images':
             return patrol.images(destination,offset,body.get('collection',''),body.get('assets'))
         if action == 'batch-suggestions':

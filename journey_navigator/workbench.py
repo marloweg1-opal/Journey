@@ -72,6 +72,7 @@ CREATE INDEX IF NOT EXISTS directory_queue ON dirs(job,epoch,status);
 CREATE INDEX IF NOT EXISTS file_queue ON files(job,epoch,status,id);
 CREATE INDEX IF NOT EXISTS scoped_visual_buckets ON observations(job,scope,bucket,representative);
 CREATE INDEX IF NOT EXISTS file_series ON files(job,epoch,series,id);
+CREATE INDEX IF NOT EXISTS file_content ON files(job,epoch,scope,digest);
 """
 
 
@@ -380,8 +381,9 @@ class Workbench:
                     self.conn.execute(f"DELETE FROM patrol_assets WHERE json_extract(record,'$.scope') IN ({markers})",affected)
                     self.conn.execute('DELETE FROM patrol_questions WHERE destination IN (SELECT id FROM destinations WHERE job=?)',(job_id,))
                     if scope==job['root']:
-                        for table in ('patrol_tasks','virtual_collections','virtual_memberships'):
-                            self.conn.execute(f'DELETE FROM {table} WHERE destination IN (SELECT id FROM destinations WHERE job=?)',(job_id,))
+                        for table in ('patrol_tasks','virtual_collections','virtual_memberships','destination_outcomes'):
+                            if table in tables:
+                                self.conn.execute(f'DELETE FROM {table} WHERE destination IN (SELECT id FROM destinations WHERE job=?)',(job_id,))
                         self.conn.execute('DELETE FROM destinations WHERE job=?',(job_id,))
                 for table in ("dirs", "files", "observations", "links", "gaps"):
                     self.conn.execute(f"DELETE FROM {table} WHERE job=? AND scope IN ({markers})", params)

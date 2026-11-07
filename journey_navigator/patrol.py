@@ -33,6 +33,9 @@ CREATE TABLE IF NOT EXISTS virtual_memberships (
 CREATE TABLE IF NOT EXISTS patrol_questions (
  id TEXT PRIMARY KEY,destination TEXT NOT NULL,prompt TEXT NOT NULL,members TEXT NOT NULL,
  state TEXT NOT NULL DEFAULT 'open',answer TEXT);
+CREATE TABLE IF NOT EXISTS destination_outcomes (
+ id INTEGER PRIMARY KEY,destination TEXT NOT NULL,binding TEXT NOT NULL,notes TEXT NOT NULL,
+ authority TEXT NOT NULL,created TEXT DEFAULT CURRENT_TIMESTAMP);
 """
 ACTIVE = ('Inspecting','Assessing','Working','Verifying')
 
@@ -118,6 +121,8 @@ class Patrol:
             self.app.refresh(row['job'])
             with self.conn:
                 self.conn.execute("UPDATE patrol_tasks SET status='pending',cursor=0,attempts=0 WHERE destination=?",(destination,))
+                self.conn.execute('DELETE FROM patrol_assets WHERE destination=?',(destination,))
+                self.conn.execute('DELETE FROM virtual_memberships WHERE destination=?',(destination,))
         self.started[destination]=monotonic()
         baseline=self.app.summary(row['job'])
         self.start_counts[destination]=baseline['files']+baseline['folders']
@@ -150,6 +155,10 @@ class Patrol:
                 self.conn.execute('INSERT OR REPLACE INTO patrol_assets VALUES(?,?,?)',(destination,image['id'],json.dumps(image)))
                 self.conn.execute('DELETE FROM virtual_memberships WHERE destination=? AND asset=?',(destination,image['id']))
                 labels=[(value,'evidence-linked') for value in image['memberships']]
+                matching=self.conn.execute("SELECT count(*) FROM files WHERE job=? AND epoch=? AND scope=? AND digest=? AND status='analyzed'",
+                    (row['job'],self.app.job(row['job'])['epoch'],image['scope'],image['digest'])).fetchone()[0]
+                if matching>1:
+                    labels.append(('Identical image bytes '+image['digest'][:8],'content fingerprint'))
                 if image['identity']['label'] and image['purpose']['label']:
                     labels.append((image['identity']['label']+' / '+image['purpose']['label'],'subject and purpose'))
                 for name,kind in labels:
@@ -192,6 +201,8 @@ class Patrol:
             state='Partially completed'
         if status['batches_waiting']:
             state='Awaiting authorization'
+        if status['outcome']:
+            state='Completed'
         if any(batch['status']=='approved' for batch in status['batches']):
             state='Working'
         self._state(destination,state,'Eligible inspection and virtual organization have finished. Review the remaining questions and queued actions.')
@@ -274,7 +285,9 @@ class Patrol:
         coverage=self.app.summary(row['job'])
         visible=set(self.app._visible(self.app.job(row['job'])))
         records=[]
-        for value in self.conn.execute("SELECT asset,json_extract(record,'$.path') AS path,json_extract(record,'$.scope') AS scope,json_extract(record,'$.identity.state') AS state FROM patrol_assets WHERE destination=?",(destination,)):
+        for value in self.conn.execute("""SELECT asset,json_extract(record,'$.path') AS path,json_extract(record,'$.scope') AS scope,
+            json_extract(record,'$.identity.state') AS state FROM patrol_assets p JOIN files f ON f.id=p.asset
+            WHERE p.destination=? AND f.job=? AND f.epoch=? AND f.status='analyzed'""",(destination,row['job'],self.app.job(row['job'])['epoch'])):
             image={'id':value['asset'],'path':value['path'],'scope':value['scope'],'identity':{'state':value['state']}}
             if image['scope'] not in visible:
                 continue
@@ -294,12 +307,17 @@ class Patrol:
         unresolved=sum(states.get(key,0) for key in ('unknown','conflicting_evidence','possibly_related','explicitly_rejected_identity'))
         receipts=self.guided.history(row['job'])
         tasks=[dict(task) for task in self.conn.execute('SELECT kind,status,cursor,attempts,reason FROM patrol_tasks WHERE destination=?',(destination,))]
-        need=Need(row['id'],row['objective'],row['why']).assess({key:True for key in ('capability','environment','resources','authority','policy','evidence')},outcome_verified=row['state']=='Completed',evidence_refs=(row['id'],) if records else ())
+        outcome_binding=sha256(json.dumps([row['objective'],row['success'],self.signature(row['job']),coverage['analyzed'],len(receipts)],sort_keys=True).encode()).hexdigest()
+        outcome=self.conn.execute('SELECT * FROM destination_outcomes WHERE destination=? AND binding=? ORDER BY id DESC LIMIT 1',(destination,outcome_binding)).fetchone()
+        need=Need(row['id'],row['objective'],row['why']).assess({key:True for key in ('capability','environment','resources','authority','policy','evidence')},
+            outcome_verified=outcome is not None,evidence_refs=(f'owner-outcome:{outcome["id"]}',) if outcome else ())
         return dict(row) | {'coverage':coverage,'metrics':{'proposed':states['proposed_identity'],'confirmed':states['human_confirmed_identity'],
             'unresolved':unresolved,'collections':len(collections),'memberships':sum(value['members'] for value in collections),
             'physical_verified':sum(value['status']=='applied' for value in receipts)},'questions':questions,'collections':collections,
             'batches':batches,'batches_waiting':sum(value['status'] in ('review_required','authorizing') for value in batches),
-            'need':need,'tasks':tasks,'authority':{'capability':'Inspect, organize virtual collections, and Guided Patrol',
+            'need':need,'outcome_binding':outcome_binding,'outcome':dict(outcome) if outcome else None,
+            'objective_outcome':'You accepted these results against the saved success criterion.' if outcome else 'Review the work against your saved success criterion. Activity and operation receipts do not establish subjective usefulness.',
+            'tasks':tasks,'authority':{'capability':'Inspect, organize virtual collections, and Guided Patrol',
                 'ceiling':'Exact account-approved batch','active':'Read and retain' if row['state']!='Working' else 'Exact approved operation',
                 'scope':coverage['root']},'history':receipts}
 
@@ -314,12 +332,25 @@ class Patrol:
             self.app.review(row['job'],asset,action,label,purpose)
         return self.begin(destination)
 
+    def accept_outcome(self,destination,binding,notes):
+        status=self.status(destination)
+        if binding!=status['outcome_binding'] or status['state'] in ACTIVE or any(batch['status']=='authorizing' for batch in status['batches']):
+            raise ValueError('The results are changing. Review the current completed cycle before accepting its outcome.')
+        with self.conn:
+            self.conn.execute('INSERT INTO destination_outcomes(destination,binding,notes,authority) VALUES(?,?,?,?)',
+                (destination,binding,str(notes or 'The current result meets my saved success criterion.')[:2000],'Local operator outcome review'))
+        self._state(destination,'Completed','The user accepted this result against the saved success criterion.')
+        return self.status(destination)
+
     def images(self,destination,offset,collection='',assets=None):
         row=self.row(destination)
         selected=assets
         if collection:
             selected=[asset for asset, in self.conn.execute('SELECT asset FROM virtual_memberships WHERE destination=? AND name=?',(destination,collection))]
-        return self.app.images(row['job'],offset,asset_ids=selected)
+        page=self.app.images(row['job'],offset,asset_ids=selected)
+        if selected and not page['items'] and row['state'] in ACTIVE:
+            page['reason']='The inventory is refreshing. Review this group after the current assessment finishes.'
+        return page
 
     def authorize(self,destination,batch):
         row=self.row(destination)

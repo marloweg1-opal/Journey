@@ -54,6 +54,11 @@ source holds. Setup does not replace its files or services.
    reversal. A newly created folder is retained when folder removal would need
    separate review.
 
+The saved purpose and success criterion remain available in **Patrol**. After
+reviewing the result, **This meets my success criterion** records your outcome
+assessment for that result. Later corrections, source refreshes or operation
+receipts invalidate that assessment. This control grants no physical authority.
+
 Pause stops at the next bounded checkpoint. Closing the Navigator window ends
 its foreground work through the local session lifecycle. **Manage → Close
 Navigator** explicitly closes the service. A reopened service restores saved
