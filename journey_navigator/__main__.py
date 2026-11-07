@@ -33,6 +33,7 @@ def navigator_page():
     results = page.index('      <section class="panel" data-panel="results">', workbench)
     page = page[:workbench] + panel + page[results:]
     return (page.replace("</head>", '<link rel="stylesheet" href="/inspection.css"></head>')
+            .replace('mini_ark Navigator','Journey Navigator')
             .replace('<span>C:\\mini_ark</span>', '<span>Isolated inspection · local review</span>')
             .replace('<strong>Launch</strong><span>Use focused local utilities</span>', '<strong>Inspect</strong><span>Folders and linked folders</span>', 1)
             .replace('data-select="tools"><strong>Inspect', 'data-select="inspect"><strong>Inspect', 1)
@@ -52,6 +53,7 @@ def navigator_page():
           "X-Journey-Session": sessionStorage.getItem("journey-inspection-session") || "",
           "X-Journey-Inspection": sessionStorage.getItem("journey-current-inspection") || ""}})''', 1)
             .replace('    refreshStatus();', '', 1)
+            .replace('    async function refreshStatus() {','    async function refreshStatus() { return;',1)
             .replace('from Navigator and ARK memory.', 'from this inspection.', 1)
             .replace('</body>', '<script src="/inspection.js"></script><script src="/patrol.js"></script></body>'))
 

@@ -386,12 +386,12 @@ class Patrol:
         row=self.row(destination)
         if not isinstance(ids,list) or not 1<=len(ids)<=20:
             raise ValueError('Select 1–20 naming proposals.')
+        current={image['id']:image for image in self.app.images(row['job'],0,asset_ids=ids,thumbnails=False)['items']}
         operations=[]
         for asset in ids:
-            saved=self.conn.execute('SELECT record FROM patrol_assets WHERE destination=? AND asset=?',(destination,asset)).fetchone()
-            if not saved:
+            image=current.get(asset)
+            if not image:
                 raise ValueError('Choose a current naming proposal.')
-            image=json.loads(saved['record'])
             if image['name']['state']!='proposed':
                 raise ValueError('A confirmed subject and purpose are needed for a physical naming proposal.')
             target=Path(image['path']).with_name(Path(image['name']['destination']).name)

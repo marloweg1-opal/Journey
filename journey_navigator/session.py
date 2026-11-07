@@ -104,6 +104,7 @@ class SessionOwner:
         self.control = secrets.token_urlsafe(32)
         self.resources = ExitStack()
         self.owns = False
+        self.reopened = None
 
     def _acquire(self):
         self.resources.enter_context(process_lock(self.lock))
@@ -133,6 +134,7 @@ class SessionOwner:
             self._request(record, "status")
         except (OSError, ValueError, KeyError, TypeError):
             raise ValueError("The previous Navigator cannot accept a verified handoff. Open its window, choose Manage → Close Navigator, then open this version again.") from None
+        self.reopened = record
         if record["build"] == self.info["build"]:
             return self._request(record, "activate")["url"]
         if not confirm_handoff(record, self.info):

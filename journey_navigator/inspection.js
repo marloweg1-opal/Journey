@@ -334,7 +334,7 @@
     } catch (error) { failure(error); }
   });
 
-  document.querySelector(".titlebar .subtitle").textContent = "Read-only folder and image stewardship";
+  document.querySelector(".titlebar .subtitle").textContent = "Local image stewardship · Guided changes require your account";
   document.querySelector('[data-panel="home"]').innerHTML = `<div class="inspection-card"><h2>Navigator inspection</h2><p>Open Inspect to choose a folder or shortcut. Manage reopens saved inspections.</p></div>`;
   document.querySelector('[data-panel="find"]').innerHTML = `<div class="inspection-card"><h2>Find inspected files</h2><p>Search filenames, paths, and text read from images in the current inspection.</p></div>`;
   document.querySelector('[data-panel="guide"]').innerHTML = `<div class="inspection-card"><h2>Inspect and review</h2>

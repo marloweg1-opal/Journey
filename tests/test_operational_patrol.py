@@ -100,6 +100,18 @@ class OperationalPatrolTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'results are changing'):
                 self.patrol.accept_outcome(self.destination,value['outcome_binding'],'Stale result')
 
+    def test_exact_naming_review_uses_current_correction_before_patrol_cache_catches_up(self):
+        self.finish()
+        with self.lock:
+            image=self.app.images(self.job,0)['items'][0]
+            self.app.review(self.job,image['id'],'confirm','Moonstone','Character Reference')
+            current=self.app.images(self.job,0,asset_ids=[image['id']])['items'][0]
+            self.assertEqual(current['name']['state'],'proposed')
+            batch=self.patrol.suggested_batch(self.destination,[image['id']])
+            self.assertEqual(batch['operations'][0]['kind'],'rename')
+            self.assertIn('Character Reference',batch['operations'][0]['destination'])
+            self.assertEqual(batch['status'],'review_required')
+
     def test_physical_change_removes_old_virtual_records_before_refresh(self):
         self.finish()
         self.assertGreater(self.app.conn.execute('SELECT count(*) FROM patrol_assets').fetchone()[0],0)

@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const api = (name, body = {}) => apiPost(`/api/inspect/${name}`, body);
   const notify = value => { $("inspect-notice").textContent = value; const alert=$("journey-alert"); if (alert) alert.textContent=value; };
-  let destination = "", current = null, offset = 0, polling = false, collection = "", questionMembers = null;
+  let destination = "", current = null, offset = 0, polling = false, collection = "", questionMembers = null, batchId = "";
   const client = sessionStorage.getItem("journey-window") || crypto.randomUUID();
   sessionStorage.setItem("journey-window", client);
   const toolbar = document.createElement("nav");
@@ -55,6 +55,7 @@
 
   async function viewBatch(id) {
     const batch = await api('batch-view', {destination, batch:id});
+    batchId=id;
     $("patrol-batch-details").innerHTML = `<div class="inspection-entry"><h3>Exact batch · ${esc(batch.status)}</h3>
       <p>Scope ${esc(batch.scope)}</p><p>Review binding ${esc(batch.binding)}</p>
       ${batch.operations.map(op => `<p><strong>${esc(op.kind)}</strong> · ${esc(op.source || 'New folder')} → ${esc(op.destination)}</p><p>${esc(op.reason)}</p>`).join('')}
@@ -86,6 +87,7 @@
       <p>${esc(receipt.action_type)} · ${esc(receipt.target_path)}</p><details><summary>Verification receipt</summary><pre>${esc(JSON.stringify(JSON.parse(receipt.new_state || '{}'),null,2))}</pre></details>
       ${receipt.action_type === 'file_move' && receipt.status === 'applied' ? `<button type="button" data-undo="${receipt.id}">Review safe reversal</button>` : ''}</div>`).join('') || '<p>Account-approved operations will appear here with their verification evidence.</p>';
     $("patrol-work").textContent = `${current.coverage.pending} images and ${current.coverage.pending_folders} folders waiting. ${current.metrics.unresolved} assets remain unresolved. ` + current.tasks.map(task => `${task.kind}: ${task.status}${task.reason ? " · " + task.reason : ""}`).join(". ");
+    if (batchId) await viewBatch(batchId);
     return current;
   }
 
@@ -107,7 +109,7 @@
     try {
       const data = Object.fromEntries(new FormData(event.target));
       const result = await api('destination-create', {...data,job:sessionStorage.getItem('journey-current-inspection'),max_files:Number(data.max_files),max_seconds:Number(data.max_seconds)});
-      destination = result.id; setMode('patrol'); await status();
+      destination = result.id; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status();
     } catch (error) { failure(error); }
   });
   $("patrol-start").onclick = async () => { try { await api('patrol-begin',{destination}); poll(); } catch(error) { failure(error); } };
@@ -124,7 +126,7 @@
     catch(error) { failure(error); }
   };
   $("patrol-naming-batch").onclick = async () => {
-    try { const batch = await api('batch-suggestions',{destination,assets:selected('.patrol-name')}); await status(); await viewBatch(batch.id); }
+    try { const batch = await api('batch-suggestions',{destination,assets:selected('.patrol-name')}); batchId=batch.id; await status(); }
     catch(error) { failure(error); }
   };
   $("patrol-operation").onsubmit = async event => {
@@ -146,7 +148,7 @@
     const button=event.target.closest('button');
     if (!button) return;
     try {
-      if (button.dataset.destination) { destination=button.dataset.destination; setMode('patrol'); await status(); poll(); }
+      if (button.dataset.destination) { destination=button.dataset.destination; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status(); poll(); }
       else if (button.dataset.collection) { collection=button.dataset.collection; questionMembers=null; offset=0; setMode('review'); await images(); }
       else if (button.dataset.batch) await viewBatch(button.dataset.batch);
       else if (button.dataset.authorizeBatch) { await api('batch-authorize',{destination,batch:button.dataset.authorizeBatch}); notify('Complete account verification in the Journey Windows dialog.'); poll(); }

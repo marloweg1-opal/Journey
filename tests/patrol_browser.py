@@ -134,7 +134,9 @@ def main():
         except Exception:
             screenshot=os.environ.get('JOURNEY_ACCEPTANCE_SCREENSHOT')
             if screenshot and browser.contexts and browser.contexts[-1].pages:
-                browser.contexts[-1].pages[-1].screenshot(path=screenshot,full_page=True)
+                failed=browser.contexts[-1].pages[-1]
+                print('Visible Navigator message:',failed.locator('#journey-alert').inner_text())
+                failed.screenshot(path=screenshot,full_page=True)
             raise
         finally: browser.close()
 

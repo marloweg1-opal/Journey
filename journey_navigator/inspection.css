@@ -14,7 +14,7 @@
 .inspection-counts div, .inspection-entry { border: 1px solid var(--line); border-radius: 7px; padding: 8px; background: #0c2547; }
 .inspection-counts strong { display: block; font-size: 1.3rem; }
 .inspection-counts span { color: var(--muted); }
-.inspection-entry { margin: 6px 0; }
+.inspection-entry { margin: 6px 0; overflow-wrap: anywhere; min-width: 0; }
 .inspection-entry dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 7px 0; }
 .inspection-entry dt { color: var(--muted); }
 .inspection-entry dd { margin: 0; }
@@ -33,4 +33,6 @@
 .journey-tools { position: relative; z-index: 2; }
 .journey-build { margin: 8px 0; font-size: .9rem; }
 #patrol-review-images img { width: 100%; max-height: 150px; object-fit: contain; }
+#patrol-review-images label { display: grid; gap: 5px; }
+#patrol-names label { display: block; }
 #patrol-history pre { white-space: pre-wrap; overflow-wrap: anywhere; }

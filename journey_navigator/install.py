@@ -45,11 +45,12 @@ def shortcuts(executable):
     script='''$ErrorActionPreference='Stop'
 $data=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('''+"'"+data+"'"+''')) | ConvertFrom-Json
 $shell=New-Object -ComObject WScript.Shell
+$managedRoot=[IO.Path]::GetDirectoryName([IO.Path]::GetDirectoryName($data.target)) + [IO.Path]::DirectorySeparatorChar
 foreach($path in $data.links) {
  [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($path)) | Out-Null
  if(Test-Path -LiteralPath $path) {
   $prior=$shell.CreateShortcut($path)
-  if($prior.TargetPath -and -not $prior.TargetPath.StartsWith([IO.Path]::GetDirectoryName([IO.Path]::GetDirectoryName($data.target)),[StringComparison]::OrdinalIgnoreCase)) {
+  if($prior.TargetPath -and -not $prior.TargetPath.StartsWith($managedRoot,[StringComparison]::OrdinalIgnoreCase)) {
    throw 'An unrelated shortcut already uses the candidate name. Rename that shortcut, then run Setup again.'
   }
  }
@@ -87,6 +88,8 @@ def main():
         data=_prepare_data_dir(local/'Journey'/'Navigator Inspection')
         owner=SessionOwner(data,info=info)
         owner.enter()
+        if not owner.owns and owner.reopened['build']!=info['build']:
+            return
         final=home/('build-'+info['build'])
         if final.exists():
             verify(final)
