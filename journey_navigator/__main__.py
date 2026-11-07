@@ -7,13 +7,15 @@ import os
 from pathlib import Path
 import secrets
 import sqlite3
-from threading import Lock, Thread
+from threading import RLock, Thread, Timer
 from urllib.parse import parse_qs, urlsplit
 import webbrowser
 
 from journey_navigator.links import ProtectedPath
 from journey_navigator.ocr import find_local_ocr
-from journey_navigator.workbench import Workbench
+from journey_navigator.patrol import Patrol
+from journey_navigator.session import SessionOwner, build_info
+from journey_navigator.workbench import Workbench, _prepare_data_dir
 from journey_planner.catalog import check_local_drive
 
 
@@ -24,6 +26,7 @@ APP = MODULE.parent
 def navigator_page():
     page = (APP / "index.html").read_text(encoding="utf-8")
     panel = (MODULE / "inspection.html").read_text(encoding="utf-8")
+    panel += (MODULE / "patrol.html").read_text(encoding="utf-8")
     workbench = page.index('      <section class="panel" data-panel="workbench">')
     results = page.index('      <section class="panel" data-panel="results">', workbench)
     page = page[:workbench] + panel + page[results:]
@@ -48,7 +51,7 @@ def navigator_page():
           "X-Journey-Inspection": sessionStorage.getItem("journey-current-inspection") || ""}})''', 1)
             .replace('    refreshStatus();', '', 1)
             .replace('from Navigator and ARK memory.', 'from this inspection.', 1)
-            .replace('</body>', '<script src="/inspection.js"></script></body>'))
+            .replace('</body>', '<script src="/inspection.js"></script><script src="/patrol.js"></script></body>'))
 
 
 def local_drives():
@@ -72,18 +75,24 @@ def local_drives():
 class Navigator(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, workbench, port=0):
+    def __init__(self, workbench, port=0, *, owner=None, approver=None):
         super().__init__(("127.0.0.1", port), Handler)
         self.workbench = workbench
         self.temporary = Workbench(workbench.data_dir, ocr=workbench.ocr, temporary=True)
         self.temporary.policy = workbench.policy
         self.token = secrets.token_urlsafe(32)
-        self.lock = Lock()
+        self.lock = RLock()
+        self.owner = owner
+        self.info = owner.info if owner else build_info()
+        self.clients = set()
+        self.closing = False
+        self.patrol = Patrol(workbench, self.lock, approver=approver)
         self.host = f"127.0.0.1:{self.server_address[1]}"
         self.origin = f"http://{self.host}"
         self.static = {"/": ("text/html; charset=utf-8", navigator_page().encode("utf-8")),
                        "/inspection.js": ("text/javascript; charset=utf-8", (MODULE / "inspection.js").read_bytes()),
-                       "/inspection.css": ("text/css; charset=utf-8", (MODULE / "inspection.css").read_bytes())}
+                       "/inspection.css": ("text/css; charset=utf-8", (MODULE / "inspection.css").read_bytes()),
+                       "/patrol.js": ("text/javascript; charset=utf-8", (MODULE / "patrol.js").read_bytes())}
 
     @property
     def url(self):
@@ -94,8 +103,24 @@ class Navigator(ThreadingHTTPServer):
 
     def server_close(self):
         super().server_close()
+        if hasattr(self, "patrol"):
+            self.patrol.close()
         if hasattr(self, "temporary"):
             self.temporary.close()
+
+    def request_close(self):
+        self.closing = True
+        self.patrol.stop.set()
+        self.patrol.wake.set()
+        Thread(target=self.shutdown, daemon=True).start()
+
+    def detached(self, client):
+        self.clients.discard(client)
+        def close_if_unused():
+            with self.lock:
+                if not self.clients:
+                    self.request_close()
+        Timer(5, close_if_unused).start()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -149,9 +174,20 @@ class Handler(BaseHTTPRequestHandler):
         return self._json({"error": "This resource is unavailable in the inspection candidate."}, 404)
 
     def do_POST(self):
+        route = urlsplit(self.path).path
+        if route.startswith('/api/session/'):
+            owner = self.server.owner
+            supplied = self.headers.get('X-Journey-Control','')
+            if not owner or not supplied.isascii() or not self._origin_ok(post=True) or not secrets.compare_digest(supplied,owner.control):
+                return self._json({'error':'This session control request could not be authenticated.'},403)
+            action=route.removeprefix('/api/session/')
+            if action=='shutdown':
+                self.server.request_close()
+            elif action not in ('status','activate'):
+                return self._json({'error':'Unknown session action.'},404)
+            return self._json(self.server.info | {'url':self.server.url})
         if not self._origin_ok(post=True) or not self._session_ok():
             return self._json({"error": "This action requires the local Navigator session."}, 403)
-        route = urlsplit(self.path).path
         if not route.startswith("/api/inspect/"):
             return self._json({"error": "This candidate exposes inspection actions only."}, 404)
         try:
@@ -164,6 +200,8 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(body, dict):
                 raise ValueError("The Navigator request is invalid.")
             with self.server.lock:
+                if self.server.closing:
+                    return self._json({'error':'Navigator is closing after its safe checkpoint.'},409)
                 result = self._run(route.removeprefix("/api/inspect/"), body)
             return self._json(result)
         except ProtectedPath as error:
@@ -176,6 +214,43 @@ class Handler(BaseHTTPRequestHandler):
     def _run(self, action, body):
         job, offset = body.get("job"), body.get("offset", 0)
         app = self.server.review_store(job)
+        patrol = self.server.patrol
+        destination = body.get('destination')
+        if action == 'build':
+            return self.server.info
+        if action == 'attach':
+            self.server.clients.add(str(body['client'])[:100])
+            return {'attached':True}
+        if action == 'detach':
+            self.server.detached(str(body['client'])[:100])
+            return {'detached':True}
+        if action == 'destinations':
+            return {'items':patrol.list()}
+        if action == 'destination-create':
+            return patrol.create(job,body['objective'],body['why'],body['success'],body.get('max_files',20000),body.get('max_seconds',300))
+        if action == 'patrol-status':
+            return patrol.status(destination)
+        if action == 'patrol-begin':
+            return patrol.begin(destination,refresh=body.get('refresh',False))
+        if action == 'patrol-pause':
+            return patrol.pause(destination)
+        if action == 'patrol-answer':
+            return patrol.answer(destination,body['assets'],body.get('label',''),body.get('purpose',''),body.get('decision','confirm'))
+        if action == 'destination-images':
+            return patrol.images(destination,offset,body.get('collection',''))
+        if action == 'batch-suggestions':
+            return patrol.suggested_batch(destination,body['assets'])
+        if action == 'batch-prepare':
+            return patrol.guided.prepare(patrol.row(destination)['job'],body['operations'])
+        if action == 'batch-view':
+            row=patrol.guided.row(body['batch'])
+            if row['job'] != patrol.row(destination)['job']:
+                raise PermissionError('This batch belongs to another Destination.')
+            return patrol.guided.view(body['batch'])
+        if action == 'batch-authorize':
+            return patrol.authorize(destination,body['batch'])
+        if action == 'batch-undo':
+            return patrol.guided.prepare_undo(patrol.row(destination)['job'],body['receipt'])
         if type(offset) is not int or not 0 <= offset <= 1_000_000:
             raise ValueError("Choose a valid results page.")
         if action == "drives":
@@ -220,7 +295,7 @@ class Handler(BaseHTTPRequestHandler):
         if action == "export":
             return app.export(job)
         if action == "exit":
-            Thread(target=self.server.shutdown, daemon=True).start()
+            self.server.request_close()
             return {"closed": True}
         raise ValueError("This inspection action is unavailable.")
 
@@ -234,18 +309,36 @@ def main():
     data = args.data_dir or local / "Journey" / "Navigator Inspection"
     hold_store = Path(r"C:\mini_ark\private\media_recovery\inventory-v2.sqlite") if os.name == "nt" else None
     perception_store = Path(r"C:\mini_ark\ark.sqlite") if os.name == "nt" else None
+    owner = None
+    app = None
     try:
+        data = _prepare_data_dir(data.absolute())
+        owner = SessionOwner(data)
+        previous = owner.enter()
+        if previous:
+            if args.no_browser:
+                print(previous,flush=True)
+            else:
+                webbrowser.open(previous)
+            owner.close()
+            return
         app = Workbench(data.absolute(), blocked=(APP, APP.parent / "ocr"), hold_store=hold_store,
                         perception_store=perception_store, ocr=find_local_ocr())
     except (OSError, ValueError) as error:
+        if owner:
+            owner.close()
         if os.name != "nt" or args.no_browser:
             raise
         import ctypes
 
-        ctypes.windll.user32.MessageBoxW(None, str(error), "Journey Navigator", 0x10)
+        message = str(error)
+        if 'already open' in message:
+            message = 'An earlier Navigator holds this checkpoint and cannot accept an authenticated upgrade. Open its window, choose Manage → Close Navigator, then open this version.'
+        ctypes.windll.user32.MessageBoxW(None, message, "Journey Navigator", 0x10)
         return
     try:
-        with Navigator(app) as server:
+        with Navigator(app,owner=owner) as server:
+            owner.publish(server)
             if args.no_browser:
                 print(server.url, flush=True)
             else:
@@ -253,6 +346,7 @@ def main():
             server.serve_forever()
     finally:
         app.close()
+        owner.close()
 
 
 if __name__ == "__main__":

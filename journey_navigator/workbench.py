@@ -656,17 +656,26 @@ class Workbench:
                          "digest": row["digest"], "memberships": memberships, "series": row["series"],
                          "thumbnail": features["thumbnail"] if thumbnails else ""}
 
-    def images(self, job_id, offset, series="", query="", *, thumbnails=True):
+    def images(self, job_id, offset, series="", query="", *, thumbnails=True, asset_ids=None):
         job = self.job(job_id)
         visible = self._visible(job)
-        args = (job_id, job["epoch"], *visible, series, series, query[:200], query[:200], PAGE + 1, offset)
+        selection = ''
+        selected = ()
+        if asset_ids is not None:
+            selected = tuple(asset_ids)
+            if not selected:
+                return {'items': [], 'more': False}
+            if len(selected)>100000 or any(type(value) is not int for value in selected):
+                raise ValueError('Choose assets in the current inspection.')
+            selection = f' AND f.id IN ({_markers(selected)})'
+        args = (job_id, job["epoch"], *visible, series, series, query[:200], query[:200], *selected, PAGE + 1, offset)
         rows = self.conn.execute(f"""SELECT f.*,o.features,o.ocr,o.ocr_key,a.propose FROM files f
             JOIN observations o ON o.job=f.job AND o.scope=f.scope AND o.digest=f.digest
             JOIN scope_access a ON a.job=f.job AND a.path=f.scope
             WHERE f.job=? AND f.epoch=? AND f.scope IN ({_markers(visible)}) AND f.status='analyzed' AND (?='' OR f.series=?)
             AND (instr(lower(f.path),lower(?))>0 OR EXISTS(
                 SELECT 1 FROM json_each(o.ocr,'$.lines') WHERE instr(lower(json_extract(value,'$.text')),lower(?))>0))
-            ORDER BY f.id LIMIT ? OFFSET ?""", args).fetchall()
+            {selection} ORDER BY f.id LIMIT ? OFFSET ?""", args).fetchall()
         scope_reviews, images = {}, []
         for row in rows[:PAGE]:
             try:

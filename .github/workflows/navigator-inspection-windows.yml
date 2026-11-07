@@ -2,7 +2,7 @@ name: Navigator linked inspection acceptance
 
 on:
   push:
-    branches: [work/navigator-linked-inspection, work/navigator-context-evidence]
+    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol]
 
 permissions:
   contents: read
@@ -42,10 +42,26 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $env:PYTHONPATH = (Get-Location).Path
           $destination = Join-Path $env:RUNNER_TEMP 'Navigator acceptance with spaces'
-          Expand-Archive -LiteralPath dist/Journey-Navigator-Context-Windows-x64.zip -DestinationPath $destination
+          Expand-Archive -LiteralPath dist/Journey-Navigator-Guided-Patrol-Windows-x64.zip -DestinationPath $destination
           $runtime = Join-Path $destination 'Journey Navigator/runtime/python.exe'
           $env:JOURNEY_TEST_OCR = Join-Path $destination 'Journey Navigator/ocr'
           python -B -m unittest discover -s tests -p 'test_navigator_context.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Navigator OCR or scope acceptance failed.' }
+          python -B -m unittest discover -s tests -p 'test_operational_patrol.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Patrol execution tests failed.' }
+          python -B -m unittest discover -s tests -p 'test_navigator_session.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Navigator ownership tests failed.' }
+          python -B tests/navigator_launcher.py --application (Join-Path $destination 'Journey Navigator/Journey Navigator.exe')
+          if ($LASTEXITCODE -ne 0) { throw 'Normal launcher lifecycle failed.' }
+          $env:JOURNEY_ACCEPTANCE_SCREENSHOT = Join-Path $env:RUNNER_TEMP 'patrol-review.png'
+          python -B tests/patrol_browser.py
+          if ($LASTEXITCODE -ne 0) { throw 'Operational Patrol browser acceptance failed.' }
           python -B tests/navigator_browser.py --runtime $runtime
           if ($LASTEXITCODE -ne 0) { throw 'Navigator browser acceptance failed.' }
+      - name: Preserve generated acceptance screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-patrol-review
+          path: ${{ runner.temp }}/patrol-review.png
+          if-no-files-found: ignore

@@ -104,7 +104,7 @@ def begin_transaction(conn, preview: dict, previous_state: dict, *, proposal_ite
     return cur.lastrowid
 
 
-def complete_operation(conn, op_id: int, new_state: dict, verified: bool) -> dict:
+def complete_operation(conn, op_id: int, new_state: dict, verified: bool, *, read_guard=None) -> dict:
     """
     Step 4: VERIFICATION. The caller performed the actual filesystem
     action and confirms whether the resulting state matches what was
@@ -124,7 +124,7 @@ def complete_operation(conn, op_id: int, new_state: dict, verified: bool) -> dic
 
     status = "COMPLETE" if verified else "COMPLETE (unverified)"
     from core.recovery_inspection import inspect_operation
-    undo_state = inspect_operation(conn, op_id)['state']
+    undo_state = inspect_operation(conn, op_id, read_guard=read_guard)['state']
     print(f"{'OK' if verified else 'WARNING'} {status}")
     print(f"  Operation ID: OP-{op_id:06d}")
     print(f"  Undo state: {undo_state}")

@@ -14,7 +14,7 @@ from build_windows_planner import EMBED, PYTHON_VERSION, ROOT, fetch
 from build_windows_vision_lab import PILLOW_SHA
 
 
-ZIP_NAME = "Journey-Navigator-Context-Windows-x64.zip"
+ZIP_NAME = "Journey-Navigator-Guided-Patrol-Windows-x64.zip"
 
 
 def build(output, cache, wheel, zig):
@@ -36,10 +36,12 @@ def build(output, cache, wheel, zig):
         stage_ocr(package / "ocr", cache / "ocr")
         modules = {
             "journey_navigator": ("__init__.py", "__main__.py", "context.py", "links.py", "ocr.py", "workbench.py",
-                                  "inspection.html", "inspection.js", "inspection.css"),
+                                  "inspection.html", "inspection.js", "inspection.css", "approval.py", "guided.py", "migrations.py",
+                                  "patrol.py", "patrol.html", "patrol.js", "session.py"),
             "journey_planner": ("__init__.py", "catalog.py"),
             "journey_vision": ("__init__.py", "observe.py", "steward.py"),
-            "core": ("file_paths.py", "naming.py", "process_lock.py", "token_registry.py"),
+            "core": tuple(item.name for item in (ROOT / 'core').glob('*.py')),
+            "db": ("database.py", "schema.sql"),
         }
         for module, names in modules.items():
             destination = app / module
@@ -54,6 +56,11 @@ def build(output, cache, wheel, zig):
         shutil.copyfile(ROOT / "LICENSE", package / "LICENSE.txt")
         commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         (package / "BUILD.txt").write_text(f"Journey source commit {commit}\nCPython {PYTHON_VERSION}\nPillow 12.2.0\nTesseract OCR 5.5.4 (English)\n", encoding="utf-8")
+        approval = package / 'Journey Approval.exe'
+        subprocess.run([*zig, 'cc', '-target', 'x86_64-windows-gnu', '-municode', '-Os', '-s',
+                        'tools/windows/approve.c', '-lcredui', '-ladvapi32', '-lole32', '-o', str(approval)], cwd=ROOT, check=True)
+        with approval.open('rb') as stream:
+            (package / 'approval.sha256').write_text(file_digest(stream,'sha256').hexdigest(),encoding='ascii')
         resources = staging / "navigator.res"
         subprocess.run([*zig, "rc", f"/fo{resources}", "tools/windows/navigator.rc"], cwd=ROOT, check=True)
         subprocess.run([*zig, "cc", "-target", "x86_64-windows-gnu", "-municode", "-Wl,--subsystem,windows", "-Os", "-s",

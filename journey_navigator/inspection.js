@@ -9,7 +9,7 @@
   const browser = $("inspect-browser");
   const results = $("inspect-results");
   const manage = document.querySelector('[data-panel="manage"]');
-  const notice = (message) => { $("inspect-notice").textContent = message; };
+  const notice = (message) => { $("inspect-notice").textContent = message; const alert=document.getElementById("journey-alert"); if (alert) alert.textContent=message; };
   const action = (name, label, value = "") => `<button type="button" data-inspect="${name}" data-value="${esc(value)}">${esc(label)}</button>`;
   const label = (value) => String(value || "").replaceAll("_", " ");
   const views = {images: "images", groups: "groups", links: "links", issues: "skipped entries"};
