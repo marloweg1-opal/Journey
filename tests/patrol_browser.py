@@ -107,7 +107,7 @@ def run(browser,base):
         expect(page.locator('#patrol-names')).to_contain_text('no validated project naming profile')
         expect(page.get_by_role('button',name='Review selected naming changes')).to_be_disabled()
         if os.name=='nt':
-            for checkbox in page.locator('.patrol-asset:checked').all():
+            for checkbox in page.locator('.patrol-asset').all():
                 checkbox.uncheck()
             chosen=page.locator('.patrol-asset').first
             chosen.check()
