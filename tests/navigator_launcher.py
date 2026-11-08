@@ -27,6 +27,8 @@ def choose_fixture_dialog(title,runtime,button=6):
     user.GetWindowThreadProcessId.argtypes=[wintypes.HWND,ctypes.POINTER(wintypes.DWORD)]
     user.GetDlgItem.argtypes=[wintypes.HWND,ctypes.c_int]
     user.GetDlgItem.restype=wintypes.HWND
+    user.IsWindowVisible.argtypes=[wintypes.HWND]
+    user.IsWindowEnabled.argtypes=[wintypes.HWND]
     user.PostMessageW.argtypes=[wintypes.HWND,wintypes.UINT,wintypes.WPARAM,wintypes.LPARAM]
     deadline=monotonic()+30
     while monotonic()<deadline:
@@ -35,9 +37,12 @@ def choose_fixture_dialog(title,runtime,button=6):
             pid=wintypes.DWORD()
             user.GetWindowThreadProcessId(window,ctypes.byref(pid))
             if Path(process_identity(pid.value)['executable'])==runtime.resolve():
-                assert user.GetDlgItem(window,button),'Expected install/update decision is unavailable.'
-                assert user.PostMessageW(window,0x0111,button,0)
-                return
+                control=user.GetDlgItem(window,button)
+                # Windows exposes the dialog before its children are ready.
+                # Wait for the exact fixture-owned decision, not just its title.
+                if control and user.IsWindowVisible(control) and user.IsWindowEnabled(control):
+                    assert user.PostMessageW(window,0x0111,button,0)
+                    return
         sleep(.1)
     raise AssertionError(f'The isolated fixture did not open its expected {title} dialog.')
 
