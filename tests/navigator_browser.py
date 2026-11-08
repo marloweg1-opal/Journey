@@ -201,7 +201,11 @@ def run(browser, runtime, base):
         assert len(plan["images"]) == 76
         named = next(image for image in plan["images"] if image["filename"] == FIRST)
         assert len(named["memberships"]) >= 3
-        assert named["name"]["destination"].endswith("v02 - 20261018_142351.png")
+        assert named["name"]["state"] == "held_convention"
+        assert named["name"]["destination"] is None
+        assert named["name"]["candidate_destination"].endswith("v02 - 20261018_142351.png")
+        assert named["observed_name"]["original"] == FIRST
+        assert named["naming_profile"]["executable"] is False
         titled = next(image for image in plan["images"] if image["filename"] == BOARD)
         assert titled["identity"]["state"] == "proposed_identity" and titled["name"]["destination"] is None
         denied = page.evaluate("""async () => {
