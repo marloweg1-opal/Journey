@@ -1,6 +1,8 @@
 """Unvalidated formats cannot acquire authority; exact names survive review."""
 
 from hashlib import sha256
+from contextlib import redirect_stdout
+import io
 import json
 import os
 from pathlib import Path
@@ -9,6 +11,7 @@ from threading import RLock
 import unittest
 
 from core.naming import observe_filename
+from core.journal import preview_operation
 from journey_navigator.guided import encoded
 from journey_navigator.patrol import Patrol
 from journey_navigator.workbench import Workbench
@@ -49,6 +52,17 @@ class NamingHoldTests(unittest.TestCase):
         binding, description = self.patrol.guided.begin_approval(batch['id'])
         self.patrol.guided.accept(batch['id'], FixtureConsent().verify(binding, description))
         return self.patrol.guided.step(batch['id'])
+
+    def test_limited_windows_console_encoding_cannot_corrupt_or_block_unicode_preview(self):
+        output = io.BytesIO()
+        stream = io.TextIOWrapper(output, encoding='cp1252', errors='strict')
+        with redirect_stdout(stream):
+            preview = preview_operation(None, 'file_move', 3, self.original, {'dest': 'Curated/' + self.original})
+        stream.flush()
+        self.assertEqual(preview['target_path'], self.original)
+        self.assertEqual(preview['planned_changes']['dest'], 'Curated/' + self.original)
+        self.assertIn(b'\\U0001f496\\U0001f308', output.getvalue())
+        stream.detach()
 
     def test_unicode_opaque_fields_survive_export_and_reopen_without_source_changes(self):
         before = fingerprint(self.source)

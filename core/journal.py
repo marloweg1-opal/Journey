@@ -21,6 +21,20 @@ from pathlib import Path
 KILL_SWITCH_FLAG = Path(__file__).parent.parent / "ARK_EXECUTION_DISABLED.flag"
 
 
+def _console_line(value):
+    """Display a preview even when a Windows output pipe cannot encode it.
+
+    Escaping affects only the console representation. Preview values, paths
+    and journal records keep their exact Unicode text. Other I/O failures are
+    still errors rather than being silently discarded.
+    """
+    try:
+        print(value)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+        print(value.encode(encoding, errors="backslashreplace").decode(encoding))
+
+
 class ExecutionDisabled(Exception):
     """Raised when the external kill-switch flag is present."""
     pass
@@ -66,9 +80,9 @@ def preview_operation(conn, action_type: str, tier: int, target_path: str,
     print(f"MINI ARK PROPOSED OPERATION")
     print(f"  Action:       {action_type}")
     print(f"  Tier:         {tier}")
-    print(f"  Target:       {target_path}")
+    _console_line(f"  Target:       {target_path}")
     for k, v in planned_changes.items():
-        print(f"  {k}: {v}")
+        _console_line(f"  {k}: {v}")
     print(f"  [PREVIEW ONLY -- nothing has been changed]")
     return {
         "action_type": action_type,
