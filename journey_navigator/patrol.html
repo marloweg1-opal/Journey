@@ -44,7 +44,7 @@
           <div id="patrol-names"></div><button type="button" id="patrol-naming-batch">Review selected naming changes</button>
           <details><summary>Review a folder creation or within-scope move</summary>
             <form id="patrol-operation"><div class="inspection-bar">
-              <label>Operation <select name="kind"><option value="mkdir">Create a folder</option><option value="move">Move selected image, preserve filename</option></select></label>
+              <label>Operation <select name="kind" aria-label="Operation"><option value="mkdir">Create a folder</option><option value="move">Move selected image, preserve filename</option></select></label>
               <label>Exact destination path <input name="destination" required></label>
               <label>Reason this improves the collection <input name="reason" required></label>
               <button type="submit">Prepare exact batch</button></div></form>

@@ -69,3 +69,9 @@ jobs:
           name: generated-patrol-review
           path: ${{ runner.temp }}/patrol-review.png
           if-no-files-found: ignore
+      - name: Preserve verified Windows candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-navigator-windows
+          path: dist/Journey-Navigator-Guided-Patrol-Windows-x64.zip
+          if-no-files-found: error
