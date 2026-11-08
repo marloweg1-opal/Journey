@@ -25,6 +25,23 @@ MEDIA_SUFFIXES = {".mp3", ".wav", ".flac", ".mp4", ".mov", ".mkv", ".webm"}
 MAX_RECOMMENDED_PATH_LENGTH = 220
 
 
+def observe_filename(value: str) -> dict[str, Any]:
+    """Record exact spelling and opaque fields without inventing a naming rule.
+
+    The parts concatenate to the original stem. Unicode sequences are recorded
+    verbatim, including variation selectors and adjacent symbols. A numeric
+    field is an observation, not an assumed version, counter, or date.
+    """
+    path = Path(value)
+    return {
+        "original": path.name, "stem": path.stem, "extension": path.suffix,
+        "parts": re.split(r"(_+|[ -]+)", path.stem),
+        "unicode_sequences": re.findall(r"[^\x00-\x7f]+", path.stem),
+        "numeric_fields": [{"text": match.group(), "offset": match.start(), "meaning": "unknown"}
+                           for match in re.finditer(r"(?<![^\W_])[0-9]+(?![^\W_])", path.stem)],
+    }
+
+
 def date_token(year: str, month: str, day: str) -> str:
     return f"{year}-{month}-{day}"
 

@@ -145,7 +145,7 @@ class Patrol:
     def signature(self, job):
         row=self.app.job(job)
         revision=self.conn.execute('SELECT max(id) FROM reviews WHERE job=?',(job,)).fetchone()[0]
-        return sha256(json.dumps([row['epoch'],row['rule'],revision],sort_keys=True).encode()).hexdigest()
+        return sha256(json.dumps(['context-0.4.1',row['epoch'],row['rule'],revision],sort_keys=True).encode()).hexdigest()
 
     def _assess(self, destination, row):
         task=self.conn.execute("SELECT * FROM patrol_tasks WHERE destination=? AND kind='assess'",(destination,)).fetchone()
@@ -396,7 +396,7 @@ class Patrol:
             if not image:
                 raise ValueError('Choose a current naming proposal.')
             if image['name']['state']!='proposed':
-                raise ValueError('A confirmed subject and purpose are needed for a physical naming proposal.')
+                raise ValueError(image['name'].get('blocker') or 'A confirmed subject, purpose and validated project convention are needed for a physical naming proposal.')
             target=Path(image['path']).with_name(Path(image['name']['destination']).name)
             operations.append({'kind':'rename','asset':asset,'destination':str(target),
                 'reason':image['name']['reason']+' Retains the current physical parent folder.'})

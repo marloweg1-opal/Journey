@@ -2,7 +2,7 @@ name: Navigator linked inspection acceptance
 
 on:
   push:
-    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol]
+    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol, work/navigator-provenance-naming]
 
 permissions:
   contents: read
@@ -49,6 +49,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Navigator OCR or scope acceptance failed.' }
           python -B -m unittest discover -s tests -p 'test_operational_patrol.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Patrol execution tests failed.' }
+          python -B -m unittest discover -s tests -p 'test_navigator_naming_hold.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Naming provenance or release hold tests failed.' }
           python -B -m unittest discover -s tests -p 'test_navigator_session.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Navigator ownership tests failed.' }
           python -B tests/navigator_launcher.py --application (Join-Path $destination 'Journey Navigator/Journey Navigator.exe')

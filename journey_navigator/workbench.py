@@ -16,7 +16,8 @@ from uuid import uuid4
 from core.file_paths import safe_metadata, signature
 from core.process_lock import ProcessBusyError, process_lock
 from core.token_registry import resolve_token
-from journey_navigator.context import assess, preliminary_name, profile_registry
+from core.naming import observe_filename
+from journey_navigator.context import NAMING_HOLD, assess, preliminary_name, profile_registry
 from journey_navigator.links import Boundaries, ProtectedPath, identity, kind_of, path_key, resolve_folder
 from journey_planner.catalog import File, Plan, absolute_path, check_local_drive, component
 from journey_vision.observe import IMAGE_FORMATS, decode_image, describe, image_bytes
@@ -664,6 +665,9 @@ class Workbench:
             relative = path.relative_to(row["scope"]).as_posix()
             draft = Plan(row["scope"], "", files={relative: File(row["size"], row["modified"], path.name)})
             draft_names(draft, {relative: record}, rule)
+            if record["name"].get("destination"):
+                record["name"].update(state="held_convention", candidate_destination=record["name"]["destination"],
+                                      destination=None, blocker=NAMING_HOLD, executable=False)
         if record["name"]["state"] == "proposed":
             target = Path(row["scope"]) / record["name"]["destination"]
             try:
@@ -677,6 +681,8 @@ class Workbench:
         if not thumbnails:
             ocr.pop("lines", None)
         return record | {"id": row["id"], "path": str(path), "scope": row["scope"], "filename": path.name, "ocr": ocr,
+                         "observed_name": observe_filename(path.name),
+                         "naming_profile": {"state": "unvalidated", "executable": False, "reason": NAMING_HOLD},
                          "size": row["size"], "modified_ns": row["modified"], "can_propose": proposals,
                          "digest": row["digest"], "memberships": memberships, "series": row["series"],
                          "thumbnail": features["thumbnail"] if thumbnails else ""}

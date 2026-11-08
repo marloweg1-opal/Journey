@@ -66,7 +66,7 @@ def run(browser,base):
         page=browser.new_page()
         page.on('pageerror',lambda error:errors.append(str(error)))
         page.goto(server.url)
-        expect(page.get_by_text('Journey 0.4.0 Guided Patrol',exact=False)).to_be_visible()
+        expect(page.get_by_text('Journey 0.4.1 Provenance Naming Hold',exact=False)).to_be_visible()
         page.get_by_label('Keep a local checkpoint',exact=False).check()
         page.get_by_label('Suggest names and draft a plan',exact=True).check()
         page.get_by_label('Folder or shortcut path').fill(str(source))
@@ -92,7 +92,7 @@ def run(browser,base):
         expect(page.locator('#patrol-history')).to_contain_text('directory_create',timeout=30000)
         assert folder.is_dir()
         expect(page.locator('#patrol-state')).to_have_text('Awaiting clarification',timeout=90000)
-        # Group a correction, then get an actual contextual rename proposal.
+        # Group a correction. This supplies identity, not a validated naming rule.
         page.get_by_role('button',name='Select these images',exact=True).first.click()
         expect(page.locator('.patrol-asset:checked')).to_have_count(2)
         answer=page.locator('#patrol-answer')
@@ -104,14 +104,23 @@ def run(browser,base):
         expect(page.locator('#patrol-metrics > div').filter(has_text='Confirmed identities')).to_contain_text('2',timeout=30000)
         expect(page.locator('#patrol-state')).to_have_text('Awaiting clarification',timeout=30000)
         page.locator('.journey-tools').get_by_role('button',name='Review',exact=True).click()
-        expect(page.locator('.patrol-name').first).to_be_visible(timeout=15000)
+        expect(page.locator('#patrol-names')).to_contain_text('no validated project naming profile')
+        expect(page.get_by_role('button',name='Review selected naming changes')).to_be_disabled()
         if os.name=='nt':
-            page.locator('.patrol-name').first.check()
+            for checkbox in page.locator('.patrol-asset:checked').all():
+                checkbox.uncheck()
+            chosen=page.locator('.patrol-asset').first
+            chosen.check()
+            basename=chosen.locator('..').locator('strong').inner_text()
             # A review refresh must preserve an intentional checked selection.
             page.locator('.journey-tools').get_by_role('button',name='Review',exact=True).click()
-            expect(page.locator('.patrol-name:checked')).to_have_count(1)
-            page.get_by_role('button',name='Review selected naming changes').click()
-            expect(page.locator('#patrol-batch-details')).to_contain_text('rename')
+            expect(page.locator('.patrol-asset:checked')).to_have_count(1)
+            form.get_by_label('Operation',exact=True).select_option('move')
+            form.get_by_label('Exact destination path').fill(str(folder/basename))
+            form.get_by_label('Reason this improves the collection').fill('Keep the exact filename and make the reference easier to retrieve.')
+            form.get_by_role('button',name='Prepare exact batch').click()
+            expect(page.locator('#patrol-batch-details')).to_contain_text('move')
+            expect(page.locator('#patrol-batch-details')).to_contain_text(str(folder/basename))
             page.get_by_role('button',name='Authorize exact batch with my Windows account').click()
             expect(page.locator('#patrol-history')).to_contain_text('file_move',timeout=30000)
             page.get_by_role('button',name='Review safe reversal').first.click()
@@ -129,7 +138,7 @@ def run(browser,base):
             page.screenshot(path=screenshot,full_page=True)
         assert (outside/'Cloverstone.png').exists()
         assert not list(outside.glob('Curated*'))
-        print('Browser completed real journaled folder creation, grouped correction, virtual collection work, and '+('real rename and reversal.' if os.name=='nt' else 'Windows execution withheld on this host.'))
+        print('Browser completed the naming hold, real journaled folder creation, grouped correction, virtual collection work, and '+('a same-filename move and reversal.' if os.name=='nt' else 'Windows execution withheld on this host.'))
         print('Approval actor was the declared automated fixture actor. Native human account verification remains a separate owner acceptance step.')
         page.close()
     assert not errors,errors

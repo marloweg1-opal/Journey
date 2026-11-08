@@ -40,10 +40,11 @@
             <div class="inspection-bar"><button id="review-previous" type="button">Previous images</button><span id="review-page"></span><button id="review-next" type="button">Next images</button></div>
           </details>
           <h3>Physical organization</h3><p>Review an exact batch before account authorization. Inspection and virtual organization can continue while a batch waits.</p>
+          <p>Filename changes are held until a project naming profile is validated. Confirmation of an image's subject does not validate a naming convention. Reviewed moves must keep the exact filename.</p>
           <div id="patrol-names"></div><button type="button" id="patrol-naming-batch">Review selected naming changes</button>
           <details><summary>Review a folder creation or within-scope move</summary>
             <form id="patrol-operation"><div class="inspection-bar">
-              <label>Operation <select name="kind"><option value="mkdir">Create a folder</option><option value="move">Move selected image</option><option value="rename">Rename selected image</option></select></label>
+              <label>Operation <select name="kind"><option value="mkdir">Create a folder</option><option value="move">Move selected image, preserve filename</option></select></label>
               <label>Exact destination path <input name="destination" required></label>
               <label>Reason this improves the collection <input name="reason" required></label>
               <button type="submit">Prepare exact batch</button></div></form>

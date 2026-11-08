@@ -1,4 +1,16 @@
-# Journey Navigator 0.4.0 Guided Patrol
+# Journey Navigator 0.4.1 Provenance Naming Hold
+
+This increment preserves the operational Patrol and adds a backend hold on
+source filename changes. The current candidate has no validated project naming
+profile. Confirming identity and purpose, editing a trial format, or approving
+a batch cannot remove that hold. Existing saved renames are rechecked before
+approval and execution. Exact recorded reversals remain available.
+
+Original Unicode sequences, extension spelling and opaque numeric fields are
+retained in the inspection and export. Their presence does not establish a
+canonical naming rule or the meaning of a counter. Compound name references
+remain ambiguous unless supported by independent evidence or an explicitly
+registered full alias. No project-specific glyph map is invented by this build.
 
 ## Open and upgrade
 
@@ -35,8 +47,10 @@ source holds. Setup does not replace its files or services.
    that selection. New assessment uses the scoped correction without repeating
    unchanged OCR work. A preliminary name and a physical operation remain
    distinct records.
-5. Review exact naming changes or prepare a folder creation or within-scope
-   move with an explanation. The batch lists original and destination paths,
+5. Prepare a folder creation or a within-scope move that keeps the exact
+   filename, with an explanation. Preliminary naming evidence stays in
+   **Inspect** and cannot become a physical rename in this increment.
+   The batch lists original and destination paths,
    operation types and its binding before any source change.
 6. Choose **Authorize exact batch with my Windows account**. The native
    review includes the dependency disposition you are confirming for these
@@ -73,8 +87,8 @@ scope's retention permission. Physical source work uses a separately reviewed
 batch with native account attribution. A known dependency, protected path,
 source hold, revoked scope, occupied destination, changed source or kill switch
 blocks the affected operation. An empty reference search supplies no dependency
-clearance. The current Guided pathway supports folder creation, file renames and
-same-volume moves inside the original approved scope. External linked scopes
+clearance. The current Guided pathway supports folder creation and same-volume
+moves that preserve filenames inside the original approved scope. External linked scopes
 support inspection. Delegated execution and source deletion are excluded.
 
 The worker stops when there is no eligible work, a cycle budget is exhausted,

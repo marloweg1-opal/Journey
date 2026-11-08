@@ -19,6 +19,7 @@ from core.patrol_state import read_state
 from core.recovery_inspection import file_identity, inspect_operation
 from db.database import initialize_schema
 from journey_navigator.session import protect
+from journey_navigator.context import require_preserved_filename
 from journey_planner.catalog import component
 
 
@@ -120,6 +121,8 @@ class Guided:
     def validate_operation(self, batch, operation, *, source):
         scope = Path(batch['scope'])
         destination = Path(operation['destination'])
+        if operation['kind'] in ('rename', 'move'):
+            require_preserved_filename(operation['source'], destination)
         if not destination.is_relative_to(scope) or destination == scope:
             raise ValueError('The destination is outside the reviewed scope.')
         self.guard(batch['id'], destination)
@@ -169,6 +172,7 @@ class Guided:
                 if row is None:
                     raise ValueError('Choose a current analyzed image in the original scope.')
                 path = Path(row['path'])
+                require_preserved_filename(path, target)
                 app.policy.check_image(path, retain=True)
                 operation['source'] = str(path)
                 operation['identity'] = file_identity(path, read_guard=app.policy.check)

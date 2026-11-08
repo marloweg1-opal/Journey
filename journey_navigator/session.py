@@ -17,7 +17,7 @@ from core.file_paths import safe_metadata
 from core.process_lock import ProcessBusyError, process_lock
 
 
-VERSION = "0.4.0 Guided Patrol"
+VERSION = "0.4.1 Provenance Naming Hold"
 APP_ID = "Journey.Navigator"
 
 

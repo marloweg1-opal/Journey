@@ -144,7 +144,9 @@ class NavigatorContextTests(unittest.TestCase):
         export = json.loads(Path(app.export(job)["path"]).read_text())
         reviewed = next(row for row in export["images"] if row["filename"] == "untitled-0.png")
         self.assertEqual(reviewed["identity"]["state"], "human_confirmed_identity")
-        self.assertEqual(reviewed["name"]["destination"], "Moonstone/Moonstone - Character Reference.png")
+        self.assertEqual(reviewed["name"]["state"], "held_convention")
+        self.assertIsNone(reviewed["name"]["destination"])
+        self.assertEqual(reviewed["name"]["candidate_destination"], "Moonstone/Moonstone - Character Reference.png")
         self.assertNotIn("lines", reviewed["ocr"])
         self.assertEqual(fingerprint(self.source), before)
 

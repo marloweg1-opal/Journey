@@ -114,17 +114,16 @@ class OperationalPatrolTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'results are changing'):
                 self.patrol.accept_outcome(self.destination,value['outcome_binding'],'Stale result')
 
-    def test_exact_naming_review_uses_current_correction_before_patrol_cache_catches_up(self):
+    def test_identity_confirmation_cannot_validate_a_naming_convention(self):
         self.finish()
         with self.lock:
             image=self.app.images(self.job,0)['items'][0]
             self.app.review(self.job,image['id'],'confirm','Moonstone','Character Reference')
             current=self.app.images(self.job,0,asset_ids=[image['id']])['items'][0]
-            self.assertEqual(current['name']['state'],'proposed')
-            batch=self.patrol.suggested_batch(self.destination,[image['id']])
-            self.assertEqual(batch['operations'][0]['kind'],'rename')
-            self.assertIn('Character Reference',batch['operations'][0]['destination'])
-            self.assertEqual(batch['status'],'review_required')
+            self.assertEqual(current['name']['state'],'held_convention')
+            self.assertIsNone(current['name']['destination'])
+            with self.assertRaisesRegex(ValueError,'no validated project naming profile'):
+                self.patrol.suggested_batch(self.destination,[image['id']])
 
     def test_physical_change_removes_old_virtual_records_before_refresh(self):
         self.finish()
@@ -144,8 +143,10 @@ class OperationalPatrolTests(unittest.TestCase):
         self.finish()
         image=self.app.images(self.job,0)['items'][0]
         source=Path(image['path']); original=source.read_bytes()
-        target=source.with_name('Moonstone - Confirmed Reference.png')
-        batch=self.patrol.guided.prepare(self.job,[{'kind':'rename','asset':image['id'],'destination':str(target),'reason':'Use the established reference naming convention'}])
+        folder=self.source/'Curated References'
+        folder.mkdir()
+        target=folder/source.name
+        batch=self.patrol.guided.prepare(self.job,[{'kind':'move','asset':image['id'],'destination':str(target),'reason':'Preserve the filename while making the reference easier to find'}])
         result=self.approve(batch)
         self.assertEqual(result['status'],'completed',result)
         self.assertFalse(source.exists())
@@ -159,7 +160,7 @@ class OperationalPatrolTests(unittest.TestCase):
         self.finish()
         image=next(image for image in self.app.images(self.job,0)['items'] if image['path']==str(source))
         # Another real operation, followed by an occupied original path.
-        batch=self.patrol.guided.prepare(self.job,[{'kind':'rename','asset':image['id'],'destination':str(target)}])
+        batch=self.patrol.guided.prepare(self.job,[{'kind':'move','asset':image['id'],'destination':str(target)}])
         moved=self.approve(batch)
         receipt=moved['progress'][0]['receipt']
         source.write_bytes(b'new occupant')

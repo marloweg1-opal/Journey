@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import re
 
-from core.naming import detected_token_ids, extract_date_info
+from core.naming import detected_token_ids, extract_date_info, observe_filename
 from core.token_registry import resolve_token, validate_token_registry
 from journey_planner.catalog import validate_name
 from journey_vision.steward import PROPOSE_IDENTITY, STAMP, VERSION_TOKEN, _identity, _purpose, contextual_filename, pixel_distance
@@ -21,6 +21,42 @@ ASSET_TYPES = {
     "Artwork": r"\bartwork\b",
 }
 MENTION_ONLY = re.compile(r"\b(?:not|versus|vs|compare|comparison|inspired by|resembles|unrelated|example of)\b", re.I)
+NAMING_HOLD = ("Filename changes are held: this candidate has no validated project naming profile. "
+               "A confirmed subject, a trial format, and batch approval do not validate the convention. "
+               "Inspection, virtual collections, and reviewed moves that keep the exact filename remain available.")
+
+
+def require_preserved_filename(source, destination):
+    """Enforce the release hold independently of UI, trial formats and consent."""
+    if Path(source).name != Path(destination).name:
+        raise ValueError(NAMING_HOLD)
+
+
+def _compound_references(registry, text, ids):
+    # A registered word within a compound asset reference is not necessarily
+    # the depicted subject. Preserve the phrase rather than register an alias.
+    result = []
+    normalized = " ".join(re.findall(r"[^\W_]+", text.casefold()))
+    stems = {token["display_name"][:-5].casefold() for token in registry["tokens"].values()
+             if token["display_name"].casefold().endswith("stone")}
+    for key in ids:
+        token = registry["tokens"][key]
+        aliases = [key, token["display_name"], *token.get("aliases", [])]
+        phrases = {" ".join(re.findall(r"[^\W_]+", alias.casefold())) for alias in aliases}
+        matches, compounds = [], []
+        for phrase in phrases:
+            matches.extend(match.span() for match in re.finditer(r"(?<!\w)" + re.escape(phrase) + r"(?!\w)", normalized))
+            for stem in stems:
+                compound = stem + " " + phrase
+                if compound in phrases:
+                    continue  # Respect a deliberately registered full alias.
+                for match in re.finditer(r"(?<!\w)" + re.escape(compound) + r"(?!\w)", normalized):
+                    compounds.append((match.start(), match.end(), compound))
+        if compounds and all(any(start < first and last <= end for start, end, _ in compounds) for first, last in matches):
+            result.extend({"token": key, "phrase": phrase,
+                           "reason": "A compound asset reference does not establish the image's subject."}
+                          for phrase in sorted({phrase for _, _, phrase in compounds}))
+    return result
 
 
 def profile_registry():
@@ -36,6 +72,9 @@ def _token_key(registry, value):
 
 def _evidence(registry, source, text, *, confidence=None, top=None):
     ids = detected_token_ids(registry, text, whole_tokens=True)
+    compounds = _compound_references(registry, text, ids)
+    ambiguous = {item["token"] for item in compounds}
+    ids = [key for key in ids if key not in ambiguous]
     purposes = [label for label, pattern in ASSET_TYPES.items() if re.search(pattern, text.replace("_", " "), re.I)]
     versions = VERSION_TOKEN.findall(text)
     dates = STAMP.findall(text)
@@ -43,13 +82,14 @@ def _evidence(registry, source, text, *, confidence=None, top=None):
         _, date_info = extract_date_info(text)
         if date_info["token"]:
             dates = [date_info["token"]]
-    if not (ids or purposes or versions or dates):
+    if not (ids or purposes or versions or dates or compounds):
         return None
     strength = "mention" if MENTION_ONLY.search(text.replace("_", " ")) else "direct"
     if source == "Image text":
         strength = "title" if confidence >= 75 and top <= 0.33 and len(text.split()) <= 8 and strength == "direct" else "mention"
     return {"source": source, "text": text, "subjects": [registry["tokens"][key]["display_name"] for key in ids],
-            "purposes": purposes, "versions": versions, "dates": dates, "strength": strength, "confidence": confidence}
+            "purposes": purposes, "versions": versions, "dates": dates, "strength": strength, "confidence": confidence,
+            "ambiguous_references": compounds}
 
 
 def _context_identity(registry, asset, reviews, examples, signals):
@@ -112,7 +152,11 @@ def _context_identity(registry, asset, reviews, examples, signals):
     if mentions:
         return common | {"state": "possibly_related", "mentions": list(mentions.values()),
                          "reason": "The image text mentions these subjects. A mention alone does not identify the image."}
-    return common | {"state": "unknown", "reason": "The available evidence leaves the subject open."}
+    ambiguous = [item for signal in signals for item in signal.get("ambiguous_references", [])]
+    reason = "The available evidence leaves the subject open."
+    if ambiguous:
+        reason += " A compound asset reference needs context before it can identify a subject."
+    return common | {"state": "unknown", "reason": reason}
 
 
 def _context_purpose(path, asset, reviews, examples, signals):
@@ -147,6 +191,11 @@ def preliminary_name(path, record, rule):
         return None
     if record["identity"]["state"] == "human_confirmed_identity" and record["purpose"]["state"] == "human_confirmed":
         return None
+    observed = observe_filename(path.name)
+    if observed["unicode_sequences"] or re.search(r"(?:_[0-9]+){2,}$", path.stem):
+        return {"state": "preliminary", "filename": path.name, "executable": False,
+                "convention_state": "unvalidated",
+                "reason": "Keeps the exact Unicode spelling and structured fields while their naming meanings remain unresolved. " + NAMING_HOLD}
     versions = VERSION_TOKEN.findall(path.stem)
     stamps = STAMP.findall(path.stem)
     values = {"project": rule["project"], "subject": subject, "purpose": purpose,
@@ -161,4 +210,5 @@ def preliminary_name(path, record, rule):
         except ValueError:
             return None
         reason = "Keeps the original filename information while the remaining naming fields are open."
-    return {"state": "preliminary", "filename": name, "reason": reason}
+    return {"state": "preliminary", "filename": name, "executable": False,
+            "convention_state": "unvalidated", "reason": reason + " This is a trial format, not a validated project convention."}

@@ -86,6 +86,7 @@
       const reasons = image.signals.map(signal => `<li><strong>${esc(signal.source)}</strong> · ${esc(signal.text)}
         ${signal.subjects.length ? ` · ${esc(signal.subjects.join(", "))}` : ""}
         ${signal.purposes.length ? ` · ${esc(signal.purposes.join(", "))}` : ""}
+        ${(signal.ambiguous_references || []).map(item => ` · Ambiguous reference: ${esc(item.phrase)}. ${esc(item.reason)}`).join('')}
         ${signal.source === "Image text" ? ` · ${esc(signal.strength)}` : ""}</li>`).join("");
       return `<article class="inspection-entry" data-image="${image.id}">
         <img src="data:image/webp;base64,${esc(image.thumbnail)}" alt="Thumbnail of ${esc(image.filename)}">
@@ -99,7 +100,13 @@
         ${rejected ? `<p>Rejected association · ${esc(rejected)}</p>` : ""}
         ${image.suggestion ? `<p><strong>Preliminary filename · ${esc(image.suggestion.filename)}</strong></p><p>${esc(image.suggestion.reason)}</p>` : ""}
         ${name.destination ? `<p><strong>Destination preview · ${esc(name.destination)}</strong></p>` : ""}
+        ${name.candidate_destination ? `<p><strong>Trial format only · ${esc(name.candidate_destination)}</strong></p>` : ""}
         <p>${esc(name.reason)} ${esc(name.blocker || "")}</p>
+        <details><summary>Original filename structure</summary><p>${esc(image.observed_name.original)}</p>
+          <p>Exact extension · ${esc(image.observed_name.extension)}</p>
+          <p>Observed Unicode sequences · ${esc(image.observed_name.unicode_sequences.join(' · ') || 'None')}</p>
+          <p>Numeric fields with unresolved meaning · ${esc(image.observed_name.numeric_fields.map(item => item.text).join(' · ') || 'None')}</p>
+        </details>
         <details><summary>Text read from the image · ${esc(label(ocr.status))}</summary>
           ${ocr.provider ? `<p>${esc(ocr.provider)} · ${esc(ocr.language || "eng")} · local</p>` : ""}
           ${ocr.lines ? `<ul>${ocr.lines.map(line => `<li>${esc(line.text)}</li>`).join("")}</ul>` : ""}
