@@ -19,7 +19,7 @@ from core.token_registry import resolve_token
 from core.naming import observe_filename
 from journey_navigator.context import NAMING_HOLD, assess, preliminary_name, profile_registry
 from journey_navigator.links import Boundaries, ProtectedPath, identity, kind_of, path_key, resolve_folder
-from journey_navigator.project_audit import ProjectAudit
+from journey_navigator.project_audit import ProjectAudit, naming_blocker
 from journey_navigator.registry import ProjectRegistry, creation_dates, preview as registry_preview
 from journey_navigator.stewardship import SCHEMA as STEWARDSHIP_SCHEMA
 from journey_planner.catalog import File, Plan, absolute_path, check_local_drive, component
@@ -672,7 +672,7 @@ class Workbench:
             "display_name": name, "type": "subject", "aliases": aliases, "owns": [], "routes": {}, "customization": {}
         } for name, aliases in subjects.items()}}
 
-    def _image_view(self, job, row, reviews, evidence, *, thumbnails, proposals, profile, recognizer):
+    def _image_view(self, job, row, reviews, evidence, *, thumbnails, proposals, profile, recognizer, audit):
         path = self.policy.check_image(Path(row["path"]), retain=self.retains)
         features = json.loads(row["features"])
         asset = {"digest": row["digest"], "features": features}
@@ -693,6 +693,8 @@ class Workbench:
             memberships.append("Retired · " + metadata["retirements"][0]["family"])
         if proposals and profile:
             record["name"] = registry_preview(path, record, metadata, naming_rule)
+            if naming_rule and (blocker := naming_blocker(audit, profile, naming_rule)):
+                record["name"].update(state="blocked", destination=None, blocker=blocker, executable=False)
             if record["name"]["destination"]:
                 record["name"]["destination"] = path.with_name(record["name"]["destination"]).relative_to(row["scope"]).as_posix()
         elif proposals:
@@ -748,6 +750,7 @@ class Workbench:
             {selection} ORDER BY f.id LIMIT ? OFFSET ?""", args).fetchall()
         scope_reviews, images = {}, []
         profile = self.project_registry.profile(job_id)
+        audit = self.project_audit.document(job_id)
         recognizer = self._subject_registry(job_id, profile)
         for row in rows[:PAGE]:
             try:
@@ -756,7 +759,8 @@ class Workbench:
                 reviews, evidence = scope_reviews[row["scope"]]
                 images.append(self._image_view(job, row, reviews, evidence, thumbnails=thumbnails, proposals=bool(row["propose"]),
                                                profile=profile if row["scope"] == job["root"] else None,
-                                               recognizer=recognizer if row["scope"] == job["root"] else self.registry))
+                                               recognizer=recognizer if row["scope"] == job["root"] else self.registry,
+                                               audit=audit if row["scope"] == job["root"] else None))
             except ProtectedPath:
                 continue
         return {"items": images, "more": len(rows) > PAGE}
@@ -775,8 +779,11 @@ class Workbench:
             raise ValueError(name.get("blocker") or name["reason"])
         if str(Path(job["root"]) / name["destination"]) != str(target):
             raise ValueError("Only the exact destination from the validated naming preview can be reviewed.")
-        return {"asset": asset, "epoch": job["epoch"], "profile_revision": profile["revision"], "digest": image["digest"],
-                "creation_date": image["metadata"]["date"]}
+        binding = {"asset": asset, "epoch": job["epoch"], "profile_revision": profile["revision"], "digest": image["digest"],
+                   "creation_date": image["metadata"]["date"]}
+        if audit := self.project_audit.binding(job_id):
+            binding["audit"] = audit
+        return binding
 
     def groups(self, job_id, offset):
         job = self.job(job_id)

@@ -166,9 +166,11 @@ class Stewardship:
         task = self.patrol.row(destination)
         job = self.app.job(task["job"])
         profile = self.app.project_registry.profile(job["id"])
-        basis = [job["root"], job["epoch"], profile["revision"] if profile else None,
-                 profile["knowledge_version"] if profile else None]
-        return job, profile, basis
+        return job, profile, self._basis(job, profile)
+
+    def _basis(self, job, profile):
+        return [job["root"], job["epoch"], profile["revision"] if profile else None,
+                profile["knowledge_version"] if profile else None, self.app.project_audit.binding(job["id"])]
 
     def _claim_sources(self, job, profile, family):
         if not profile:
@@ -299,15 +301,19 @@ class Stewardship:
         replacement = text_field(replacement, 180) if replacement else None
         family = item["result"]["family"]
         decision = key_for([binding, sorted(selected), reason, replacement])
+        refs = scan_references(self.app, job["root"], [entry["path"] for entry in chosen]) if item["read_references"] else None
         with self.conn:
             for entry in chosen:
+                dependencies = [ref for ref in (refs["references"] if refs else []) if ref["target"] == entry["path"]]
+                blocker = self._path_restriction(Path(entry["path"]))
+                if any(ref["role"] == "possible_dependency" for ref in dependencies):
+                    blocker = blocker or "A current configuration references this asset."
                 fact = {"state": "retired", "family": family, "reason": reason, "replacement": replacement,
                         "source": {"type": "operator_confirmed_retirement", "destination": destination, "decision": decision,
                                    "recorded_at": datetime.now(timezone.utc).isoformat()},
                         "path": entry["path"], "digest": entry["digest"],
                         "provenance": [value["source"] for value in entry["evidence"]],
-                        "dependencies": [ref for ref in item["result"]["dependencies"]["references"] if ref["target"] == entry["path"]],
-                        "physical_blocker": entry["physical_blocker"]}
+                        "dependencies": dependencies, "physical_blocker": blocker}
                 self.conn.execute("""INSERT OR IGNORE INTO stewardship_retirements(job,project,decision,path,digest,fact)
                     VALUES(?,?,?,?,?,?)""", (job["id"], project_key(profile), decision, entry["path"], entry["digest"], json.dumps(fact)))
         return {"state": "VERIFIED_COMPLETE", "decision": decision, "recorded": len(chosen)}
@@ -348,8 +354,7 @@ class Stewardship:
         job = self.app.job(job_id)
         profile = self.app.project_registry.profile(job_id)
         record = operation["retirement"]
-        basis = [job["root"], job["epoch"], profile["revision"] if profile else None,
-                 profile["knowledge_version"] if profile else None]
+        basis = self._basis(job, profile)
         if basis != record["basis"]:
             raise ValueError("The source inspection or evidence changed. Prepare a new archive review.")
         path, digest = operation["source"], operation["identity"]["sha256"]

@@ -152,7 +152,8 @@ class Patrol:
         profile = self.app.project_registry.profile(job)
         knowledge = [profile['revision'], profile['knowledge_version']] if profile else None
         retirements = self.conn.execute('SELECT max(id) FROM stewardship_retirements WHERE job=?',(job,)).fetchone()[0]
-        return sha256(json.dumps(['context-0.6',row['epoch'],row['rule'],revision,knowledge,retirements],sort_keys=True).encode()).hexdigest()
+        audit = self.app.project_audit.binding(job)
+        return sha256(json.dumps(['context-0.6',row['epoch'],row['rule'],revision,knowledge,retirements,audit],sort_keys=True).encode()).hexdigest()
 
     def _assess(self, destination, row):
         task=self.conn.execute("SELECT * FROM patrol_tasks WHERE destination=? AND kind='assess'",(destination,)).fetchone()

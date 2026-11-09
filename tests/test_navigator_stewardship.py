@@ -204,6 +204,23 @@ class StewardshipTests(unittest.TestCase):
         self.app.step(job)
         self.assertEqual(self.app.images(job, 0)["items"][0]["identity"]["state"], "unknown")
 
+    def test_new_audit_correction_holds_an_already_prepared_rename(self):
+        source = self.source / "Moonstone Character Sheet import.png"
+        sample_image(source, "yellow", created="2026-11-07")
+        self.app.refresh(self.job)
+        self.scan()
+        image = next(item for item in self.app.images(self.job, 0)["items"] if item["path"] == str(source))
+        self.app.review(self.job, image["id"], "confirm", "Moonstone", "Character Reference")
+        target = self.source / MOON.replace("06_11", "07_11")
+        batch = self.patrol.guided.prepare(self.job, [{"kind": "rename", "asset": image["id"], "destination": str(target)}])
+        late = {"id": "date-correction", "tier": "A", "subject": "Moonstone", "family": "Character Reference",
+                "dimension": "date", "value": "YYYY-MM-DD", "source": {"role": "user", "locator": "Synthetic scoped correction"}}
+        self.app.project_audit.activate(self.job, audit() | {"claims": [late]})
+        with self.assertRaisesRegex(ValueError, "disagrees with accepted audit evidence"):
+            self.patrol.guided.begin_approval(batch["id"])
+        self.assertTrue(source.exists())
+        self.assertFalse(target.exists())
+
     def test_grouped_retirement_preserves_history_and_copy_identity(self):
         config = self.source / "current-desk.ini"
         config.write_text("[main]\nimage=Heartfield Desk.png", encoding="utf-8")

@@ -5,14 +5,36 @@ from pathlib import Path
 from time import monotonic
 
 from core.file_paths import safe_metadata
+from core.naming import observe_filename
 from core.naming_audit import FIELDS, contains_words, resolve_field, validate_audit
-from core.project_registry import asset_name, profile_date
+from core.project_registry import asset_name, key_for, profile_date
 from core.recovery_inspection import file_identity
 
 
 MAX_ROWS = 2000
 PROOF_FILES = 12
 PROOF_BYTES = 32 * 1024 * 1024
+
+
+def naming_blocker(document, profile, rule):
+    if not document:
+        return None
+    if document["project"].casefold() != profile["project"].casefold():
+        return "The audit and the active rule belong to different projects."
+    fields = {field: resolve_field(document["claims"], rule["subject"], rule["purpose"], field) for field in FIELDS}
+    conflicted = [field for field, fact in fields.items() if fact["state"] == "CONFLICTED"]
+    if conflicted:
+        return "Naming evidence conflicts on " + ", ".join(name.replace("_", " ") for name in conflicted) + "."
+    expected = {field: fact["value"] for field, fact in fields.items() if fact["state"] == "CONFIRMED"}
+    filename = rule["example"]["filename"]
+    checks = {"date": rule["date_order"] == expected.get("date"),
+              "extension": rule["extension"] == expected.get("extension"),
+              "project_tag": contains_words(filename, expected.get("project_tag", "")),
+              "marker": expected.get("marker") in observe_filename(filename)["unicode_sequences"]}
+    disagreements = [field for field, passes in checks.items() if field in expected and not passes]
+    if disagreements:
+        return "The active rule disagrees with accepted audit evidence for " + ", ".join(disagreements).replace("_", " ") + "."
+    return None
 
 
 class ProjectAudit:
@@ -27,6 +49,10 @@ class ProjectAudit:
     def document(self, job):
         row = self.conn.execute("SELECT document FROM project_naming_audits WHERE job=?", (job,)).fetchone()
         return json.loads(row[0]) if row else None
+
+    def binding(self, job):
+        audit = self.document(job)
+        return key_for(audit) if audit else None
 
     def activate(self, job_id, document):
         self.app.project_registry._root(job_id)
@@ -105,6 +131,8 @@ class ProjectAudit:
                 archived = [sample for sample in document.get("examples", [])
                             if (sample["subject"], sample["family"]) == key]
                 if any(field["state"] == "CONFLICTED" for field in fields.values()):
+                    state = "CONFLICTED"
+                elif any(naming_blocker(document, active, rule) for rule in active_rules):
                     state = "CONFLICTED"
                 elif active_rules:
                     state = ("VERIFIED_FILENAME_EXEMPLAR" if any(item["state"] == "VERIFIED_FILENAME_EXEMPLAR" for item in files)
