@@ -88,7 +88,8 @@ review after restart.
    read in place and its paths are never followed. Importing the same file
    again is safe.
 4. Review candidate matches, dates, and relationships. A name match alone is
-   a candidate. A reviewed supersession is shown separately from whether the
+   a candidate. Named references can remain open even when the archive
+   supplies no literal filename. A reviewed supersession is separate from whether the
    old artwork was located in this scope. **Image details** shows the full
    creation date and its source, any competing evidence, the filesystem
    modification time, and any verified rename or move history.

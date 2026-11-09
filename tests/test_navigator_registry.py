@@ -226,6 +226,29 @@ class ProjectRegistryTests(unittest.TestCase):
         self.assertEqual(evidence["source"]["message"], "test-index")
         self.assertEqual(evidence["kind"], "reference")
 
+    def test_named_references_and_normalized_message_positions_keep_their_evidence(self):
+        value = profile()
+        name = "Earlier Moonstone panel"
+        value["evidence"] = [{"name": name, "kind": "named_reference", "value": ["Moonstone", "panel"],
+                              "source": {"archive": "Selected export", "conversation": "project", "message": "5", "role": "user"}}]
+        self.registry.activate(self.job, value)
+        pending = next(item for item in self.registry.catalog(self.job, 0)["items"] if item["name"] == name)
+        self.assertEqual(pending["state"], "reference_needs_identification")
+        candidate = self.root / "Moonstone_panel_study.png"
+        sample_image(candidate, "blue")
+        self.app.refresh(self.job)
+        self.scan()
+        found = next(item for item in self.registry.catalog(self.job, 0)["items"] if item["name"] == name)
+        self.assertEqual(found["state"], "possible_context_match")
+        self.assertEqual(found["paths"], [str(candidate)])
+        normalized = self.base / "normalized.json"
+        normalized.write_text(json.dumps({"id": "normalized", "messages": [
+            {"role": "user", "content": "`Moonstone_panel_study.png`"},
+        ]}), encoding="utf-8")
+        self.assertEqual(self.registry.import_archive(self.job, normalized)["added"], 1)
+        source = self.image(candidate.name)["metadata"]["registry_evidence"][0]["source"]
+        self.assertEqual(source["message"], "message-index:0")
+
     @unittest.skipUnless(os.name == "nt", "Native Windows no-overwrite rename and reversal")
     def test_exact_account_path_executes_renames_and_preserves_history_through_undo(self):
         source = self.root / ORIGINAL

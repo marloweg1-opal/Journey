@@ -99,7 +99,7 @@ def validate_profile(value):
 
 def validate_claim(claim):
     name, kind = claim["name"], claim["kind"]
-    if name != asset_name(name) or kind not in CLAIM_TYPES:
+    if kind not in CLAIM_TYPES or (kind != "named_reference" and name != asset_name(name)):
         raise ValueError("The profile includes invalid registry evidence.")
     component(name)
     source = claim["source"]
@@ -113,6 +113,10 @@ def validate_claim(claim):
     value = claim["value"]
     if kind == "reference":
         value = ""
+    elif kind == "named_reference":
+        if not isinstance(value, list) or not 1 <= len(value) <= 4:
+            raise ValueError("A named reference needs 1–4 search terms.")
+        value = [text_field(term, 50) for term in value]
     elif kind == "creation_date":
         value = iso_date(value)
     elif kind == "lifecycle":
@@ -295,6 +299,23 @@ class ProjectRegistry:
                 state = "verified_path_history"
             else:
                 state = "filename_candidate" if evidence else "observed_in_scope"
+            reference = next((item for item in evidence if item["kind"] == "named_reference"
+                              and item["decision"] != "rejected"), None)
+            if reference:
+                terms = reference["value"]
+                conditions = " AND ".join("instr(lower(path),lower(?))>0" for _ in terms)
+                paths = []
+                rows = self.conn.execute(f"""SELECT path FROM files WHERE job=? AND scope=? AND epoch=?
+                    AND registry_asset(path)<>'' AND {conditions} ORDER BY path LIMIT 20""",
+                    (*scope, job["epoch"], *terms))
+                for row in rows:
+                    try:
+                        path = self.app.policy.check_image(row["path"], retain=True)
+                        safe_metadata(path)
+                    except (OSError, ValueError):
+                        continue
+                    paths.append(row["path"])
+                state = "possible_context_match" if paths else "reference_needs_identification"
             named = next((item["name"] for item in evidence if filename_key(item["name"]) == name), None)
             items.append({"name": named or (Path(paths[0]).name if paths else name),
                           "state": state, "paths": paths[:5], "matches": len(paths),

@@ -19,7 +19,7 @@ CREATED = re.compile(r"\b(?:created|drawn|authored) (?:on )?(\d{4}-\d{2}-\d{2})\
 RELATION = re.compile(r"\b(supersedes|replaces|variant of|derived from)\b", re.I)
 LIFECYCLE = re.compile(r"\b(retired|archived|discarded)\b", re.I)
 QUALIFIED = re.compile(r"\b(not|never|maybe|might|could|should|would|if)\b", re.I)
-CLAIM_TYPES = {"reference", "creation_date", "relationship", "lifecycle"}
+CLAIM_TYPES = {"reference", "named_reference", "creation_date", "relationship", "lifecycle"}
 
 
 def iso_date(value):
@@ -94,12 +94,12 @@ def _messages(record):
         return
     conversation = record.get("conversation_id") or record.get("id")
     if isinstance(record.get("mapping"), dict):
-        for node in record["mapping"].values():
+        for locator, node in record["mapping"].items():
             if isinstance(node, dict):
-                yield conversation, node.get("message")
+                yield conversation, node.get("message"), locator
     elif isinstance(record.get("messages"), list):
-        for message in record["messages"]:
-            yield conversation, message
+        for index, message in enumerate(record["messages"]):
+            yield conversation, message, f"message-index:{index}"
 
 
 def _texts(message):
@@ -123,12 +123,12 @@ def _texts(message):
                     yield "`" + name + "`"
 
 
-def _source(archive, conversation, message):
+def _source(archive, conversation, message, locator):
     author = message.get("author")
     role = author.get("role") if isinstance(author, dict) else message.get("role")
     if role not in ("user", "assistant"):
         return None
-    conversation, message_id = text_field(conversation, 120), text_field(message.get("id"), 120)
+    conversation, message_id = text_field(conversation, 120), text_field(message.get("id") or locator, 120)
     created = message.get("create_time")
     authored = None
     if type(created) in (int, float):
@@ -182,11 +182,11 @@ def archive_claims(document, archive, project_signals, *, limit=5000):
     for record in _records(document):
         if isinstance(record, dict) and record.get("is_do_not_remember") is True:
             continue
-        for conversation, message in _messages(record):
+        for conversation, message, locator in _messages(record):
             if not isinstance(message, dict):
                 continue
             try:
-                source = _source(archive, conversation, message)
+                source = _source(archive, conversation, message, locator)
             except ValueError:
                 continue  # Without an ID the evidence cannot be attributed.
             if source is None:
