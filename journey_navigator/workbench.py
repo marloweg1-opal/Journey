@@ -19,9 +19,9 @@ from core.token_registry import resolve_token
 from core.naming import observe_filename
 from journey_navigator.context import NAMING_HOLD, assess, preliminary_name, profile_registry
 from journey_navigator.links import Boundaries, ProtectedPath, identity, kind_of, path_key, resolve_folder
-from journey_navigator.registry import ProjectRegistry, preview as registry_preview
+from journey_navigator.registry import ProjectRegistry, creation_dates, preview as registry_preview
 from journey_planner.catalog import File, Plan, absolute_path, check_local_drive, component
-from journey_vision.observe import IMAGE_FORMATS, creation_dates, decode_image, describe, image_bytes
+from journey_vision.observe import IMAGE_FORMATS, decode_image, describe, image_bytes
 from journey_vision.steward import (
     DEFAULT_RULE, SIMILAR, draft_names, pixel_distance, review_index, validate_rule,
 )
