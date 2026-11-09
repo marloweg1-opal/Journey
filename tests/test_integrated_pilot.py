@@ -5,11 +5,12 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import RLock, Thread
-from time import sleep
+from time import monotonic, sleep
 from urllib.request import Request, urlopen
 import unittest
 
 from journey_navigator.__main__ import Navigator
+from journey_navigator.conversation import explicit_intent
 from journey_navigator.patrol import Patrol
 from journey_navigator.registry import PATTERN_FORMAT
 from journey_navigator.session import SessionOwner
@@ -142,6 +143,8 @@ class IntegratedPilot(unittest.TestCase):
         self.assertEqual(items["Opalstone Chibi.png"]["identity"]["label"], "Corestone")
         music = items["musicstone_care_rail(1).png"]["metadata"]["local_history"]
         self.assertTrue(any(item["name"] == "musicstone_care_rail.png" and item["match"] == "variant candidate" for item in music))
+        self.assertIn("musicstone_care_rail(1).png", {item["title"] for item in self.app.search(self.job, "Musicstone CareRail")
+                                                   if item["group"] == "INSPECTED FILES"})
         self.assertEqual(self.app.history.reconcile(self.job)["archive_bytes_verified"], 0)
 
     def test_changed_export_and_manifest_escape_fail_without_importing(self):
@@ -209,6 +212,29 @@ class IntegratedPilot(unittest.TestCase):
                 run.join(5)
                 opening.join(10)
                 other.close()
+
+    def test_abandoned_browser_lease_closes_the_session(self):
+        with Navigator(self.app) as navigator:
+            runner = Thread(target=navigator.serve_forever)
+            runner.start()
+            try:
+                with navigator.lock:
+                    navigator.attached("fixture-window")
+                    navigator.clients["fixture-window"] = monotonic() - 200
+                    navigator.service_actions()
+                    self.assertEqual(navigator.clients, {})
+                    navigator.empty_since = monotonic() - 10
+                    navigator.service_actions()
+                runner.join(5)
+                self.assertFalse(runner.is_alive())
+            finally:
+                navigator.shutdown()
+                runner.join(5)
+
+    def test_playful_age_is_retirement_intent_and_negation_stays_out(self):
+        self.assertEqual(explicit_intent("Heartfield Desk is 92 Carecycles past its expiration date, I don't need that design anymore."),
+                         "Heartfield Desk")
+        self.assertIsNone(explicit_intent("Do not retire Heartfield Desk."))
 
 
 if __name__ == "__main__":

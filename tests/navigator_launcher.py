@@ -11,6 +11,7 @@ import subprocess
 import shutil
 from tempfile import TemporaryDirectory
 from time import monotonic,sleep
+from urllib.parse import parse_qs, urlsplit
 from urllib.request import Request,urlopen
 
 from journey_navigator.session import protect,process_identity
@@ -71,6 +72,16 @@ def stop(record):
         assert json.load(response)['session']==record['session']
 
 
+def inspection(record, action, **body):
+    url=urlsplit(record['url'])
+    origin=f'{url.scheme}://{url.netloc}'
+    token=parse_qs(url.fragment)['session'][0]
+    request=Request(origin+'/api/inspect/'+action,data=json.dumps(body).encode(),headers={
+        'Content-Type':'application/json','Origin':origin,'X-Journey-Session':token})
+    with urlopen(request,timeout=8) as reply:
+        return json.load(reply)
+
+
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--application',required=True,type=Path)
     args=parser.parse_args()
@@ -127,9 +138,25 @@ def main():
             deadline=monotonic()+30
             while path.exists() and monotonic()<deadline:sleep(.1)
             assert not path.exists(),'The installed service did not release ownership.'
+            reopened=subprocess.Popen([str(installation/'Journey Navigator.exe')],env=env)
+            try:
+                current=manifest(path)
+                assert current['session']!=installed['session']
+                jobs=inspection(current,'jobs')['items']
+                assert len(jobs)==1
+                job=jobs[0]['id']
+                assert inspection(current,'pack-status',job=job)['project']=='Studio Fixture'
+                assert inspection(current,'history-status',job=job)['unique_messages']==3
+                assert not inspection(current,'watch-status',job=job)['enabled']
+                stop(current)
+                assert reopened.wait(timeout=30)==0
+            finally:
+                if reopened.poll() is None:
+                    reopened.terminate()
             shutil.rmtree(root/'Journey')
             print('Normal EXE launch, compatible instance reopening, authenticated shutdown, lock release and clean relaunch passed.')
             print('Actual changed-build handoff, Setup EXE, manifest-verified staged installation and stable shortcuts passed using automated installation consent only.')
+            print('Managed relaunch reopened the retained project pack and imported history with drift watch off.')
         finally:
             if path.exists():
                 try:stop(manifest(path))

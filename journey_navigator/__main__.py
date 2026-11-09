@@ -9,7 +9,8 @@ import secrets
 import sqlite3
 import subprocess
 import sys
-from threading import RLock, Thread, Timer
+from threading import RLock, Thread
+from time import monotonic
 from urllib.parse import parse_qs, urlsplit
 import webbrowser
 
@@ -25,6 +26,8 @@ from journey_planner.catalog import check_local_drive
 
 MODULE = Path(__file__).resolve().parent
 APP = MODULE.parent
+WINDOW_LEASE_SECONDS = 150
+WINDOW_CLOSE_GRACE = 5
 
 
 def navigator_page():
@@ -90,7 +93,8 @@ class Navigator(ThreadingHTTPServer):
         self.lock = RLock()
         self.owner = owner
         self.info = owner.info if owner else build_info()
-        self.clients = set()
+        self.clients = {}
+        self.empty_since = None
         self.closing = False
         self.restore_checkpoint = None
         self.patrol = Patrol(workbench, self.lock, approver=approver)
@@ -125,13 +129,30 @@ class Navigator(ThreadingHTTPServer):
         self.patrol.wake.set()
         Thread(target=self.shutdown, daemon=True).start()
 
+    def attached(self, client):
+        if client not in self.clients and len(self.clients) >= 32:
+            raise ValueError("Close an unused Navigator tab first.")
+        self.clients[client] = monotonic()
+        self.empty_since = None
+
     def detached(self, client):
-        self.clients.discard(client)
-        def close_if_unused():
-            with self.lock:
-                if not self.clients:
-                    self.request_close()
-        Timer(5, close_if_unused).start()
+        if self.clients.pop(client, None) is not None and not self.clients:
+            self.empty_since = monotonic()
+
+    def service_actions(self):
+        # A browser crash may skip pagehide. Leases bound how long a service
+        # with an attached window can continue without one.
+        if not self.lock.acquire(blocking=False):
+            return
+        try:
+            now = monotonic()
+            for client, last_seen in tuple(self.clients.items()):
+                if now - last_seen >= WINDOW_LEASE_SECONDS:
+                    self.detached(client)
+            if self.empty_since is not None and now - self.empty_since >= WINDOW_CLOSE_GRACE:
+                self.request_close()
+        finally:
+            self.lock.release()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -261,7 +282,7 @@ class Handler(BaseHTTPRequestHandler):
             self.server.request_close()
             return {'restarting':reopen}
         if action == 'attach':
-            self.server.clients.add(str(body['client'])[:100])
+            self.server.attached(str(body['client'])[:100])
             return {'attached':True}
         if action == 'detach':
             self.server.detached(str(body['client'])[:100])

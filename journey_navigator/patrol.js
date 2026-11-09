@@ -8,8 +8,7 @@
   let stewardshipReview = null, retirementDecision = "";
   const selections={'.patrol-asset':new Set(),'.patrol-name':new Set()};
   const clearSelections=()=>Object.values(selections).forEach(values=>values.clear());
-  const client = sessionStorage.getItem("journey-window") || crypto.randomUUID();
-  sessionStorage.setItem("journey-window", client);
+  const client = crypto.randomUUID();
   const toolbar = document.createElement("nav");
   toolbar.className = "inspection-bar journey-tools";
   toolbar.setAttribute("aria-label", "Journey tools");
@@ -24,8 +23,12 @@
     build.innerHTML = `<strong>Journey ${esc(info.version)}</strong> · ${esc(info.installation)} · Build ${esc(info.commit)} / ${esc(info.build)}
       <details><summary>Running application</summary><p>${esc(info.location)}</p><p>${esc(info.executable)}</p><p>Session ${esc(info.session)}</p></details>`;
   }).catch(error => notify(error.message || String(error)));
-  api("attach", {client}).catch(() => {});
+  const heartbeat = () => api("attach", {client}).catch(() => {});
+  heartbeat();
+  const windowLease = setInterval(heartbeat, 30000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) heartbeat(); });
   window.addEventListener("pagehide", () => {
+    clearInterval(windowLease);
     fetch('/api/inspect/detach', {method:'POST', keepalive:true, headers:{'Content-Type':'application/json',
       'X-Journey-Session':sessionStorage.getItem('journey-inspection-session') || ''},body:JSON.stringify({client})}).catch(() => {});
   });

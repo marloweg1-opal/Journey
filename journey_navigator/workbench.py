@@ -854,14 +854,16 @@ class Workbench:
         return rule
 
     def search(self, job_id, query):
+        from journey_navigator.history import search_words
         job = self.job(job_id)
         visible = self._visible(job)
+        normalized = search_words(query)
         rows = self.conn.execute(f"""SELECT f.path,f.status,f.scope,o.ocr FROM files f
             LEFT JOIN observations o ON o.job=f.job AND o.scope=f.scope AND o.digest=f.digest
             WHERE f.job=? AND f.epoch=? AND f.scope IN ({_markers(visible)})
-            AND (instr(lower(f.path),lower(?))>0 OR EXISTS(
+            AND (instr(lower(f.path),lower(?))>0 OR (?<>'' AND instr(history_match_key(f.path),?)>0) OR EXISTS(
                 SELECT 1 FROM json_each(o.ocr,'$.lines') WHERE instr(lower(json_extract(value,'$.text')),lower(?))>0))
-            ORDER BY f.path LIMIT 50""", (job_id, job["epoch"], *visible, query, query)).fetchall()
+            ORDER BY f.path LIMIT 50""", (job_id, job["epoch"], *visible, query, normalized, normalized, query)).fetchall()
         results = []
         for row in rows:
             try:
