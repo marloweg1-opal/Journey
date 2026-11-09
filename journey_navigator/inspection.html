@@ -31,14 +31,29 @@
             <summary>Review or revoke permissions</summary>
             <div id="inspect-scopes"></div>
           </details>
+          <details id="inspect-registry">
+            <summary>Project registry and validated naming</summary>
+            <p>Use a project profile for this inspected folder. It adds evidence and naming rules to this checkpoint. Guided file changes still require separate account approval.</p>
+            <form id="registry-profile" class="inspection-bar">
+              <label>Project profile JSON <input id="registry-file" type="file" accept=".json,application/json" required></label>
+              <button type="submit" id="registry-activate" disabled>Use this profile in this folder</button>
+            </form>
+            <p id="registry-file-preview" role="status"></p>
+            <form id="registry-import" class="inspection-bar" hidden>
+              <label>Full local path to a conversation export or Asset Pipeline index <input name="path" autocomplete="off" required></label>
+              <button type="submit">Import selected evidence file</button>
+            </form>
+            <p id="registry-status" role="status" aria-live="polite"></p>
+            <div id="registry-results"></div>
+          </details>
           <details id="inspect-naming">
-            <summary>Naming convention</summary>
-            <p>Supported clues can produce a preliminary filename. These are trial formats. This candidate has no validated project naming profile, so source filename changes are held even after identity confirmation. Filename fields include {project}, {subject}, {purpose}, {variation}, and {stamp}.</p>
+            <summary>Trial naming formats</summary>
+            <p>Trial formats help preview possible filenames. A validated project rule takes precedence when a profile is active. Trial fields include {project}, {subject}, {purpose}, {variation}, and {stamp}.</p>
             <form id="inspect-rule" class="inspection-bar">
               <label>Project label <input name="project"></label>
               <label>Filename pattern <input name="filename" required></label>
               <label>Destination folder pattern <input name="folder"></label>
-              <button type="submit">Save convention</button>
+              <button type="submit">Save trial format</button>
             </form>
           </details>
           <div class="inspection-bar" aria-label="Review views">

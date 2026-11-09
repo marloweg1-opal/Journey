@@ -2,7 +2,7 @@ name: Navigator linked inspection acceptance
 
 on:
   push:
-    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol, work/navigator-provenance-naming]
+    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol, work/navigator-provenance-naming, work/navigator-asset-registry]
 
 permissions:
   contents: read
@@ -51,6 +51,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Patrol execution tests failed.' }
           python -B -m unittest discover -s tests -p 'test_navigator_naming_hold.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Naming provenance or release hold tests failed.' }
+          python -B -m unittest discover -s tests -p 'test_navigator_registry.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Project registry or guided rename acceptance failed.' }
           python -B -m unittest discover -s tests -p 'test_navigator_session.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Navigator ownership tests failed.' }
           python -B tests/navigator_launcher.py --application (Join-Path $destination 'Journey Navigator/Journey Navigator.exe')
@@ -62,6 +64,8 @@ jobs:
           }
           python -B tests/navigator_browser.py --runtime $runtime
           if ($LASTEXITCODE -ne 0) { throw 'Navigator browser acceptance failed.' }
+          python -B tests/registry_browser.py
+          if ($LASTEXITCODE -ne 0) { throw 'Project registry browser acceptance failed.' }
       - name: Preserve generated acceptance screenshot
         if: always()
         uses: actions/upload-artifact@v4

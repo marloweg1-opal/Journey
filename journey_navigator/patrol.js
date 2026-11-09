@@ -64,7 +64,9 @@
       <span>${esc(image.identity.reason)}</span></label>`).join("");
     $("patrol-names").innerHTML = page.items.filter(image => image.name.state === 'proposed').map(image => `<label class="inspection-entry">
       <input type="checkbox" class="patrol-name" value="${image.id}"${selections['.patrol-name'].has(image.id) ? ' checked' : ''}><strong>${esc(image.filename)}</strong> → ${esc(image.name.destination)}
-      <p>${esc(image.name.reason)}</p></label>`).join("") || '<p>Preliminary naming evidence is available in Inspect. Source filename changes are held because no validated project naming profile is active.</p>';
+      <p>${esc(image.name.reason)}</p></label>`).join("") || (page.items.some(image => image.naming_profile.state === 'validated') ?
+        '<p>No eligible naming proposals in this view. Check the naming evidence and date details in Inspect.</p>' :
+        '<p>Preliminary naming evidence is available in Inspect. Source filename changes are held because no validated project naming profile is active.</p>');
     $("review-page").textContent = `Page ${Math.floor(offset / 24)+1}`;
     $("review-previous").disabled = offset === 0;
     $("review-next").disabled = !page.more;

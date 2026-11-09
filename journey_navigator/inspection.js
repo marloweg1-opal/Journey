@@ -14,6 +14,7 @@
   const label = (value) => String(value || "").replaceAll("_", " ");
   const views = {images: "images", groups: "groups", links: "links", issues: "skipped entries"};
   let job = "", view = "images", series = "", query = "", offset = 0, running = false, sequence = 0;
+  let profileDraft = null, registryOffset = 0;
 
   function failure(error) {
     notice(error.error || error.message || String(error));
@@ -62,10 +63,69 @@
     $("inspect-mode").textContent = (data.retains ? "Local checkpoint enabled." : "Temporary review for this session.") +
       (data.ocr_available ? " Image text reading is available." : " Image text reading is unavailable. Filename, folder, and visual evidence are available.");
     $("inspect-naming").hidden = !data.proposals;
+    $("inspect-registry").hidden = !data.retains;
     panel.querySelector('[data-inspect="resume"]').disabled = running || !waiting;
     panel.querySelector('[data-inspect="pause"]').disabled = !running;
     panel.querySelector('[data-inspect="refresh"]').disabled = running;
     panel.querySelector('[data-inspect="export"]').disabled = running || !data.retains || !data.proposals;
+  }
+
+  function sourceLabel(source) {
+    if (typeof source === "string") return source;
+    return [source.role, source.archive, source.authored, source.conversation, source.message].filter(Boolean).join(" · ");
+  }
+
+  function claimText(item) {
+    const value = item.kind === "relationship" ? `${item.value.relation} ${item.value.asset}` : item.value;
+    return `${label(item.kind)}${value ? ` · ${value}` : ""} · ${item.decision}`;
+  }
+
+  function imageMetadata(image) {
+    const data = image.metadata;
+    const date = data.date;
+    const short = data.filename_date;
+    const applicable = image.naming_profile.state === "validated";
+    const dateLabel = date ? date.date : data.date_state === "conflicted" ? "Evidence disagrees" : "Unknown";
+    const modified = new Date(Math.trunc(data.filesystem_modified_ns / 1_000_000)).toLocaleString();
+    return `<details><summary>Image details · created ${esc(dateLabel)}</summary>
+      <dl><dt>Original filename</dt><dd>${esc(data.original_filename)}</dd><dt>Current filename</dt><dd>${esc(data.current_filename)}</dd>
+      <dt>Full creation date</dt><dd>${esc(dateLabel)}${date ? ` · ${esc(sourceLabel(date.source))}` : ""}</dd>
+      <dt>Filesystem modification time</dt><dd>${esc(modified)}</dd></dl>
+      ${data.lifecycle !== "unestablished" ? `<p>Reviewed lifecycle · ${esc(data.lifecycle)}</p>` : ""}
+      ${short ? `<p>Filename date fields · ${short.state === "placeholder" ? "00_00 date placeholder" :
+        `day ${short.day}, month ${short.month} · ${short.state === "invalid" ? "invalid date fields" : "year is separate"}`}</p>` : ""}
+      ${image.naming_profile.rule_source ? `<p>Naming rule source · ${esc(image.naming_profile.rule_source)}</p>` : ""}
+      ${data.embedded_dates.map(item => `<p>${esc(item.source)} · ${esc(item.date)}</p>`).join("")}
+      ${data.path_history.map(item => `<p>${esc(item.from_path)} → ${esc(item.to_path)} · receipt ${esc(item.receipt)}</p>`).join("")}
+      ${data.registry_evidence.map(item => `<p>${esc(claimText(item))}<br><small>${esc(sourceLabel(item.source))}</small>
+        ${item.kind === "creation_date" && item.decision !== "rejected" ?
+          action("use-date", `Confirm ${item.value} for this image`, JSON.stringify([image.id, item.id])) : ""}</p>`).join("")}
+      ${applicable ? `<form data-image-date="${image.id}" class="inspection-bar">
+        <label>Verified creation date <input name="date" type="date" value="${esc(date?.date || "")}" required></label>
+        <label>Date source <input name="source" maxlength="300" required></label>
+        <button type="submit">Record creation date</button></form>` : ""}</details>`;
+  }
+
+  async function loadRegistry() {
+    if (!job || $("inspect-registry").hidden) return;
+    const selected = job, page = registryOffset;
+    const data = await api("registry", {job: selected, offset: page});
+    if (selected !== job || page !== registryOffset) return;
+    $("registry-import").hidden = !data.profile;
+    $("registry-status").textContent = data.profile ?
+      `${data.profile.project} · ${data.profile.rules.length} validated naming rules · ${data.claims} evidence records · ${data.archives} imported files` :
+      "Choose a project profile to start a registry in this folder.";
+    $("registry-results").innerHTML = data.profile ?
+      data.profile.rules.map(rule => `<p>${esc(rule.subject)} · ${esc(rule.purpose)} · ${esc(rule.example.filename)}</p>`).join("") +
+      action("registry-deactivate", "Deactivate this profile") +
+      data.items.map(item => `<details class="inspection-entry"><summary>${esc(item.name)} · ${esc(label(item.state))}</summary>
+        ${item.lifecycle !== "unestablished" ? `<p>Reviewed lifecycle · ${esc(item.lifecycle)}</p>` : ""}
+        ${item.paths.map(path => `<p>${esc(path)}</p>`).join("")}
+        ${item.evidence.map(claim => `<p>${esc(claimText(claim))}<br><small>${esc(sourceLabel(claim.source))}</small><br>
+          ${action("registry-review", "Accept this evidence", JSON.stringify([claim.id, "accepted"]))}
+          ${action("registry-review", "Reject this evidence", JSON.stringify([claim.id, "rejected"]))}</p>`).join("")}</details>`).join("") +
+      `<div class="inspection-bar">${page ? action("registry-page", "Previous records", page - 16) : ""}
+        ${data.more ? action("registry-page", "Next records", page + 16) : ""}</div>` : "";
   }
 
   function showImages(items) {
@@ -105,13 +165,14 @@
         <details><summary>Original filename structure</summary><p>${esc(image.observed_name.original)}</p>
           <p>Exact extension · ${esc(image.observed_name.extension)}</p>
           <p>Observed Unicode sequences · ${esc(image.observed_name.unicode_sequences.join(' · ') || 'None')}</p>
-          <p>Numeric fields with unresolved meaning · ${esc(image.observed_name.numeric_fields.map(item => item.text).join(' · ') || 'None')}</p>
+          <p>Observed numeric fields · ${esc(image.observed_name.numeric_fields.map(item => item.text).join(' · ') || 'None')}</p>
         </details>
         <details><summary>Text read from the image · ${esc(label(ocr.status))}</summary>
           ${ocr.provider ? `<p>${esc(ocr.provider)} · ${esc(ocr.language || "eng")} · local</p>` : ""}
           ${ocr.lines ? `<ul>${ocr.lines.map(line => `<li>${esc(line.text)}</li>`).join("")}</ul>` : ""}
           ${ocr.refresh_available || ocr.status === "retry" || ocr.status === "pending_refresh" ? "<p>Refresh source to run the current text reader.</p>" : ""}
         </details></details>
+        ${imageMetadata(image)}
         <details><summary>Record a correction</summary><form data-image-review="${image.id}">
           <label>Decision <select name="decision"><option value="confirm">Confirm identity</option><option value="reject">Reject identity</option><option value="purpose">Record purpose</option></select></label>
           <label>Identity <input name="label" value="${esc(identity.label)}"></label>
@@ -156,8 +217,15 @@
     const form = $("inspect-rule");
     for (const name of ["project", "filename", "folder"]) form.elements[name].value = data.rule[name];
     coverage(data);
+    profileDraft = null;
+    registryOffset = 0;
+    $("registry-profile").reset();
+    $("registry-import").reset();
+    $("registry-activate").disabled = true;
+    $("registry-file-preview").textContent = "";
     await showAccess();
     await loadView();
+    await loadRegistry();
   }
 
   async function showAccess() {
@@ -215,6 +283,7 @@
         if (data) coverage(data);
         else coverage(await api("summary", {job}));
         await loadView();
+        if ($("inspect-registry").open) await loadRegistry();
       }
     }
   }
@@ -266,6 +335,25 @@
     event.preventDefault();
     choose(pathField.value).catch(failure);
   });
+  $("registry-file").addEventListener("change", async (event) => {
+    const file = event.target.files[0], selected = job;
+    profileDraft = null;
+    $("registry-activate").disabled = true;
+    $("registry-file-preview").textContent = "";
+    if (!file) return;
+    try {
+      if (file.size > 62 * 1024) throw new Error("Choose a project profile JSON under 62 KiB.");
+      const data = JSON.parse((await file.text()).replace(/^\uFEFF/, ""));
+      if (job !== selected || event.target.files[0] !== file) return;
+      if (data?.format !== "journey-project-naming-1" || !Array.isArray(data.rules)) throw new Error("Choose a Journey project naming profile.");
+      profileDraft = data;
+      $("registry-file-preview").textContent = `${data.project} · ${data.rules.map(rule => rule.example?.filename).join(" · ")}`;
+      $("registry-activate").disabled = false;
+    } catch (error) { failure(error); }
+  });
+  $("inspect-registry").addEventListener("toggle", () => {
+    if ($("inspect-registry").open) loadRegistry().catch(failure);
+  });
   panel.addEventListener("submit", async (event) => {
     if (event.target.id === "inspect-selection") return;
     event.preventDefault();
@@ -276,7 +364,22 @@
         offset = 0;
       } else if (event.target.id === "inspect-rule") {
         await api("rule", {job, ...data});
-        notice("Naming convention saved.");
+        notice("Trial naming format saved.");
+      } else if (event.target.id === "registry-profile") {
+        if (!profileDraft) throw new Error("Choose a project profile first.");
+        await api("registry-profile", {job, profile: profileDraft});
+        registryOffset = 0;
+        await loadRegistry();
+        notice("Project profile active for this inspection.");
+      } else if (event.target.id === "registry-import") {
+        $("registry-status").textContent = "Reading the selected file for project evidence.";
+        const result = await api("registry-import", {job, path: data.path.trim().replace(/^"|"$/g, "")});
+        registryOffset = 0;
+        await loadRegistry();
+        notice(result.already_imported ? "This file was already imported for the active profile." : `Retained ${result.added} new source-linked records.`);
+      } else if (event.target.dataset.imageDate) {
+        await api("asset-creation-date", {job, asset: Number(event.target.dataset.imageDate), ...data});
+        notice("Creation date recorded for this image.");
       } else if (event.target.dataset.imageReview) {
         await api("review", {job, asset: Number(event.target.dataset.imageReview), ...data});
         notice("Correction recorded. Related suggestions within this scope have been updated.");
@@ -308,6 +411,26 @@
     },
     "revoke-read": (scope) => revoke(scope, "inspect"),
     forget: (scope) => revoke(scope, "retain"),
+    "registry-page": async (page) => { registryOffset = Number(page); await loadRegistry(); },
+    "registry-deactivate": async () => {
+      await api("registry-deactivate", {job});
+      await loadRegistry();
+      await loadView();
+      notice("Project profile deactivated for this inspection.");
+    },
+    "registry-review": async (value) => {
+      const [claim, decision] = JSON.parse(value);
+      await api("registry-review", {job, claim, decision});
+      await loadRegistry();
+      await loadView();
+      notice("Evidence review recorded.");
+    },
+    "use-date": async (value) => {
+      const [asset, claim] = JSON.parse(value);
+      await api("asset-creation-date", {job, asset, claim});
+      await loadView();
+      notice("Archive date confirmed for this image.");
+    },
     reauthorize: async (id) => {
       const data = await api("permissions", {job: id});
       pathField.value = data.root;

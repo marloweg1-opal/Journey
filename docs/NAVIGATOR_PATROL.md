@@ -1,16 +1,10 @@
-# Journey Navigator 0.4.1 Provenance Naming Hold
+# Journey Navigator 0.5 Project Asset Registry
 
-This increment preserves the operational Patrol and adds a backend hold on
-source filename changes. The current candidate has no validated project naming
-profile. Confirming identity and purpose, editing a trial format, or approving
-a batch cannot remove that hold. Existing saved renames are rechecked before
-approval and execution. Exact recorded reversals remain available.
-
-Original Unicode sequences, extension spelling and opaque numeric fields are
-retained in the inspection and export. Their presence does not establish a
-canonical naming rule or the meaning of a counter. Compound name references
-remain ambiguous unless supported by independent evidence or an explicitly
-registered full alias. No project-specific glyph map is invented by this build.
+Navigator can reconcile source-linked project references with a selected
+inventory. A reviewed profile supplies a convention for a specific subject,
+asset type and extension. A Guided rename requires the exact current preview,
+including its creation-date evidence. Original Unicode spelling, extension case
+and verified path history are retained in the image details and plan export.
 
 ## Open and upgrade
 
@@ -47,11 +41,10 @@ source holds. Setup does not replace its files or services.
    that selection. New assessment uses the scoped correction without repeating
    unchanged OCR work. A preliminary name and a physical operation remain
    distinct records.
-5. Prepare a folder creation or a within-scope move that keeps the exact
-   filename, with an explanation. Preliminary naming evidence stays in
-   **Inspect** and cannot become a physical rename in this increment.
-   The batch lists original and destination paths,
-   operation types and its binding before any source change.
+5. Prepare a folder creation, a within-scope move that keeps the exact
+   filename, or select eligible naming proposals for an exact rename review.
+   The batch lists original and destination paths, operation types and its
+   binding before any source change.
 6. Choose **Authorize exact batch with my Windows account**. The native
    review includes the dependency disposition you are confirming for these
    exact sources. Windows verifies the current account using its sign-in
@@ -80,6 +73,41 @@ Navigator** explicitly closes the service. A reopened service restores saved
 objectives and tasks in a paused state. Ready physical approvals require fresh
 review after restart.
 
+## Build a project registry
+
+1. In **Inspect**, select the project's folder and turn on **Keep a local
+   checkpoint**. Turn on **Suggest names and draft a plan** to preview names.
+2. Open **Project registry and validated naming**, select the project profile
+   JSON, review the displayed examples, and choose **Use this profile in this
+   folder**. The profile is attached to that inspection's original scope.
+3. To add evidence, give Navigator the full local path to a selected ChatGPT
+   conversation export, normalized conversation, or Asset Pipeline
+   `asset-index.json`. Choose **Import selected evidence file**. Imports
+   retain matching structured references with message or creation-record IDs.
+   Historical statements enter as review candidates. The original JSON is
+   read in place and its paths are never followed. Importing the same file
+   again is safe.
+4. Review candidate matches, dates, and relationships. A name match alone is
+   a candidate. A reviewed supersession is shown separately from whether the
+   old artwork was located in this scope. **Image details** shows the full
+   creation date and its source, any competing evidence, the filesystem
+   modification time, and any verified rename or move history.
+5. An eligible preview uses a confirmed subject and purpose and a full date
+   from explicit embedded metadata or operator-confirmed evidence. Open
+   **Review** in a saved Destination to prepare the exact batch. The name
+   uses `DD_MM`; the registry retains `YYYY-MM-DD`. If the date is missing,
+   confirm it for that image from its source. An unresolved date, unsupported
+   asset class, version token that would be lost, or occupied destination
+   holds the rename.
+
+Profiles use the `journey-project-naming-1` format with a project label,
+search signals, and rules. Each rule specifies `subject`, `purpose`,
+`prefix`, `extension`, `date_order`, an attributed `source`, and an
+`example` containing a full `date` and exact `filename`. The example must
+round-trip through the rule. Trial formats and historical evidence cannot
+activate a profile. Deactivate a profile in Inspect to withdraw its naming
+rules. Forget the retained inspection to clear its registry evidence.
+
 ## Scope, authority and recovery
 
 Inspection is read-only. Internal indexes, corrections and collections use the
@@ -87,9 +115,10 @@ scope's retention permission. Physical source work uses a separately reviewed
 batch with native account attribution. A known dependency, protected path,
 source hold, revoked scope, occupied destination, changed source or kill switch
 blocks the affected operation. An empty reference search supplies no dependency
-clearance. The current Guided pathway supports folder creation and same-volume
-moves that preserve filenames inside the original approved scope. External linked scopes
-support inspection. Delegated execution and source deletion are excluded.
+clearance. The current Guided pathway supports folder creation, same-volume
+moves that preserve filenames, and validated same-folder renames inside the
+original approved scope. External linked scopes support inspection. Delegated
+execution and source deletion are excluded.
 
 The worker stops when there is no eligible work, a cycle budget is exhausted,
 or a safe pause is requested. Coverage gaps, unresolved meaning and queued
@@ -97,7 +126,7 @@ approvals remain visible separately from successful operations. Failed actions
 retain their journal state and require review. A blocked action does not become
 permission to alter its target or expand the scope.
 
-Before the additive Patrol migration, Journey saves and checks an inspection
+Before an additive inspection migration, Journey saves and checks an inspection
 snapshot. **Manage** can restore that snapshot while preserving the current
 action history. Restoration restarts the application and makes scope access
 inactive until reselection. Forgetting retained observations clears matching

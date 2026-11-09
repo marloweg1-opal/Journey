@@ -121,8 +121,13 @@ class Guided:
     def validate_operation(self, batch, operation, *, source):
         scope = Path(batch['scope'])
         destination = Path(operation['destination'])
-        if operation['kind'] in ('rename', 'move'):
-            require_preserved_filename(operation['source'], destination)
+        if operation['kind'] in ('rename', 'move') and Path(operation['source']).name != destination.name:
+            naming = operation.get('naming')
+            if operation['kind'] != 'rename' or not naming:
+                require_preserved_filename(operation['source'], destination)
+            current = self.workbench.naming_binding(batch['job'], naming['asset'], Path(operation['source']), destination)
+            if current != naming:
+                raise ValueError('Naming evidence changed after review. Prepare a new exact batch.')
         if not destination.is_relative_to(scope) or destination == scope:
             raise ValueError('The destination is outside the reviewed scope.')
         self.guard(batch['id'], destination)
@@ -172,7 +177,10 @@ class Guided:
                 if row is None:
                     raise ValueError('Choose a current analyzed image in the original scope.')
                 path = Path(row['path'])
-                require_preserved_filename(path, target)
+                if path.name != target.name:
+                    if kind != 'rename':
+                        require_preserved_filename(path, target)
+                    operation['naming'] = app.naming_binding(job_id, row['id'], path, target)
                 app.policy.check_image(path, retain=True)
                 operation['source'] = str(path)
                 operation['identity'] = file_identity(path, read_guard=app.policy.check)

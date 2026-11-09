@@ -13,6 +13,7 @@ from threading import RLock, Thread, Timer
 from urllib.parse import parse_qs, urlsplit
 import webbrowser
 
+from core.circuit_breaker import OperationTooLarge
 from journey_navigator.links import ProtectedPath
 from journey_navigator.ocr import find_local_ocr
 from journey_navigator.patrol import Patrol
@@ -213,7 +214,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"error": str(error)}, 403)
         except sqlite3.Error:
             return self._json({"error": "Journey could not save this review step. Reopen the saved inspection and retry."}, 503)
-        except (OSError, ValueError, TypeError, KeyError) as error:
+        except (OSError, ValueError, TypeError, KeyError, OperationTooLarge) as error:
             return self._json({"error": str(error)}, 400)
 
     def _run(self, action, body):
@@ -271,6 +272,19 @@ class Handler(BaseHTTPRequestHandler):
             return patrol.guided.prepare_undo(patrol.row(destination)['job'],body['receipt'])
         if type(offset) is not int or not 0 <= offset <= 1_000_000:
             raise ValueError("Choose a valid results page.")
+        registry = app.project_registry
+        if action == "registry":
+            return registry.catalog(job, offset)
+        if action == "registry-profile":
+            return registry.activate(job, body["profile"])
+        if action == "registry-deactivate":
+            return registry.deactivate(job)
+        if action == "registry-import":
+            return registry.import_archive(job, body["path"])
+        if action == "registry-review":
+            return registry.review(job, body["claim"], body["decision"])
+        if action == "asset-creation-date":
+            return registry.record_date(job, body["asset"], body.get("date"), body.get("source"), body.get("claim"))
         if action == "drives":
             return {"items": local_drives()}
         if action == "browse":

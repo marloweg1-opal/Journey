@@ -6,10 +6,12 @@ from hashlib import sha256
 from io import BytesIO
 import os
 from pathlib import Path, PurePosixPath
+import re
 import stat
 from time import monotonic
 
 from core.file_paths import safe_metadata, signature
+from core.project_registry import iso_date
 
 
 IMAGE_FORMATS = {
@@ -48,6 +50,30 @@ def decode_image(data, expected_format):
         if image.width * image.height > MAX_PIXELS:
             raise ValueError("The image exceeds the 20-megapixel lab limit.")
         return ImageOps.exif_transpose(image).convert("RGBA")
+
+
+def creation_dates(data):
+    """Read explicit embedded creation fields. Image bytes stay untouched."""
+    from PIL import Image
+
+    candidates = {}
+    try:
+        with Image.open(BytesIO(data)) as image:
+            tags = image.getexif()
+            original = tags.get(36867) or tags.get_ifd(34665).get(36867)
+            candidates["EXIF DateTimeOriginal"] = original
+            if image.format == "PNG":
+                candidates["PNG Creation Time"] = image.info.get("Creation Time")
+    except (OSError, ValueError, SyntaxError, TypeError, OverflowError):
+        pass  # Missing or broken optional tags do not invalidate the image.
+    dates = []
+    for source, value in candidates.items():
+        if isinstance(value, str) and re.fullmatch(r"\d{4}[-:]\d{2}[-:]\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?", value):
+            try:
+                dates.append({"date": iso_date(value[:10].replace(":", "-")), "source": source, "type": "embedded"})
+            except ValueError:
+                continue
+    return dates
 
 
 def describe(image):

@@ -145,7 +145,9 @@ class Patrol:
     def signature(self, job):
         row=self.app.job(job)
         revision=self.conn.execute('SELECT max(id) FROM reviews WHERE job=?',(job,)).fetchone()[0]
-        return sha256(json.dumps(['context-0.4.1',row['epoch'],row['rule'],revision],sort_keys=True).encode()).hexdigest()
+        profile = self.app.project_registry.profile(job)
+        knowledge = [profile['revision'], profile['knowledge_version']] if profile else None
+        return sha256(json.dumps(['context-0.5',row['epoch'],row['rule'],revision,knowledge],sort_keys=True).encode()).hexdigest()
 
     def _assess(self, destination, row):
         task=self.conn.execute("SELECT * FROM patrol_tasks WHERE destination=? AND kind='assess'",(destination,)).fetchone()
@@ -180,9 +182,10 @@ class Patrol:
                 labels=sorted(identity['conflicts'])
                 key=image['scope']+'|'+str(labels)
                 prompt='These images have competing identity clues: '+', '.join(labels)+'. Which subject fits the selected images?'
-            elif image['name']['state']=='blocked':
-                key=image['scope']+'|naming|'+image['name'].get('blocker','')
-                prompt='These naming destinations need review: '+image['name'].get('blocker','')
+            elif image['name']['state'] in ('blocked', 'needs_date'):
+                reason=image['name'].get('blocker') or image['name']['reason']
+                key=image['scope']+'|naming|'+reason
+                prompt='These naming destinations need review. '+reason
             else:
                 continue
             groups.setdefault(key,{'prompt':prompt,'members':[]})['members'].append(row['asset'])

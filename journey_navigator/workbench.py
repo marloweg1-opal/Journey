@@ -19,8 +19,9 @@ from core.token_registry import resolve_token
 from core.naming import observe_filename
 from journey_navigator.context import NAMING_HOLD, assess, preliminary_name, profile_registry
 from journey_navigator.links import Boundaries, ProtectedPath, identity, kind_of, path_key, resolve_folder
+from journey_navigator.registry import ProjectRegistry, preview as registry_preview
 from journey_planner.catalog import File, Plan, absolute_path, check_local_drive, component
-from journey_vision.observe import IMAGE_FORMATS, decode_image, describe, image_bytes
+from journey_vision.observe import IMAGE_FORMATS, creation_dates, decode_image, describe, image_bytes
 from journey_vision.steward import (
     DEFAULT_RULE, SIMILAR, draft_names, pixel_distance, review_index, validate_rule,
 )
@@ -138,6 +139,7 @@ class Workbench:
             self.conn.execute("PRAGMA temp_store=MEMORY")
             self.conn.executescript(SCHEMA)
             self._upgrade_checkpoint()
+            self.project_registry = ProjectRegistry(self)
             self.resources = setup.pop_all()
         self.tickets = {}
         self.cursor = None
@@ -392,6 +394,7 @@ class Workbench:
                 for table in ("scopes", "scope_access"):
                     self.conn.execute(f"DELETE FROM {table} WHERE job=? AND path IN ({markers})", params)
                 if scope == job["root"]:
+                    self.project_registry.forget(job_id)
                     self.conn.execute("DELETE FROM jobs WHERE id=?", (job_id,))
         return {"revoked": affected, "closed": scope == job["root"]}
 
@@ -535,12 +538,17 @@ class Workbench:
             fmt = IMAGE_FORMATS[path.suffix.casefold()]
             image = None
             if cached:
-                if json.loads(cached["features"])["format"] != fmt:
+                features = json.loads(cached["features"])
+                if features["format"] != fmt:
                     raise ValueError("This image's contents and filename extension disagree.")
+                if "creation_dates" not in features:
+                    features["creation_dates"] = creation_dates(data)
+                    self.conn.execute("UPDATE observations SET features=? WHERE job=? AND scope=? AND digest=?",
+                                      (json.dumps(features), *key))
                 series = cached["series"]
             else:
                 image = decode_image(data, fmt)
-                features = describe(image) | {"format": fmt}
+                features = describe(image) | {"format": fmt, "creation_dates": creation_dates(data)}
                 ratio = features["width"] / features["height"]
                 bucket = f"{round(min(ratio, 3) * 4)}:{int(features['transparency'] >= .23)}"
                 candidates = self.conn.execute("""SELECT series,features FROM observations
@@ -645,7 +653,7 @@ class Workbench:
                 purposes[(Path(transition['to_path']).as_posix(),transition['digest'])]=purposes[source]
         return (identities,purposes), cache
 
-    def _image_view(self, job, row, reviews, evidence, *, thumbnails, proposals):
+    def _image_view(self, job, row, reviews, evidence, *, thumbnails, proposals, profile):
         path = self.policy.check_image(Path(row["path"]), retain=self.retains)
         features = json.loads(row["features"])
         asset = {"digest": row["digest"], "features": features}
@@ -661,7 +669,12 @@ class Workbench:
         rule = json.loads(job["rule"])
         record["suggestion"] = preliminary_name(path, record, rule) if proposals else None
         record["name"] = {"state": "disabled", "destination": None, "reason": "Name and plan suggestions are disabled for this scope."}
-        if proposals:
+        naming_rule, metadata = self.project_registry.details(job, row, features, profile, record)
+        if proposals and profile:
+            record["name"] = registry_preview(path, record, metadata, naming_rule)
+            if record["name"]["destination"]:
+                record["name"]["destination"] = path.with_name(record["name"]["destination"]).relative_to(row["scope"]).as_posix()
+        elif proposals:
             relative = path.relative_to(row["scope"]).as_posix()
             draft = Plan(row["scope"], "", files={relative: File(row["size"], row["modified"], path.name)})
             draft_names(draft, {relative: record}, rule)
@@ -672,17 +685,21 @@ class Workbench:
             target = Path(row["scope"]) / record["name"]["destination"]
             try:
                 self.policy.check(target)
+                if os.path.lexists(target):
+                    raise ValueError("That destination is already occupied. Review the competing asset.")
                 if self.conn.execute("SELECT 1 FROM files WHERE job=? AND epoch=? AND key=?", (job["id"], job["epoch"], path_key(target))).fetchone():
                     raise ValueError("That destination is already present in the inventory.")
                 if self.conn.execute("SELECT 1 FROM dirs WHERE job=? AND epoch=? AND path=? COLLATE NOCASE", (job["id"], job["epoch"], str(target))).fetchone():
                     raise ValueError("A folder already occupies that destination.")
             except (OSError, ValueError) as error:
-                record["name"].update(state="blocked", blocker=str(error))
+                record["name"].update(state="blocked", blocker=str(error), executable=False)
         if not thumbnails:
             ocr.pop("lines", None)
         return record | {"id": row["id"], "path": str(path), "scope": row["scope"], "filename": path.name, "ocr": ocr,
-                         "observed_name": observe_filename(path.name),
-                         "naming_profile": {"state": "unvalidated", "executable": False, "reason": NAMING_HOLD},
+                         "observed_name": observe_filename(path.name), "metadata": metadata,
+                         "naming_profile": ({"state": "validated", "executable": bool(record["name"].get("executable")),
+                                             "project": profile["project"], "rule_source": naming_rule["source"] if naming_rule else None}
+                                            if profile else {"state": "unvalidated", "executable": False, "reason": NAMING_HOLD}),
                          "size": row["size"], "modified_ns": row["modified"], "can_propose": proposals,
                          "digest": row["digest"], "memberships": memberships, "series": row["series"],
                          "thumbnail": features["thumbnail"] if thumbnails else ""}
@@ -708,15 +725,34 @@ class Workbench:
                 SELECT 1 FROM json_each(o.ocr,'$.lines') WHERE instr(lower(json_extract(value,'$.text')),lower(?))>0))
             {selection} ORDER BY f.id LIMIT ? OFFSET ?""", args).fetchall()
         scope_reviews, images = {}, []
+        profile = self.project_registry.profile(job_id)
         for row in rows[:PAGE]:
             try:
                 if row["scope"] not in scope_reviews:
                     scope_reviews[row["scope"]] = self._reviews(job, row["scope"])
                 reviews, evidence = scope_reviews[row["scope"]]
-                images.append(self._image_view(job, row, reviews, evidence, thumbnails=thumbnails, proposals=bool(row["propose"])))
+                images.append(self._image_view(job, row, reviews, evidence, thumbnails=thumbnails, proposals=bool(row["propose"]),
+                                               profile=profile if row["scope"] == job["root"] else None))
             except ProtectedPath:
                 continue
         return {"items": images, "more": len(rows) > PAGE}
+
+    def naming_binding(self, job_id, asset, source, target):
+        profile = self.project_registry.profile(job_id)
+        if not profile:
+            raise ValueError(NAMING_HOLD)
+        job = self.job(job_id)
+        items = self.images(job_id, 0, asset_ids=[asset], thumbnails=False)["items"]
+        if not items or items[0]["path"] != str(source) or items[0]["scope"] != job["root"]:
+            raise ValueError("Choose a current image in the profile's original scope.")
+        image = items[0]
+        name = image["name"]
+        if name["state"] != "proposed":
+            raise ValueError(name.get("blocker") or name["reason"])
+        if str(Path(job["root"]) / name["destination"]) != str(target):
+            raise ValueError("Only the exact destination from the validated naming preview can be reviewed.")
+        return {"asset": asset, "epoch": job["epoch"], "profile_revision": profile["revision"], "digest": image["digest"],
+                "creation_date": image["metadata"]["date"]}
 
     def groups(self, job_id, offset):
         job = self.job(job_id)
