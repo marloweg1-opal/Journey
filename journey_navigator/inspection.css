@@ -18,7 +18,7 @@
 .inspection-entry dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 7px 0; }
 .inspection-entry dt { color: var(--muted); }
 .inspection-entry dd { margin: 0; }
-.inspection-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(225px, 1fr)); gap: 8px; }
+.inspection-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 10px; }
 .inspection-gallery article { min-width: 0; }
 .inspection-gallery img { width: 100%; height: 124px; object-fit: contain; background: #101d33; border-radius: 5px; }
 .inspection-gallery small { color: var(--muted); }
@@ -36,3 +36,13 @@
 #patrol-review-images label { display: grid; gap: 5px; }
 #patrol-names label { display: block; }
 #patrol-history pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.compact-layout .inspection-gallery { display: block; }
+.compact-layout .inspection-gallery article { display: flow-root; }
+.compact-layout .inspection-gallery img { float: inline-start; width: 76px; height: 76px; margin-inline-end: 14px; }
+.audit-scroll { max-width: 100%; overflow-x: auto; }
+.audit-matrix { border-collapse: collapse; font-size: .9rem; }
+.audit-matrix caption { text-align: left; margin-block: 8px; }
+.audit-matrix :is(th, td) { border: 1px solid var(--line); text-align: left; padding: 4px; }
+.audit-matrix button { min-height: 36px; }
+.journey-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#pack-preview label, #history-preview label { flex: 1 1 290px; }

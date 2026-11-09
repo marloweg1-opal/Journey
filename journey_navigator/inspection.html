@@ -33,18 +33,48 @@
           </details>
           <details id="inspect-registry">
             <summary>Project registry and validated naming</summary>
-            <p>Use a project profile for this inspected folder. It adds evidence and naming rules to this checkpoint. Guided file changes still require separate account approval.</p>
+            <p>Activate an evidence pack once for this inspection. The active project and reviewed naming rules reopen with the checkpoint.</p>
+            <form id="pack-preview" class="inspection-bar">
+              <label>Local project pack or evidence ZIP path <input name="path" autocomplete="off" required></label>
+              <button type="submit">Preview project pack</button>
+            </form>
+            <p id="pack-status-message" role="status" aria-live="polite"></p><div id="pack-results"></div>
+            <details open><summary>Individual project profile and legacy evidence files</summary>
             <form id="registry-profile" class="inspection-bar">
               <label>Project profile JSON <input id="registry-file" type="file" accept=".json,application/json" required></label>
               <button type="submit" id="registry-activate" disabled>Use this profile in this folder</button>
             </form>
             <p id="registry-file-preview" role="status"></p>
             <form id="registry-import" class="inspection-bar" hidden>
-              <label>Full local path to a conversation export or Asset Pipeline index <input name="path" autocomplete="off" required></label>
+              <label>Full local path to a conversation export or Asset Pipeline index (legacy single-file importer) <input name="path" autocomplete="off" required></label>
               <button type="submit">Import selected evidence file</button>
             </form>
+            </details>
             <p id="registry-status" role="status" aria-live="polite"></p>
             <div id="registry-results"></div>
+          </details>
+          <details id="inspect-history">
+            <summary>Local reference history</summary>
+            <p>Choose a local conversation JSON file, its export folder, or a supported manifest. Journey keeps project references and source locators in this checkpoint. This selection grants read access for the import.</p>
+            <form id="history-preview" class="inspection-bar">
+              <label>Local conversation export or folder path <input name="path" autocomplete="off" required></label>
+              <button type="submit">Preview archive selection</button>
+            </form>
+            <div id="history-selection"></div>
+            <p id="history-status" role="status" aria-live="polite"></p>
+            <div id="history-files"></div>
+            <div class="inspection-bar"><button type="button" data-project="history-status">Refresh history status</button>
+              <button type="button" data-project="history-pause">Pause import</button>
+              <button type="button" data-project="history-reconcile">Reconcile with inspected files</button>
+              <button type="button" data-project="history-forget">Forget imported archives</button></div>
+          </details>
+          <details id="inspect-watch">
+            <summary>Opt-in drift watch</summary>
+            <p>While Navigator is open, periodically sample local file metadata in this inspection’s original scope. Closing the last Navigator tab stops the session. Enable again after reopening.</p>
+            <p id="watch-status" role="status" aria-live="polite">Off</p>
+            <div class="inspection-bar"><button type="button" data-project="watch-enable">Enable for this session</button>
+              <button type="button" data-project="watch-stop">Stop drift watch</button>
+              <button type="button" data-project="watch-status">Check watch report</button></div>
           </details>
           <details id="inspect-naming-audit">
             <summary>Naming coverage and proof</summary>
@@ -71,6 +101,7 @@
             <button type="button" data-view="groups" aria-pressed="false">Visual groups</button>
             <button type="button" data-view="links" aria-pressed="false">Links and destinations</button>
             <button type="button" data-view="issues" aria-pressed="false">Skipped entries</button>
+            <button type="button" data-inspect="layout" aria-pressed="false" id="inspect-layout">Compact list</button>
           </div>
           <div id="inspect-questions"></div>
           <form id="inspect-filter" class="inspection-bar">

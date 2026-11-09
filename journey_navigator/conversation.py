@@ -16,9 +16,11 @@ UNSURE = re.compile(r"\b(?:suppose|hypothetical|what if|for example|maybe we|sho
 NEGATIVE = re.compile(rf"\b(?:do not|don['’]t|never|must not|cannot)\s+(?:\w+\s+){{0,2}}{RETIRE}\b", re.I)
 QUOTED = re.compile(r'["“]([^"”\n]+)["”]')
 SHORT_COMMAND = re.compile(rf"^(?:please\s+)?{RETIRE}\s+(?:all\s+|the\s+)?(.+?)(?:\s+assets?)?[.!]?$", re.I)
+CARECYCLE = re.compile(r"^\s*(.{2,96}?)\s+is\s+(?:about\s+|approximately\s+)?\d{1,8}\s+carecycles? past (?:its |the )?expiration date\s*[,;.!]?\s*(?:i don['’]t need that design anymore|retire (?:that|the) design)[.!]?\s*$", re.I)
 SHAPE = {
     "type": "object", "additionalProperties": False, "required": ["action", "family"],
-    "properties": {"action": {"enum": ["retire_family", "unsupported"]}, "family": {"type": "string", "maxLength": 96}},
+    "properties": {"action": {"enum": ["retire_family", "organize_scope", "find_reference", "unsupported"]},
+                   "family": {"type": "string", "maxLength": 96}},
 }
 
 
@@ -45,6 +47,9 @@ def _family(prompt, value):
 
 
 def explicit_intent(prompt):
+    playful = CARECYCLE.fullmatch(prompt)
+    if playful and not UNSURE.search(playful[1]):
+        return _family(prompt, playful[1].strip('"“” '))
     if not _directive(prompt):
         return None
     quoted = QUOTED.findall(prompt)
@@ -66,9 +71,9 @@ class LocalQwen:
         body = json.dumps({"model": MODEL, "stream": False, "think": False, "format": SHAPE,
                            "options": {"temperature": 0, "num_predict": 120},
                            "messages": [{"role": "system", "content": (
-                               "Classify one live user instruction. Return retire_family only for an affirmative "
-                               "design-family retirement request. Copy the exact family phrase from the instruction, "
-                               "without surrounding quotes. Otherwise return unsupported and an empty family. "
+                               "Classify one live instruction as retire_family, organize_scope, find_reference or unsupported. "
+                               "Retirement must be affirmative. For retirement or find, copy the exact design or search phrase. "
+                               "For other actions use an empty family. These are read-only proposals. "
                                "You have no file, tool, permission, or execution capabilities.")},
                                {"role": "user", "content": prompt}]}).encode("utf-8")
         try:
@@ -86,7 +91,15 @@ class LocalQwen:
             proposed = json.loads(message["content"])
         finally:
             client.close()
-        if not isinstance(proposed, dict) or set(proposed) != {"action", "family"} or proposed["action"] != "retire_family":
+        if not isinstance(proposed, dict) or set(proposed) != {"action", "family"}:
+            return {"state": "NEEDS_HUMAN_DECISION", "family": None}
+        if proposed["action"] == "organize_scope" and proposed["family"] == "" and re.search(
+                r"\b(?:organize|organise|classify|group|arrange)\b", prompt, re.I) and not UNSURE.search(prompt):
+            return {"state": "CANDIDATE", "family": None, "intent": "organize"}
+        if proposed["action"] == "find_reference" and re.search(r"\b(?:find|search|locate|look for)\b", prompt, re.I) and not UNSURE.search(prompt):
+            if term := _family(prompt, proposed["family"]):
+                return {"state": "CANDIDATE", "family": None, "intent": "find", "term": term}
+        if proposed["action"] != "retire_family":
             return {"state": "NEEDS_HUMAN_DECISION", "family": None}
         family = _family(prompt, proposed["family"]) if _directive(prompt) else None
         return {"state": "CANDIDATE" if family else "NEEDS_HUMAN_DECISION", "family": family}

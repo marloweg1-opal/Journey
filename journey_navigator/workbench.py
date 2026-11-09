@@ -144,6 +144,10 @@ class Workbench:
             self._upgrade_checkpoint()
             self.project_registry = ProjectRegistry(self)
             self.project_audit = ProjectAudit(self)
+            from journey_navigator.history import ArchiveHistory
+            from journey_navigator.project_pack import ProjectPacks
+            self.history = ArchiveHistory(self)
+            self.packs = ProjectPacks(self)
             self.resources = setup.pop_all()
         self.tickets = {}
         self.cursor = None
@@ -375,6 +379,8 @@ class Workbench:
             from journey_navigator.migrations import clear_inspection_backups
             clear_inspection_backups(self.data_dir)
         with self.conn:
+            if scope == job["root"]:
+                self.history.pause(job_id)
             self.conn.execute(f"UPDATE scope_access SET inspect=0,propose=0 WHERE job=? AND path IN ({markers})", params)
             self.conn.execute(f"""UPDATE links SET record=json_set(record,'$.status','approval_required',
                 '$.physical_id','','$.reason','Inspection permission for this destination was revoked.')
@@ -398,6 +404,8 @@ class Workbench:
                 for table in ("scopes", "scope_access"):
                     self.conn.execute(f"DELETE FROM {table} WHERE job=? AND path IN ({markers})", params)
                 if scope == job["root"]:
+                    self.history.forget(job_id)
+                    self.packs.forget(job_id)
                     self.project_registry.forget(job_id)
                     self.project_audit.forget(job_id)
                     self.conn.execute("DELETE FROM jobs WHERE id=?", (job_id,))
@@ -664,11 +672,11 @@ class Workbench:
         audit = self.project_audit.document(job_id)
         project = profile["project"] if profile else audit["project"] if audit else None
         if project is None or project.casefold() == self.registry["project"].casefold():
-            return self.registry
+            return self.registry | {"profile_active": bool(profile)}
         subjects = {rule["subject"]: [] for rule in (profile["rules"] if profile else [])}
         if audit and audit["project"].casefold() == project.casefold():
             subjects.update({name: audit.get("aliases", {}).get(name, []) for name in audit["subjects"]})
-        return {"schema_version": 1, "tokens": {name.casefold().replace(" ", "_"): {
+        return {"schema_version": 1, "profile_active": bool(profile), "tokens": {name.casefold().replace(" ", "_"): {
             "display_name": name, "type": "subject", "aliases": aliases, "owns": [], "routes": {}, "customization": {}
         } for name, aliases in subjects.items()}}
 
@@ -679,7 +687,11 @@ class Workbench:
         ocr = json.loads(row["ocr"]) if row["ocr"] else {"status": "pending_refresh" if self.ocr else "unavailable"}
         if self.ocr and row["ocr_key"] and row["ocr_key"] != self.ocr.key:
             ocr["refresh_available"] = True
-        record = assess(recognizer, path, row["scope"], asset, reviews, evidence, ocr)
+        historical = self.history.evidence(job["id"], profile, path.name)
+        entity_links = self.history.entity_links(job["id"], profile, path.name)
+        exemplars = [item for item in audit["examples"] if item.get("sha256") == row["digest"]] if (
+            audit and profile and audit["project"].casefold() == profile["project"].casefold()) else []
+        record = assess(recognizer, path, row["scope"], asset, reviews, evidence, ocr, historical, exemplars, entity_links)
         memberships = [f"Visual series {row['series'][:8]}"]
         if record["purpose"]["label"]:
             memberships.append(record["purpose"]["label"])
@@ -689,6 +701,8 @@ class Workbench:
         record["suggestion"] = preliminary_name(path, record, rule) if proposals else None
         record["name"] = {"state": "disabled", "destination": None, "reason": "Name and plan suggestions are disabled for this scope."}
         naming_rule, metadata = self.project_registry.details(job, row, features, profile, record)
+        metadata["local_history"] = historical + entity_links
+        metadata["source_fingerprint_matches"] = exemplars
         if metadata["retirements"]:
             memberships.append("Retired · " + metadata["retirements"][0]["family"])
         if proposals and profile:
@@ -783,6 +797,8 @@ class Workbench:
                    "creation_date": image["metadata"]["date"]}
         if audit := self.project_audit.binding(job_id):
             binding["audit"] = audit
+        if history := self.history.binding(job_id):
+            binding["local_history"] = history
         return binding
 
     def groups(self, job_id, offset):
@@ -860,6 +876,13 @@ class Workbench:
             results.append({"title": path.name, "group": "INSPECTED FILES", "summary": str(path),
                             "details": f"{path} · {row['status']}" + (f" · Image text: {match}" if match else ""),
                             "touches": ["Current inspection"]})
+        for item in self.history.find(job_id, query):
+            source = item["source"]
+            results.append({"title": item["name"], "group": "LOCAL REFERENCE HISTORY",
+                            "summary": "Historical reference · " + item["kind"],
+                            "details": " · ".join(filter(None, (source["role"], source["archive"], source["title"],
+                                                                 source["authored"], source["message"]))),
+                            "touches": ["Local archive import"]})
         return results
 
     def export(self, job_id):

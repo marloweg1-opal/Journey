@@ -12,8 +12,17 @@ from journey_vision.steward import PROPOSE_IDENTITY, STAMP, VERSION_TOKEN, _iden
 
 PROFILE = Path(__file__).resolve().parents[1] / "examples" / "carebloom" / "project_tokens.json"
 ASSET_TYPES = {
+    "CareRail UI / Design": r"\bcare[\W_]*rail\b",
+    "Touchstone": r"\btouch[\W_]*stones?\b",
+    "Crystal": r"\bcrystals?\b",
+    "Emblem": r"\bemblems?\b|\bmedallions?\b",
+    "Character Lineup": r"\b(?:multi[\W_]*character|(?:character|cast|team)[\W_]+line[\W_]*up|line[\W_]*up)\b",
     "Character Reference": r"\bcharacter[\W_]+(?:reference|sheet)\b|\breference[\W_]+sheet\b",
+    "Equipment / Design Reference": r"\b(?:equipment|weapons?|technical|loadout)[\W_]*(?:(?:design|reference|sheet|board|study)\b|$)|\bdesign[\W_]+(?:sheet|board)\b",
     "Concept Board": r"\bconcept[\W_]+(?:board|art)\b|\bconcepts\b",
+    "Chibi / Mascot": r"\b(?:chibi|mascots?)\b",
+    "Widget": r"\bwidgets?\b",
+    "Desk": r"\bdesks?\b",
     "Icons & Badges": r"\b(?:icons?|badges?)\b",
     "Wallpaper": r"\bwallpapers?\b",
     "Screenshot": r"\bscreenshots?\b",
@@ -37,7 +46,7 @@ def _compound_references(registry, text, ids):
     # the depicted subject. Preserve the phrase rather than register an alias.
     result = []
     normalized = " ".join(re.findall(r"[^\W_]+", text.casefold()))
-    stems = {token["display_name"][:-5].casefold() for token in registry["tokens"].values()
+    stems = {token["display_name"][:-5].casefold(): token["display_name"] for token in registry["tokens"].values()
              if token["display_name"].casefold().endswith("stone")}
     for key in ids:
         token = registry["tokens"][key]
@@ -51,11 +60,12 @@ def _compound_references(registry, text, ids):
                 if compound in phrases:
                     continue  # Respect a deliberately registered full alias.
                 for match in re.finditer(r"(?<!\w)" + re.escape(compound) + r"(?!\w)", normalized):
-                    compounds.append((match.start(), match.end(), compound))
-        if compounds and all(any(start < first and last <= end for start, end, _ in compounds) for first, last in matches):
-            result.extend({"token": key, "phrase": phrase,
+                    compounds.append((match.start(), match.end(), compound, stem))
+        if compounds and all(any(start < first and last <= end for start, end, _, _ in compounds) for first, last in matches):
+            result.extend({"token": key, "phrase": phrase, "possible_subject": stems[stem],
+                           "related_to": token["display_name"],
                            "reason": "A compound asset reference does not establish the image's subject."}
-                          for phrase in sorted({phrase for _, _, phrase in compounds}))
+                          for phrase, stem in sorted({(phrase, stem) for _, _, phrase, stem in compounds}))
     return result
 
 
@@ -70,12 +80,26 @@ def _token_key(registry, value):
     return resolved[0] if resolved else value.casefold()
 
 
+def asset_families(text):
+    text = text.replace("_", " ")
+    labels = [label for label, pattern in ASSET_TYPES.items() if re.search(pattern, text, re.I)]
+    # Specific role words describe the artifact even if the text also names
+    # a generic medium. Conflicting specific roles remain visible.
+    if "CareRail UI / Design" in labels:
+        labels = [label for label in labels if label not in ("Artwork", "Screenshot", "Diagram")]
+    if "Character Lineup" in labels:
+        labels = [label for label in labels if label != "Character Reference"]
+    if "Equipment / Design Reference" in labels and "Character Reference" in labels and not re.search(r"\bcharacter\b", text, re.I):
+        labels.remove("Character Reference")
+    return labels
+
+
 def _evidence(registry, source, text, *, confidence=None, top=None):
     ids = detected_token_ids(registry, text, whole_tokens=True)
     compounds = _compound_references(registry, text, ids)
     ambiguous = {item["token"] for item in compounds}
     ids = [key for key in ids if key not in ambiguous]
-    purposes = [label for label, pattern in ASSET_TYPES.items() if re.search(pattern, text.replace("_", " "), re.I)]
+    purposes = asset_families(text)
     versions = VERSION_TOKEN.findall(text)
     dates = STAMP.findall(text)
     if not dates:
@@ -163,24 +187,58 @@ def _context_purpose(path, asset, reviews, examples, signals):
     visual = _purpose(path.as_posix(), asset, reviews, examples)
     if visual["state"] == "human_confirmed":
         return visual
-    explicit = {purpose for signal in signals if signal["strength"] != "mention" for purpose in signal["purposes"]}
-    if len(explicit) == 1:
-        return {"state": "inferred", "label": explicit.pop(), "reason": "A name, folder label, or image title indicates this asset type."}
-    if explicit:
-        return {"state": "conflicting_evidence", "label": "", "reason": "The available labels describe more than one asset purpose."}
+    tiers = (("Filename", "Image text", "Verified file exemplar"), ("Local history",), ("Folder",))
+    for sources in tiers:
+        explicit = {purpose for signal in signals if signal["source"] in sources and signal["strength"] != "mention"
+                    for purpose in signal["purposes"]}
+        if len(explicit) == 1:
+            reason = ("An attributed local archive reference suggests this purpose for the matched name."
+                      if sources == ("Local history",) else "The filename, a readable title, or a scoped example indicates this purpose.")
+            return {"state": "inferred", "label": explicit.pop(), "reason": reason}
+        if explicit:
+            return {"state": "conflicting_evidence", "label": "", "reason": "The available labels describe more than one asset purpose.",
+                    "conflicts": sorted(explicit)}
+    if visual["label"] == "Wallpaper candidates":
+        return {"state": "unknown", "label": "", "reason": "A widescreen canvas suggests a presentation format. The asset purpose is open."}
     return visual
 
 
-def assess(registry, path, scope, asset, reviews, examples, ocr):
+def assess(registry, path, scope, asset, reviews, examples, ocr, historical=(), exemplars=(), entity_links=()):
     identities, purposes = reviews
     signals = [_evidence(registry, "Filename", path.stem)]
+    if registry.get("profile_active") and signals[0] and not signals[0]["subjects"] and "Touchstone" in signals[0]["purposes"]:
+        short = re.match(r"([^\W_]+)[\W_]+touch[\W_]*stone\b", path.stem, re.I)
+        if short:
+            signal = _evidence(registry, "Filename", short[1] + "stone")
+            if signal and len(signal["subjects"]) == 1:
+                signals[0]["subjects"] = signal["subjects"]
+                signals[0]["text"] += " (project Touchstone shorthand)"
     for parent in (Path(scope).name, *path.relative_to(scope).parts[:-1]):
         signals.append(_evidence(registry, "Folder", parent))
     for line in ocr.get("lines", []) if ocr.get("status") != "unreliable" else ():
         signals.append(_evidence(registry, "Image text", line["text"], confidence=line["confidence"], top=line["top"]))
+    for claim in historical:
+        if claim.get("family") and claim["match"] in ("filename candidate", "variant candidate"):
+            source = claim["source"]
+            signals.append({"source": "Local history", "text": claim["name"], "subjects": [], "purposes": [claim["family"]],
+                            "strength": "candidate", "provenance": source})
+    for item in exemplars:
+        signals.append({"source": "Verified file exemplar", "text": item["filename"], "subjects": [item["subject"]],
+                        "purposes": asset_families(Path(item["filename"]).stem), "strength": "candidate", "provenance": item["source"]})
+    for item in entity_links:
+        signals.append({"source": "Local history", "text": item["name"], "subjects": [item["value"]["entity"]],
+                        "purposes": [], "strength": "candidate", "provenance": item["source"]})
     signals = [signal for signal in signals if signal]
-    return {"identity": _context_identity(registry, asset, identities, examples, signals),
-            "purpose": _context_purpose(path, asset, purposes, examples, signals), "signals": signals}
+    identity = _context_identity(registry, asset, identities, examples, signals)
+    purpose = _context_purpose(path, asset, purposes, examples, signals)
+    if registry.get("profile_active") and purpose["state"] in ("unknown", "inferred") and identity["label"] and not any(
+            signal["purposes"] and signal["strength"] != "mention" for signal in signals):
+        features = asset["features"]
+        subject_only = _token_key(registry, path.stem) == _token_key(registry, identity["label"])
+        if subject_only and 0.72 <= features["width"] / features["height"] <= 1.38 and features["transparency"] >= 0.08:
+            purpose = {"state": "inferred", "label": "Emblem", "reason": "The subject-only name and isolated artwork suggest a project emblem."}
+    return {"identity": identity, "purpose": purpose, "signals": signals,
+            "relations": [item for signal in signals for item in signal.get("ambiguous_references", [])]}
 
 
 def preliminary_name(path, record, rule):

@@ -17,6 +17,7 @@ time. Its local Navigator prototype and stewardship experiments are documented b
 
 | If you want to… | Go here |
 |---|---|
+| Try the integrated Navigator pilot | [Windows pilot and three-minute synthetic demo](docs/INTEGRATED_PILOT.md) |
 | Run the standalone folder workflow | [Journey 1.0 RC1 Folder Planner](docs/FOLDER_PLANNER.md) |
 | Review Journey as a portfolio project | [Five-minute project walkthrough](docs/PROJECT_WALKTHROUGH.md) |
 | Explore the longer development history | [HEXSEED → Mini ARK → Journey](docs/DEVELOPMENT_HISTORY.md) |

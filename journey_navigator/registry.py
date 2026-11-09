@@ -25,7 +25,7 @@ from journey_vision.steward import VERSION_TOKEN
 ARCHIVE_BYTES = 64 * 1024 * 1024
 CLAIM_LIMIT = 20_000
 REGISTRY_PAGE = 16
-VARIATION = re.compile(r"(?:\b(?:variant|variation|rev(?:ision)?|candidate)[ _-]+[0-9]+\b|\([0-9]+\)$)", re.I)
+VARIATION = re.compile(r"(?:\b(?:variant|variation|rev(?:ision)?|candidate)[ _-]+[0-9]+\b|\([0-9]+\)$|\b[0-9]+(?:\.[0-9]+)?\s*%)", re.I)
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS project_profiles (
     job TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, revision TEXT NOT NULL, document TEXT NOT NULL,
@@ -192,20 +192,24 @@ class ProjectRegistry:
 
     def activate(self, job_id, value):
         self._root(job_id)
+        with self.conn:
+            self.save_profile(job_id, value)
+        return self.profile(job_id)
+
+    def save_profile(self, job_id, value):
+        """Store a validated profile inside the caller's existing transaction."""
         profile = validate_profile(value)
         fingerprint = key_for(profile)
         evidence = value.get("evidence", [])
         if not isinstance(evidence, list) or len(evidence) > 100:
             raise ValueError("A profile can include at most 100 source-linked starter records.")
         seed = [validate_claim(claim) for claim in evidence]
-        with self.conn:
-            self.conn.execute("""INSERT INTO project_profiles(job,fingerprint,revision,document) VALUES(?,?,?,?) ON CONFLICT(job) DO UPDATE
-                SET fingerprint=excluded.fingerprint,revision=excluded.revision,document=excluded.document
-                WHERE project_profiles.fingerprint<>excluded.fingerprint""",
-                (job_id, fingerprint, uuid4().hex, json.dumps(profile)))
-            if self._insert(job_id, fingerprint, {claim_id(claim): claim for claim in seed}):
-                self._changed(job_id)
-        return self.profile(job_id)
+        self.conn.execute("""INSERT INTO project_profiles(job,fingerprint,revision,document) VALUES(?,?,?,?) ON CONFLICT(job) DO UPDATE
+            SET fingerprint=excluded.fingerprint,revision=excluded.revision,document=excluded.document
+            WHERE project_profiles.fingerprint<>excluded.fingerprint""",
+            (job_id, fingerprint, uuid4().hex, json.dumps(profile)))
+        if self._insert(job_id, fingerprint, {claim_id(claim): claim for claim in seed}):
+            self._changed(job_id)
 
     def deactivate(self, job_id):
         self._root(job_id)

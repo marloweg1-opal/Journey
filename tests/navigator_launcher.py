@@ -16,6 +16,7 @@ from urllib.request import Request,urlopen
 from journey_navigator.session import protect,process_identity
 from journey_navigator.install import known_folder,verify
 from journey_navigator.links import shortcut_path
+from integrated_browser import exercise
 
 
 def choose_fixture_dialog(title,runtime,button=6):
@@ -121,6 +122,7 @@ def main():
             verify(installation)
             for link in links:
                 assert Path(shortcut_path(link.read_bytes()))==installation/'Journey Navigator.exe'
+            exercise(installed['url'], root/'Integrated Pilot Demo')
             stop(installed)
             deadline=monotonic()+30
             while path.exists() and monotonic()<deadline:sleep(.1)

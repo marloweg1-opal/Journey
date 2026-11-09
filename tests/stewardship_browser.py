@@ -52,7 +52,7 @@ def run(browser, base):
         page.get_by_label("Why this matters", exact=True).fill("Keep the history of the retired design.")
         page.get_by_role("button", name="Save Destination", exact=True).click()
         page.get_by_role("button", name="Open Review", exact=True).click()
-        summary = page.get_by_text("Talk to Journey about retirement", exact=True)
+        summary = page.get_by_text("Talk to Journey about your work", exact=True)
         summary.focus()
         summary.press("Enter")
         page.get_by_label("Stewardship instruction", exact=True).fill(PROMPT)

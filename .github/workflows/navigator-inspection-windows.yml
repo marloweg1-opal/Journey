@@ -2,7 +2,7 @@ name: Navigator linked inspection acceptance
 
 on:
   push:
-    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol, work/navigator-provenance-naming, work/navigator-asset-registry, work/navigator-project-stewardship]
+    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol, work/navigator-provenance-naming, work/navigator-asset-registry, work/navigator-project-stewardship, work/journey-integrated-pilot]
 
 permissions:
   contents: read
@@ -10,7 +10,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -37,7 +37,7 @@ jobs:
           python -B -m unittest discover -s tests -p 'test_vision_lab.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Vision Lab regressions.' }
       - name: Exercise the bundled Navigator in a browser
-        timeout-minutes: 8
+        timeout-minutes: 10
         run: |
           $ErrorActionPreference = 'Stop'
           $env:PYTHONPATH = (Get-Location).Path
@@ -55,6 +55,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Project registry or guided rename acceptance failed.' }
           python -B -m unittest discover -s tests -p 'test_navigator_stewardship.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Naming audit or guided retirement acceptance failed.' }
+          python -B -m unittest discover -s tests -p 'test_integrated_pilot.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Integrated archive, classification, or lifecycle acceptance failed.' }
           python -B -m unittest discover -s tests -p 'test_navigator_session.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Navigator ownership tests failed.' }
           python -B tests/navigator_launcher.py --application (Join-Path $destination 'Journey Navigator/Journey Navigator.exe')

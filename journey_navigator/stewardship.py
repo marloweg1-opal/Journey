@@ -170,7 +170,7 @@ class Stewardship:
 
     def _basis(self, job, profile):
         return [job["root"], job["epoch"], profile["revision"] if profile else None,
-                profile["knowledge_version"] if profile else None, self.app.project_audit.binding(job["id"])]
+                profile["knowledge_version"] if profile else None, self.app.project_audit.binding(job["id"]), self.app.history.binding(job["id"])]
 
     def _claim_sources(self, job, profile, family):
         if not profile:
@@ -180,7 +180,8 @@ class Stewardship:
                 ? || '/' || json_extract(claim,'$.name'), ?, ?)
             ORDER BY decision='accepted' DESC,id LIMIT 25""",
             (job["id"], profile["fingerprint"], job["root"], job["root"], family))
-        return [json.loads(row["claim"]) | {"id": row["id"], "decision": row["decision"]} for row in rows]
+        retained = [json.loads(row["claim"]) | {"id": row["id"], "decision": row["decision"]} for row in rows]
+        return retained + [item | {"decision": "reference only"} for item in self.app.history.find(job["id"], family, limit=10)]
 
     def _path_restriction(self, path):
         try:
@@ -234,7 +235,7 @@ class Stewardship:
             entries.append({"id": row["id"], "path": str(path), "group": group, "digest": row["digest"],
                             "file_identity": [observed.st_dev, observed.st_ino],
                             "physical_blocker": self._path_restriction(path) if group == "asset_candidate" else "",
-                            "evidence": evidence[:8]})
+                            "evidence": (evidence + self.app.history.evidence(job["id"], profile, path.name))[:8]})
         assets = [item["path"] for item in entries if item["group"] == "asset_candidate"]
         refs = scan_references(self.app, job["root"], assets) if read_references and assets else {
             "state": "NO_AUTHORITY" if assets else "INSUFFICIENT_EVIDENCE",

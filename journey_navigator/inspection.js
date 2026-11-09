@@ -14,7 +14,7 @@
   const label = (value) => String(value || "").replaceAll("_", " ");
   const views = {images: "images", groups: "groups", links: "links", issues: "skipped entries"};
   let job = "", view = "images", series = "", query = "", offset = 0, running = false, sequence = 0;
-  let profileDraft = null, registryOffset = 0;
+  let profileDraft = null, registryOffset = 0, auditRows = [];
 
   function failure(error) {
     notice(error.error || error.message || String(error));
@@ -65,6 +65,8 @@
     $("inspect-naming").hidden = !data.proposals;
     $("inspect-registry").hidden = !data.retains;
     $("inspect-naming-audit").hidden = !data.retains;
+    $("inspect-history").hidden = !data.retains;
+    $("inspect-watch").hidden = !data.retains;
     panel.querySelector('[data-inspect="resume"]').disabled = running || !waiting;
     panel.querySelector('[data-inspect="pause"]').disabled = !running;
     panel.querySelector('[data-inspect="refresh"]').disabled = running;
@@ -73,7 +75,7 @@
 
   function sourceLabel(source) {
     if (typeof source === "string") return source;
-    return [source.role, source.archive, source.authored, source.conversation, source.message].filter(Boolean).join(" · ");
+    return [source.role, source.archive, source.title, source.authored, source.conversation, source.message, source.locator].filter(Boolean).join(" · ");
   }
 
   function claimText(item) {
@@ -104,6 +106,13 @@
       ${data.registry_evidence.map(item => `<p>${esc(claimText(item))}<br><small>${esc(sourceLabel(item.source))}</small>
         ${item.kind === "creation_date" && item.decision !== "rejected" ?
           action("use-date", `Confirm ${item.value} for this image`, JSON.stringify([image.id, item.id])) : ""}</p>`).join("")}
+      ${data.source_fingerprint_matches.map(item => `<p>Matches an attributed source fingerprint · ${esc(item.filename)}<br><small>${esc(sourceLabel(item.source))}</small></p>`).join("")}
+      ${data.local_history.length ? `<details><summary>Local archive references (${data.local_history.length})</summary>
+        ${data.local_history.map(item => `<p>${esc(item.name)} · ${esc(item.match || item.value.relation || item.kind)}
+          ${item.kind === "attachment" ? " · Attachment bytes unavailable" : ""}
+          ${item.kind === "relationship" ? ` · ${esc(item.value.relation)} ${esc(item.value.asset)}` : ""}
+          ${item.kind === "lifecycle" ? ` · Historical claim: ${esc(item.value)}` : ""}
+          <br><small>${esc(sourceLabel(item.source))}</small></p>`).join("")}</details>` : ""}
       ${applicable ? `<form data-image-date="${image.id}" class="inspection-bar">
         <label>Verified creation date <input name="date" type="date" value="${esc(date?.date || "")}" required></label>
         <label>Date source <input name="source" maxlength="300" required></label>
@@ -143,7 +152,25 @@
       audit.reason || `${audit.project} · ${audit.items.length} subject and asset-family combinations · ${audit.active_rule_count} active rules · ` +
       [...counts].map(([state, count]) => `${count} ${label(state).toLowerCase()}`).join(" · ") +
       (audit.scan_limited ? " · File coverage is incomplete." : "");
-    $("naming-audit-results").innerHTML = audit.items.map(row => `<details class="inspection-entry">
+    auditRows = audit.items;
+    const subjects = [...new Set(auditRows.map(row => row.subject))];
+    const families = [...new Set(auditRows.map(row => row.family))];
+    const compact = {VERIFIED_FILENAME_EXEMPLAR: "File", RULE_ONLY: "Rule", CONFLICTED: "Conflict", CANDIDATE: "Evidence", UNKNOWN: "Open"};
+    $("naming-audit-results").innerHTML = !subjects.length ? "" : `<div class="audit-scroll"><table class="audit-matrix">
+      <caption>Project naming coverage. Choose a cell to see its sources.</caption><thead><tr><th scope="col">Subject</th>
+      ${families.map(name => `<th scope="col">${esc(name)}</th>`).join("")}</tr></thead><tbody>
+      ${subjects.map(subject => `<tr><th scope="row">${esc(subject)}</th>
+        ${auditRows.map((row, index) => row.subject !== subject ? "" : `<td><button type="button" data-inspect="audit-row" data-value="${index}">
+          <span class="journey-sr-only">${esc(row.subject)} · ${esc(row.family)} · ${esc(label(row.state).toLowerCase())}</span>
+          <span aria-hidden="true">${esc(compact[row.state] || label(row.state))}</span></button></td>`).join("")}</tr>`).join("")}
+      </tbody></table></div><div id="audit-row-proof" tabindex="-1"></div>`;
+  }
+
+  function auditProof(index) {
+    const row = auditRows[Number(index)];
+    if (!row) return;
+    const target = $("audit-row-proof");
+    target.innerHTML = `<details open class="inspection-entry">
       <summary>${esc(row.subject)} · ${esc(row.family)} · ${esc(label(row.state).toLowerCase())}</summary>
       <p>${row.observed_count} filename candidates in the current inspected scope.</p>
       ${row.active_rules.map(rule => `<p>Active rule · ${esc(rule.example.filename)} · ${esc(rule.source)}</p>`).join("")}
@@ -154,7 +181,8 @@
         <dd>${esc(label(field.state).toLowerCase())}${field.value ? ` · ${esc(field.value)}` : ""}
           ${field.proof.length ? `<ul>${field.proof.map(claim => `<li>Tier ${esc(claim.tier)} · ${esc(claim.value)}
             ${claim.superseded ? " · superseded" : ""}<br><small>${esc(claim.source.locator)}</small></li>`).join("")}</ul>` : ""}</dd>`).join("")}</dl>
-      </details>`).join("");
+      </details>`;
+    target.focus();
   }
 
   function showImages(items) {
@@ -172,26 +200,27 @@
       const rejected = (identity.rejections || []).map(item => item.label).join(", ");
       const name = image.name;
       const ocr = image.ocr;
-      const reasons = image.signals.map(signal => `<li><strong>${esc(signal.source)}</strong> · ${esc(signal.text)}
+      const reasons = image.signals.slice(0, 24).map(signal => `<li><strong>${esc(signal.source)}</strong> · ${esc(signal.text)}
         ${signal.subjects.length ? ` · ${esc(signal.subjects.join(", "))}` : ""}
         ${signal.purposes.length ? ` · ${esc(signal.purposes.join(", "))}` : ""}
-        ${(signal.ambiguous_references || []).map(item => ` · Ambiguous reference: ${esc(item.phrase)}. ${esc(item.reason)}`).join('')}
+        ${(signal.ambiguous_references || []).map(item => ` · Possible relationship: ${esc(item.possible_subject)} and ${esc(item.related_to)}. ${esc(item.reason)}`).join('')}
+        ${signal.provenance ? `<br><small>${esc(sourceLabel(signal.provenance))}</small>` : ""}
         ${signal.source === "Image text" ? ` · ${esc(signal.strength)}` : ""}</li>`).join("");
       return `<article class="inspection-entry" data-image="${image.id}">
         <img src="data:image/webp;base64,${esc(image.thumbnail)}" alt="Thumbnail of ${esc(image.filename)}">
-        <h3>${esc(image.filename)}</h3><small>${esc(image.path)}</small>
+        <h3>${esc(image.filename)}</h3>
         <p><strong>${esc(image.purpose.label || "Purpose open")}</strong> · ${esc(label(image.purpose.state))}</p>
         <p>${esc(identity.label || "Identity open")} · ${esc(label(identity.state))}</p>
-        <p><small>${image.memberships.map(esc).join(" · ")}</small></p>
+        ${image.metadata.local_history.length ? `<p><small>${image.metadata.local_history.length} local history records</small></p>` : ""}
         <details><summary>Evidence and naming preview</summary><p>${esc(image.purpose.reason)}</p><p>${esc(identity.reason)}</p>
         ${reasons ? `<ul>${reasons}</ul>` : ""}
         ${identity.visual ? `<p>Visual match · ${esc(identity.visual.label)} · ${esc(identity.visual.reason)}</p>` : ""}
         ${rejected ? `<p>Rejected association · ${esc(rejected)}</p>` : ""}
-        ${image.suggestion ? `<p><strong>Preliminary filename · ${esc(image.suggestion.filename)}</strong></p><p>${esc(image.suggestion.reason)}</p>` : ""}
+        ${image.suggestion && !image.naming_profile.project ? `<p><strong>Preliminary filename · ${esc(image.suggestion.filename)}</strong></p><p>${esc(image.suggestion.reason)}</p>` : ""}
         ${name.destination ? `<p><strong>Destination preview · ${esc(name.destination)}</strong></p>` : ""}
         ${name.candidate_destination ? `<p><strong>Trial format only · ${esc(name.candidate_destination)}</strong></p>` : ""}
         <p>${esc(name.reason)} ${esc(name.blocker || "")}</p>
-        <details><summary>Original filename structure</summary><p>${esc(image.observed_name.original)}</p>
+        <details><summary>Path and original filename structure</summary><p>${esc(image.path)}</p><p>${esc(image.observed_name.original)}</p>
           <p>Exact extension · ${esc(image.observed_name.extension)}</p>
           <p>Observed Unicode sequences · ${esc(image.observed_name.unicode_sequences.join(' · ') || 'None')}</p>
           <p>Observed numeric fields · ${esc(image.observed_name.numeric_fields.map(item => item.text).join(' · ') || 'None')}</p>
@@ -259,6 +288,7 @@
     await loadView();
     await loadRegistry();
     if ($("inspect-naming-audit").open) await loadNamingAudit();
+    window.dispatchEvent(new Event("journey-project-ready"));
   }
 
   async function showAccess() {
@@ -408,6 +438,7 @@
         registryOffset = 0;
         await loadRegistry();
         if ($("inspect-naming-audit").open) await loadNamingAudit();
+        window.dispatchEvent(new Event("journey-project-ready"));
         notice("Project profile active for this inspection.");
       } else if (event.target.id === "naming-audit-load") {
         const file = $("naming-audit-file").files[0], selected = job;
@@ -434,6 +465,12 @@
   });
 
   const commands = {
+    "audit-row": auditProof,
+    layout: () => {
+      const compact = results.classList.toggle("compact-layout");
+      $("inspect-layout").setAttribute("aria-pressed", String(compact));
+      $("inspect-layout").textContent = compact ? "Show gallery" : "Compact list";
+    },
     browse: () => browse(pathField.value ? pathField.value.trim().replace(/^"|"$/g, "") : ""),
     drives: () => browse(), folder: (path) => browse(path), "browse-page": (value) => browse(...JSON.parse(value)), choose,
     link: async (value) => selected(await api("select", {job, link: Number(value)})),
@@ -461,6 +498,7 @@
       await api("registry-deactivate", {job});
       await loadRegistry();
       await loadView();
+      window.dispatchEvent(new Event("journey-project-ready"));
       notice("Project profile deactivated for this inspection.");
     },
     "registry-review": async (value) => {
@@ -512,6 +550,10 @@
   document.querySelector(".titlebar .subtitle").textContent = "Local image stewardship · Guided changes require your account";
   document.querySelector('[data-panel="home"]').innerHTML = `<div class="inspection-card"><h2>Navigator inspection</h2><p>Open Inspect to choose a folder or shortcut. Manage reopens saved inspections.</p></div>`;
   document.querySelector('[data-panel="find"]').innerHTML = `<div class="inspection-card"><h2>Find inspected files</h2><p>Search filenames, paths, and text read from images in the current inspection.</p></div>`;
+  window.addEventListener("journey-evidence-change", () => {
+    if (!job) return;
+    Promise.all([loadView(), loadRegistry(), $("inspect-naming-audit").open ? loadNamingAudit() : Promise.resolve()]).catch(failure);
+  });
   document.querySelector('[data-panel="guide"]').innerHTML = `<div class="inspection-card"><h2>Inspect and review</h2>
     <p>Browse to the folder or select an existing shortcut. Navigator shows the link and destination separately. Approve a destination when it falls outside the current scope.</p>
     <p>Pause at any time. Turn on a local checkpoint to reopen from Manage. Name suggestions are optional, and a saved plan records previews in Journey's local review storage.</p></div>`;

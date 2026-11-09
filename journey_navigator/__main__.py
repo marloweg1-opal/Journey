@@ -57,7 +57,7 @@ def navigator_page():
             .replace('    refreshStatus();', '', 1)
             .replace('    async function refreshStatus() {','    async function refreshStatus() { return;',1)
             .replace('from Navigator and ARK memory.', 'from this inspection.', 1)
-            .replace('</body>', '<script src="/inspection.js"></script><script src="/patrol.js"></script></body>'))
+            .replace('</body>', '<script src="/inspection.js"></script><script src="/project_ui.js"></script><script src="/patrol.js"></script></body>'))
 
 
 def local_drives():
@@ -99,6 +99,7 @@ class Navigator(ThreadingHTTPServer):
         self.origin = f"http://{self.host}"
         self.static = {"/": ("text/html; charset=utf-8", navigator_page().encode("utf-8")),
                        "/inspection.js": ("text/javascript; charset=utf-8", (MODULE / "inspection.js").read_bytes()),
+                       "/project_ui.js": ("text/javascript; charset=utf-8", (MODULE / "project_ui.js").read_bytes()),
                        "/inspection.css": ("text/css; charset=utf-8", (MODULE / "inspection.css").read_bytes()),
                        "/patrol.js": ("text/javascript; charset=utf-8", (MODULE / "patrol.js").read_bytes())}
 
@@ -117,6 +118,8 @@ class Navigator(ThreadingHTTPServer):
             self.temporary.close()
 
     def request_close(self):
+        if self.closing:
+            return
         self.closing = True
         self.patrol.stop.set()
         self.patrol.wake.set()
@@ -207,7 +210,7 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(length))
             if not isinstance(body, dict):
                 raise ValueError("The Navigator request is invalid.")
-            if route == "/api/inspect/stewardship-plan":
+            if route in ("/api/inspect/stewardship-plan", "/api/inspect/goal-plan"):
                 use_model = body.get("use_model", False)
                 if type(use_model) is not bool:
                     raise ValueError("Choose whether to use local Qwen3.")
@@ -240,6 +243,9 @@ class Handler(BaseHTTPRequestHandler):
         destination = body.get('destination')
         if action == 'build':
             return self.server.info
+        if action == 'managed-builds':
+            from journey_navigator.session import managed_builds
+            return managed_builds(self.server.info)
         if action == 'checkpoints':
             from journey_navigator.migrations import checkpoints
             return {'items':checkpoints(self.server.workbench)}
@@ -248,9 +254,12 @@ class Handler(BaseHTTPRequestHandler):
             selected=next((row['backup'] for row in checkpoints(self.server.workbench) if row['version']==body['version']),None)
             if not selected:
                 raise ValueError('Choose a saved Journey recovery checkpoint.')
-            self.server.restore_checkpoint=selected
+            reopen = body.get('reopen', True)
+            if type(reopen) is not bool:
+                raise ValueError('Choose whether Navigator should reopen this build.')
+            self.server.restore_checkpoint=(selected,reopen)
             self.server.request_close()
-            return {'restarting':True}
+            return {'restarting':reopen}
         if action == 'attach':
             self.server.clients.add(str(body['client'])[:100])
             return {'attached':True}
@@ -289,6 +298,9 @@ class Handler(BaseHTTPRequestHandler):
         if action == "stewardship-plan":
             return patrol.stewardship.plan(destination, body["instruction"], provider=body["provider"],
                                            read_references=body.get("read_references", False))
+        if action == "goal-plan":
+            return patrol.capabilities.plan(destination, body["instruction"], provider=body["provider"],
+                                            read_references=body.get("read_references", False))
         if action == "stewardship-confirm":
             return patrol.stewardship.confirm(destination, body["binding"], body["assets"],
                                               body["reason"], body.get("replacement", ""))
@@ -298,6 +310,48 @@ class Handler(BaseHTTPRequestHandler):
         if type(offset) is not int or not 0 <= offset <= 1_000_000:
             raise ValueError("Choose a valid results page.")
         registry = app.project_registry
+        if action == "pack-preview":
+            return app.packs.preview(job, body["path"])
+        if action == "pack-apply":
+            return app.packs.apply(job, body["ticket"], body["project"])
+        if action == "pack-rollback":
+            return app.packs.rollback(job)
+        if action == "pack-status":
+            return app.packs.status(job)
+        if action == "history-preview":
+            return app.history.preview(job, body["path"])
+        if action == "history-enqueue":
+            result = app.history.enqueue(job, body["ticket"])
+            patrol.wake.set()
+            return result
+        if action == "history-pause":
+            app.history.context(job)
+            with app.conn:
+                app.history.pause(job)
+            return app.history.status(job)
+        if action == "history-status":
+            return app.history.status(job)
+        if action == "history-reconcile":
+            return patrol.capabilities.reconcile(job)
+        if action == "history-forget":
+            app.history.context(job)
+            from journey_navigator.migrations import clear_inspection_backups
+            clear_inspection_backups(app.data_dir)
+            with app.conn:
+                app.history.forget(job)
+                registry._changed(job)
+            patrol.stewardship.invalidate(job)
+            return app.history.status(job)
+        if action == "watch-status":
+            return patrol.watch.status(job)
+        if action == "watch-enable":
+            if app is not self.server.workbench:
+                raise ValueError("Keep a local checkpoint before enabling drift observation.")
+            result = patrol.watch.enable(job)
+            patrol.wake.set()
+            return result
+        if action == "watch-stop":
+            return patrol.watch.stop(job=job)
         if action == "registry":
             return registry.catalog(job, offset)
         if action == "naming-audit":
@@ -333,7 +387,7 @@ class Handler(BaseHTTPRequestHandler):
         if action == "summary":
             return app.summary(job)
         if action == "step":
-            return app.step(job)
+            return patrol.capabilities.inspect(job) if app is self.server.workbench else app.step(job)
         if action == "pause":
             app.pause()
             return app.summary(job)
@@ -352,6 +406,7 @@ class Handler(BaseHTTPRequestHandler):
         if action == "revoke":
             result = app.revoke(job, body["scope"], body["permission"])
             patrol.stewardship.invalidate(job)
+            patrol.watch.stop("revoked", job=job)
             return result
         if action == "rule":
             return app.rule(job, body["project"], body["filename"], body["folder"])
@@ -412,9 +467,9 @@ def main():
         restore = server.restore_checkpoint if 'server' in locals() else None
         if restore:
             from journey_navigator.migrations import restore_inspection
-            restore_inspection(data,restore)
+            restore_inspection(data,restore[0])
         owner.close()
-        if restore:
+        if restore and restore[1]:
             subprocess.Popen([sys.executable,'-B','-m','journey_navigator',*sys.argv[1:]],cwd=APP)
 
 

@@ -53,8 +53,19 @@
   function showStewardship(result) {
     const slot = $("stewardship-results");
     if (!result.binding) {
-      slot.replaceChildren();
-      stewardshipStatus(`${readable(result.state)} · ${result.reason}`);
+      stewardshipStatus(`${readable(result.state)} · ${result.reason} · Local interpreter ${readable(result.provider)}`);
+      if (result.intent === "find") {
+        slot.innerHTML = result.results.map(item => `<p><strong>${esc(item.title)}</strong> · ${esc(item.group)}<br>
+          <small>${esc(item.details)}</small></p>`).join("") || "<p>No references or local files matched inside the selected inspection.</p>";
+      } else if (result.intent === "organize") {
+        slot.innerHTML = `<p>${esc(result.scope)}</p><ol>${result.steps.map(step => `<li>${esc(step)}</li>`).join("")}</ol>
+          <p>Patrol will update virtual groups and report review decisions. Physical changes use a separate exact batch.</p>
+          <button type="button" id="start-goal-patrol">Start this scoped plan</button>`;
+        $("start-goal-patrol").onclick = async () => {
+          try { await api("patrol-begin", {destination}); setMode("patrol"); poll(); }
+          catch (error) { failure(error); }
+        };
+      } else slot.replaceChildren();
       return;
     }
     const {entries, dependencies} = result;
@@ -170,7 +181,7 @@
     $("patrol-history").innerHTML = current.history.map(receipt => `<div class="inspection-entry"><strong>OP-${String(receipt.id).padStart(6,'0')} · ${esc(receipt.status)}</strong>
       <p>${esc(receipt.action_type)} · ${esc(receipt.target_path)}</p><details><summary>Verification receipt</summary><pre>${esc(JSON.stringify(JSON.parse(receipt.new_state || '{}'),null,2))}</pre></details>
       ${receipt.action_type === 'file_move' && receipt.status === 'applied' ? `<button type="button" data-undo="${receipt.id}">Review safe reversal</button>` : ''}</div>`).join('') || '<p>Account-approved operations will appear here with their verification evidence.</p>';
-    $("patrol-work").textContent = `${current.coverage.pending} images and ${current.coverage.pending_folders} folders waiting. ${current.metrics.unresolved} assets remain unresolved. ` + current.tasks.map(task => `${task.kind}: ${task.status}${task.reason ? " · " + task.reason : ""}`).join(". ");
+    $("patrol-work").textContent = current.report;
     if (batchId) await viewBatch(batchId);
     if (document.querySelector('[data-panel="review"]').classList.contains('active') &&
         !['Inspecting','Assessing','Working','Verifying'].includes(current.state) && renderedSnapshot !== current.outcome_binding) await images();
@@ -236,7 +247,7 @@
     button.disabled = true;
     stewardshipStatus("Inspecting the instruction and its scope.");
     try {
-      const result = await api("stewardship-plan", {destination: requested, instruction: form.elements.instruction.value,
+      const result = await api("goal-plan", {destination: requested, instruction: form.elements.instruction.value,
         use_model: form.elements.use_model.checked, read_references: form.elements.read_references.checked});
       if (destination !== requested) return;
       stewardshipReview = result.binding ? result : null;
@@ -290,21 +301,30 @@
   });
   window.addEventListener('journey-manage', async () => {
     try {
-      const {items}=await api('checkpoints');
+      const [{items}, builds]=await Promise.all([api('checkpoints'), api('managed-builds')]);
       const panel=document.querySelector('[data-panel="manage"]');
       panel.querySelector('#journey-recovery')?.remove();
       const section=document.createElement('div'); section.id='journey-recovery'; section.className='inspection-card';
       section.innerHTML=`<h2>Work, permissions and recovery</h2><p>Inspect contains scope controls. Review contains exact batches, account approvals and operation receipts.</p>
         <button type="button" data-select="destination">Open saved Destinations</button> <button type="button" data-select="review">Review operations and recovery</button>
         <p>Inspection recovery snapshots restore reviewed data with scope access inactive. Action receipts stay current. Forgetting retained observations also clears old inspection recovery snapshots.</p>
-        ${items.map(item=>`<div class="inspection-entry"><p>${esc(item.created)} · ${esc(item.backup)}</p><button type="button" data-restore="${item.version}">Restore inspection checkpoint</button></div>`).join('')}`;
+        ${items.map(item=>`<div class="inspection-entry"><p>${esc(item.created)} · ${esc(item.backup)}</p>
+          <button type="button" data-restore="${item.version}">Restore inspection checkpoint</button>
+          <button type="button" data-restore="${item.version}" data-close-for-rollback>Restore and close for build rollback</button></div>`).join('')}
+        <details><summary>Managed candidate builds</summary>
+          <p>Use the running build for current work. Prior builds are retained for review and rollback.</p>
+          ${builds.items.map(item=>`<p>${item.running ? 'Running' : 'Prior candidate'} · ${esc(item.commit)} · ${esc(item.path)}</p>`).join('') || '<p>No managed candidate builds were found for this account.</p>'}</details>`;
       panel.append(section);
     } catch(error) { failure(error); }
   });
   document.addEventListener('click',async event=>{
     const button=event.target.closest('[data-restore]');
     if (!button || !confirm('Restore this inspection checkpoint? Current inspection data is backed up, scope access needs reselection, and action receipts stay current.')) return;
-    try { await api('restore-checkpoint',{version:Number(button.dataset.restore)}); notify('Restoring the inspection checkpoint. Navigator will reopen.'); }
+    try {
+      const reopen=!button.hasAttribute('data-close-for-rollback');
+      await api('restore-checkpoint',{version:Number(button.dataset.restore),reopen});
+      notify(reopen ? 'Restoring the inspection checkpoint. Navigator will reopen.' : 'Restoring the checkpoint and closing for build rollback.');
+    }
     catch(error) { failure(error); }
   });
   list().catch(failure);

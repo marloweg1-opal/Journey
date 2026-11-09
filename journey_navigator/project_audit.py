@@ -61,9 +61,12 @@ class ProjectAudit:
         if active and active["project"].casefold() != audit["project"].casefold():
             raise ValueError("This naming audit belongs to another project. Choose its own inspection.")
         with self.conn:
-            self.conn.execute("""INSERT INTO project_naming_audits VALUES(?,?)
-                ON CONFLICT(job) DO UPDATE SET document=excluded.document""", (job_id, json.dumps(audit)))
+            self.save_audit(job_id, audit)
         return {"saved": True, "project": audit["project"]}
+
+    def save_audit(self, job_id, audit):
+        self.conn.execute("""INSERT INTO project_naming_audits VALUES(?,?)
+            ON CONFLICT(job) DO UPDATE SET document=excluded.document""", (job_id, json.dumps(audit)))
 
     def _observed(self, job, document, active):
         rows = self.conn.execute("""SELECT path,status,digest,size,modified FROM files
