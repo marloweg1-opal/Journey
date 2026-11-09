@@ -14,6 +14,7 @@ from core.patrol_state import read_state, update_state
 from journey_navigator.approval import WindowsApprover
 from journey_navigator.guided import Guided
 from journey_navigator.migrations import prepare_patrol_schema
+from journey_navigator.stewardship import Stewardship
 
 
 SCHEMA = """
@@ -50,6 +51,8 @@ class Patrol:
             self.conn.execute("UPDATE destinations SET state='Paused',reason='Restored checkpoint. Resume when ready.' WHERE state IN ('Inspecting','Assessing','Working','Verifying')")
             self.conn.execute("UPDATE patrol_tasks SET status='pending' WHERE status='running'")
         self.guided = Guided(app)
+        self.stewardship = Stewardship(self)
+        self.guided.retirement_guard = self.stewardship.verify_archive
         self.approver = approver or WindowsApprover()
         self.stop = Event()
         self.wake = Event()
@@ -73,6 +76,7 @@ class Patrol:
         for thread in self.approval_threads:
             thread.join(timeout=5)
         with self.lock:
+            self.stewardship.clear()
             for row in self.conn.execute('SELECT id,state FROM destinations').fetchall():
                 if row['state'] in ACTIVE:
                     self._state(row['id'],'Paused','Navigator closed at a safe checkpoint.')
@@ -147,7 +151,8 @@ class Patrol:
         revision=self.conn.execute('SELECT max(id) FROM reviews WHERE job=?',(job,)).fetchone()[0]
         profile = self.app.project_registry.profile(job)
         knowledge = [profile['revision'], profile['knowledge_version']] if profile else None
-        return sha256(json.dumps(['context-0.5',row['epoch'],row['rule'],revision,knowledge],sort_keys=True).encode()).hexdigest()
+        retirements = self.conn.execute('SELECT max(id) FROM stewardship_retirements WHERE job=?',(job,)).fetchone()[0]
+        return sha256(json.dumps(['context-0.6',row['epoch'],row['rule'],revision,knowledge,retirements],sort_keys=True).encode()).hexdigest()
 
     def _assess(self, destination, row):
         task=self.conn.execute("SELECT * FROM patrol_tasks WHERE destination=? AND kind='assess'",(destination,)).fetchone()

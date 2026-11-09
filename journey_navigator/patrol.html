@@ -2,7 +2,7 @@
         <div class="inspection-card"><h2>Give Journey a destination</h2>
           <p>Choose a project in Inspect with a local checkpoint, then describe the outcome that matters to you.</p>
           <form id="destination-form">
-            <label>Intended outcome <textarea name="objective" required rows="2">Improve the organization and findability of my CareBloomOS image collection while preserving identity, provenance, content, and relationships.</textarea></label>
+            <label>Intended outcome <textarea name="objective" required rows="2">Improve the organization and findability of my selected project assets while preserving identity, provenance, content, and relationships.</textarea></label>
             <label>Why this matters <textarea name="why" required rows="2" placeholder="What would this help you do?"></textarea></label>
             <label>Success looks like <textarea name="success" required rows="2">Supported images are searchable and grouped with evidence. Conflicts and remaining work are clear. Any authorized physical changes are verified.</textarea></label>
             <div class="inspection-bar"><label>Entry ceiling per cycle <input name="max_files" type="number" value="20000" min="1" max="100000"></label>
@@ -32,6 +32,20 @@
         <div class="inspection-card"><h2>Review what changes the outcome</h2>
           <p>Inspect the evidence and select the images a decision applies to. One correction can address a related group.</p>
           <div id="patrol-questions"></div>
+          <details id="stewardship">
+            <summary>Talk to Journey about retirement</summary>
+            <p>Write one instruction for this Destination. Journey prepares evidence and asks you to review the matching assets.</p>
+            <form id="stewardship-plan">
+              <label>Stewardship instruction <textarea name="instruction" rows="3" maxlength="2000" required placeholder='Retire “Design Family” assets.'></textarea></label>
+              <div class="inspection-options">
+                <label><input type="checkbox" name="use_model"> Interpret this instruction with local Qwen3</label>
+                <label><input type="checkbox" name="read_references"> Read scoped documentation and configuration references</label>
+              </div>
+              <button type="submit">Inspect instruction</button>
+            </form>
+            <p id="stewardship-status" role="status" aria-live="polite"></p>
+            <div id="stewardship-results"></div>
+          </details>
           <details><summary>Classify selected assets together</summary><div id="patrol-review-images" class="inspection-gallery"></div>
             <form id="patrol-answer"><div class="inspection-bar">
               <label>Decision <select name="decision"><option value="confirm">Confirm identity</option><option value="reject">Reject identity</option><option value="purpose">Record purpose</option></select></label>

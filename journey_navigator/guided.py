@@ -57,9 +57,12 @@ class GuidedVerifier(MoveEvidenceVerifier):
         if operation is None or operation['kind'] not in ('rename', 'move'):
             raise MoveEvidenceDenied('This operation is absent from the account-approved batch')
         self.owner.validate_operation(batch, operation, source=True)
+        references = [f"account-verified-dependency-disposition:{batch['binding']}"]
+        if operation.get('retirement'):
+            references.append(f"stewardship-retirement:{operation['retirement']['decision']}")
         return MoveEvidence(receipt_id=batch['id'], approval_reference=approval['account'],
             approval_binding=approval['proposal_binding'],
-            evidence_references=(f"account-verified-dependency-disposition:{batch['binding']}",),
+            evidence_references=tuple(references),
             proposal_id=batch['proposal'],item_id=item['id'],source=operation['source'],destination=operation['destination'],
             source_scope=batch['scope'],destination_scope=batch['scope'],identity=MoveIdentity(**operation['identity']),
             issued_at=approval['verified_at'],expires_at=approval['expires_at'])
@@ -72,6 +75,7 @@ class Guided:
         self.conn.row_factory = sqlite3.Row
         initialize_schema(self.conn)
         self.conn.executescript(SCHEMA)
+        self.retirement_guard = None
         path = workbench.data_dir / 'guided-approval-key.dat'
         if path.exists():
             safe_metadata(path)
@@ -109,10 +113,13 @@ class Guided:
         app.policy.check(path)
         if os.name=='nt' and Path(r'C:\mini_ark\ARK_EXECUTION_DISABLED.flag').exists():
             raise PermissionError('The existing Journey execution kill switch is active.')
-        registry = app.policy.perception_store
+        self.require_unprotected(path)
+
+    def require_unprotected(self, path):
+        registry = self.workbench.policy.perception_store
         for query, table in (("SELECT path FROM protected_paths", 'protected_paths'),
                              ("SELECT canonical_path FROM file_dependents WHERE active=1", 'file_dependents')):
-            for protected, in app.policy._rows(registry, query, table, optional_table=True):
+            for protected, in self.workbench.policy._rows(registry, query, table, optional_table=True):
                 if path == Path(protected) or (table == 'protected_paths' and path.is_relative_to(protected)):
                     raise PermissionError('An existing Journey protection or active dependency blocks this path.')
         if executor.is_protected(self.conn, str(path)) or executor.get_active_dependents(self.conn,str(path)):
@@ -147,8 +154,12 @@ class Guided:
             current = file_identity(path, read_guard=lambda p: self.guard(batch['id'], p))
             if current != operation['identity'] or current['device'] != parent.st_dev:
                 raise ValueError('Source identity changed or this move crosses a volume.')
+            if 'retirement' in operation:
+                if self.retirement_guard is None:
+                    raise PermissionError('The reviewed retirement evidence is unavailable.')
+                self.retirement_guard(batch['job'], operation)
 
-    def prepare(self, job_id, operations):
+    def prepare(self, job_id, operations, *, retirement=None):
         app = self.workbench
         job = app.job(job_id)
         app.policy.refresh()
@@ -168,6 +179,10 @@ class Guided:
             if not target.is_absolute() or '..' in target.parts or not target.is_relative_to(scope):
                 raise ValueError('Choose an exact destination inside this scope.')
             operation = {'kind': kind, 'destination': str(target), 'reason': str(request.get('reason','Improve findability'))[:500]}
+            if retirement is not None:
+                if kind != 'move':
+                    raise ValueError('Archive review accepts same-filename moves.')
+                operation['retirement'] = retirement
             app.policy.check(target)
             parent = safe_metadata(target.parent, read_guard=app.policy.check)
             operation['parent'] = [parent.st_dev, parent.st_ino]

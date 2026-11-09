@@ -8,7 +8,7 @@ from pathlib import Path
 import secrets
 import sqlite3
 import stat
-from subprocess import SubprocessError
+from subprocess import SubprocessError, TimeoutExpired
 from tempfile import NamedTemporaryFile
 from time import monotonic
 from uuid import uuid4
@@ -19,7 +19,9 @@ from core.token_registry import resolve_token
 from core.naming import observe_filename
 from journey_navigator.context import NAMING_HOLD, assess, preliminary_name, profile_registry
 from journey_navigator.links import Boundaries, ProtectedPath, identity, kind_of, path_key, resolve_folder
+from journey_navigator.project_audit import ProjectAudit
 from journey_navigator.registry import ProjectRegistry, creation_dates, preview as registry_preview
+from journey_navigator.stewardship import SCHEMA as STEWARDSHIP_SCHEMA
 from journey_planner.catalog import File, Plan, absolute_path, check_local_drive, component
 from journey_vision.observe import IMAGE_FORMATS, decode_image, describe, image_bytes
 from journey_vision.steward import (
@@ -138,8 +140,10 @@ class Workbench:
             self.conn.execute("PRAGMA secure_delete=ON")
             self.conn.execute("PRAGMA temp_store=MEMORY")
             self.conn.executescript(SCHEMA)
+            self.conn.executescript(STEWARDSHIP_SCHEMA)
             self._upgrade_checkpoint()
             self.project_registry = ProjectRegistry(self)
+            self.project_audit = ProjectAudit(self)
             self.resources = setup.pop_all()
         self.tickets = {}
         self.cursor = None
@@ -395,6 +399,7 @@ class Workbench:
                     self.conn.execute(f"DELETE FROM {table} WHERE job=? AND path IN ({markers})", params)
                 if scope == job["root"]:
                     self.project_registry.forget(job_id)
+                    self.project_audit.forget(job_id)
                     self.conn.execute("DELETE FROM jobs WHERE id=?", (job_id,))
         return {"revoked": affected, "closed": scope == job["root"]}
 
@@ -566,6 +571,8 @@ class Workbench:
                     image = decode_image(data, fmt)
                 try:
                     ocr = self.ocr.recognize(image)
+                except TimeoutExpired:
+                    ocr = {"status": "timed_out", "provider": self.ocr.version}
                 except (OSError, ValueError, SubprocessError):
                     ocr = {"status": "retry", "provider": self.ocr.version}
                 self.conn.execute("UPDATE observations SET ocr_key=?,ocr=? WHERE job=? AND scope=? AND digest=?",
@@ -653,14 +660,26 @@ class Workbench:
                 purposes[(Path(transition['to_path']).as_posix(),transition['digest'])]=purposes[source]
         return (identities,purposes), cache
 
-    def _image_view(self, job, row, reviews, evidence, *, thumbnails, proposals, profile):
+    def _subject_registry(self, job_id, profile):
+        audit = self.project_audit.document(job_id)
+        project = profile["project"] if profile else audit["project"] if audit else None
+        if project is None or project.casefold() == self.registry["project"].casefold():
+            return self.registry
+        subjects = {rule["subject"]: [] for rule in (profile["rules"] if profile else [])}
+        if audit and audit["project"].casefold() == project.casefold():
+            subjects.update({name: audit.get("aliases", {}).get(name, []) for name in audit["subjects"]})
+        return {"schema_version": 1, "tokens": {name.casefold().replace(" ", "_"): {
+            "display_name": name, "type": "subject", "aliases": aliases, "owns": [], "routes": {}, "customization": {}
+        } for name, aliases in subjects.items()}}
+
+    def _image_view(self, job, row, reviews, evidence, *, thumbnails, proposals, profile, recognizer):
         path = self.policy.check_image(Path(row["path"]), retain=self.retains)
         features = json.loads(row["features"])
         asset = {"digest": row["digest"], "features": features}
         ocr = json.loads(row["ocr"]) if row["ocr"] else {"status": "pending_refresh" if self.ocr else "unavailable"}
         if self.ocr and row["ocr_key"] and row["ocr_key"] != self.ocr.key:
             ocr["refresh_available"] = True
-        record = assess(self.registry, path, row["scope"], asset, reviews, evidence, ocr)
+        record = assess(recognizer, path, row["scope"], asset, reviews, evidence, ocr)
         memberships = [f"Visual series {row['series'][:8]}"]
         if record["purpose"]["label"]:
             memberships.append(record["purpose"]["label"])
@@ -670,6 +689,8 @@ class Workbench:
         record["suggestion"] = preliminary_name(path, record, rule) if proposals else None
         record["name"] = {"state": "disabled", "destination": None, "reason": "Name and plan suggestions are disabled for this scope."}
         naming_rule, metadata = self.project_registry.details(job, row, features, profile, record)
+        if metadata["retirements"]:
+            memberships.append("Retired · " + metadata["retirements"][0]["family"])
         if proposals and profile:
             record["name"] = registry_preview(path, record, metadata, naming_rule)
             if record["name"]["destination"]:
@@ -697,7 +718,8 @@ class Workbench:
             ocr.pop("lines", None)
         return record | {"id": row["id"], "path": str(path), "scope": row["scope"], "filename": path.name, "ocr": ocr,
                          "observed_name": observe_filename(path.name), "metadata": metadata,
-                         "naming_profile": ({"state": "validated", "executable": bool(record["name"].get("executable")),
+                         "naming_profile": ({"state": "validated" if profile["rules"] else "evidence_only",
+                                             "executable": bool(record["name"].get("executable")),
                                              "project": profile["project"], "rule_source": naming_rule["source"] if naming_rule else None}
                                             if profile else {"state": "unvalidated", "executable": False, "reason": NAMING_HOLD}),
                          "size": row["size"], "modified_ns": row["modified"], "can_propose": proposals,
@@ -726,13 +748,15 @@ class Workbench:
             {selection} ORDER BY f.id LIMIT ? OFFSET ?""", args).fetchall()
         scope_reviews, images = {}, []
         profile = self.project_registry.profile(job_id)
+        recognizer = self._subject_registry(job_id, profile)
         for row in rows[:PAGE]:
             try:
                 if row["scope"] not in scope_reviews:
                     scope_reviews[row["scope"]] = self._reviews(job, row["scope"])
                 reviews, evidence = scope_reviews[row["scope"]]
                 images.append(self._image_view(job, row, reviews, evidence, thumbnails=thumbnails, proposals=bool(row["propose"]),
-                                               profile=profile if row["scope"] == job["root"] else None))
+                                               profile=profile if row["scope"] == job["root"] else None,
+                                               recognizer=recognizer if row["scope"] == job["root"] else self.registry))
             except ProtectedPath:
                 continue
         return {"items": images, "more": len(rows) > PAGE}
@@ -768,9 +792,6 @@ class Workbench:
         label, purpose = label.strip(), purpose.strip()
         if action != "purpose":
             component(label)
-            token = resolve_token(self.registry, label)
-            if token:
-                label = token[1]["display_name"]
         if purpose or action == "purpose":
             component(purpose)
         self.policy.refresh()
@@ -779,6 +800,11 @@ class Workbench:
         if row is None:
             raise ValueError("Choose a current analyzed image.")
         self._validate_scope(job, row["scope"])
+        if action != "purpose":
+            registry = self._subject_registry(job_id, self.project_registry.profile(job_id)) if row["scope"] == job["root"] else self.registry
+            token = resolve_token(registry, label)
+            if token:
+                label = token[1]["display_name"]
         path = self.policy.check_image(Path(row["path"]), retain=self.retains, learn=True)
         if sha256(image_bytes(path)).hexdigest() != row["digest"]:
             raise ValueError("The image changed. Refresh its folder before reviewing it.")

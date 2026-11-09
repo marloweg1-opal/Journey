@@ -64,6 +64,7 @@
       (data.ocr_available ? " Image text reading is available." : " Image text reading is unavailable. Filename, folder, and visual evidence are available.");
     $("inspect-naming").hidden = !data.proposals;
     $("inspect-registry").hidden = !data.retains;
+    $("inspect-naming-audit").hidden = !data.retains;
     panel.querySelector('[data-inspect="resume"]').disabled = running || !waiting;
     panel.querySelector('[data-inspect="pause"]').disabled = !running;
     panel.querySelector('[data-inspect="refresh"]').disabled = running;
@@ -84,7 +85,7 @@
     const data = image.metadata;
     const date = data.date;
     const short = data.filename_date;
-    const applicable = image.naming_profile.state === "validated";
+    const applicable = Boolean(image.naming_profile.project);
     const dateLabel = date ? date.date : data.date_state === "conflicted" ? "Evidence disagrees" : "Unknown";
     const modified = new Date(Math.trunc(data.filesystem_modified_ns / 1_000_000)).toLocaleString();
     return `<details><summary>Image details · created ${esc(dateLabel)}</summary>
@@ -92,8 +93,11 @@
       <dt>Full creation date</dt><dd>${esc(dateLabel)}${date ? ` · ${esc(sourceLabel(date.source))}` : ""}</dd>
       <dt>Filesystem modification time</dt><dd>${esc(modified)}</dd></dl>
       ${data.lifecycle !== "unestablished" ? `<p>Reviewed lifecycle · ${esc(data.lifecycle)}</p>` : ""}
-      ${short ? `<p>Filename date fields · ${short.state === "placeholder" ? "00_00 date placeholder" :
-        `day ${short.day}, month ${short.month} · ${short.state === "invalid" ? "invalid date fields" : "year is separate"}`}</p>` : ""}
+      ${data.retirements.map(item => `<p>Retired from active use · ${esc(item.family)} · ${esc(item.reason)}
+        ${item.replacement ? ` · Replacement ${esc(item.replacement)}` : ""}</p>`).join("")}
+      ${short && short.state !== "undated" ? `<p>Filename date fields · ${short.state === "placeholder" ? "00_00 date placeholder" :
+        `day ${short.day}, month ${short.month}${short.year ? `, year ${short.year}` : ""}
+          · ${short.state === "invalid" ? "invalid date fields" : "filename evidence"}`}</p>` : ""}
       ${image.naming_profile.rule_source ? `<p>Naming rule source · ${esc(image.naming_profile.rule_source)}</p>` : ""}
       ${data.embedded_dates.map(item => `<p>${esc(item.source)} · ${esc(item.date)}</p>`).join("")}
       ${data.path_history.map(item => `<p>${esc(item.from_path)} → ${esc(item.to_path)} · receipt ${esc(item.receipt)}</p>`).join("")}
@@ -126,6 +130,31 @@
           ${action("registry-review", "Reject this evidence", JSON.stringify([claim.id, "rejected"]))}</p>`).join("")}</details>`).join("") +
       `<div class="inspection-bar">${page ? action("registry-page", "Previous records", page - 16) : ""}
         ${data.more ? action("registry-page", "Next records", page + 16) : ""}</div>` : "";
+  }
+
+  async function loadNamingAudit() {
+    if (!job || $("inspect-naming-audit").hidden) return;
+    const requested = job;
+    const audit = await api("naming-audit", {job});
+    if (job !== requested) return;
+    const counts = new Map();
+    for (const item of audit.items) counts.set(item.state, (counts.get(item.state) || 0) + 1);
+    $("naming-audit-status").textContent = audit.state === "NO_AUDIT" ? "Choose a project evidence file to audit coverage." :
+      audit.reason || `${audit.project} · ${audit.items.length} subject and asset-family combinations · ${audit.active_rule_count} active rules · ` +
+      [...counts].map(([state, count]) => `${count} ${label(state).toLowerCase()}`).join(" · ") +
+      (audit.scan_limited ? " · File coverage is incomplete." : "");
+    $("naming-audit-results").innerHTML = audit.items.map(row => `<details class="inspection-entry">
+      <summary>${esc(row.subject)} · ${esc(row.family)} · ${esc(label(row.state).toLowerCase())}</summary>
+      <p>${row.observed_count} filename candidates in the current inspected scope.</p>
+      ${row.active_rules.map(rule => `<p>Active rule · ${esc(rule.example.filename)} · ${esc(rule.source)}</p>`).join("")}
+      ${row.files.map(file => `<p>${esc(label(file.state))} · ${esc(file.path)} ${file.sha256 ? ` · ${esc(file.sha256)}` : ""}</p>`).join("")}
+      ${row.examples.map(file => `<p>${file.sha256 ? "Direct-file sample" : "Archive filename reference"} · ${esc(file.filename)}
+        <br><small>${esc(file.source.locator)}${file.sha256 ? ` · ${esc(file.sha256)}` : ""}</small></p>`).join("")}
+      <dl>${Object.entries(row.fields).map(([name, field]) => `<dt>${esc(label(name))}</dt>
+        <dd>${esc(label(field.state).toLowerCase())}${field.value ? ` · ${esc(field.value)}` : ""}
+          ${field.proof.length ? `<ul>${field.proof.map(claim => `<li>Tier ${esc(claim.tier)} · ${esc(claim.value)}
+            ${claim.superseded ? " · superseded" : ""}<br><small>${esc(claim.source.locator)}</small></li>`).join("")}</ul>` : ""}</dd>`).join("")}</dl>
+      </details>`).join("");
   }
 
   function showImages(items) {
@@ -223,9 +252,13 @@
     $("registry-import").reset();
     $("registry-activate").disabled = true;
     $("registry-file-preview").textContent = "";
+    $("naming-audit-load").reset();
+    $("naming-audit-results").replaceChildren();
+    $("naming-audit-status").textContent = "";
     await showAccess();
     await loadView();
     await loadRegistry();
+    if ($("inspect-naming-audit").open) await loadNamingAudit();
   }
 
   async function showAccess() {
@@ -284,6 +317,7 @@
         else coverage(await api("summary", {job}));
         await loadView();
         if ($("inspect-registry").open) await loadRegistry();
+        if ($("inspect-naming-audit").open) await loadNamingAudit();
       }
     }
   }
@@ -345,7 +379,7 @@
       if (file.size > 62 * 1024) throw new Error("Choose a project profile JSON under 62 KiB.");
       const data = JSON.parse((await file.text()).replace(/^\uFEFF/, ""));
       if (job !== selected || event.target.files[0] !== file) return;
-      if (data?.format !== "journey-project-naming-1" || !Array.isArray(data.rules)) throw new Error("Choose a Journey project naming profile.");
+      if (!["journey-project-naming-1", "journey-project-naming-2"].includes(data?.format) || !Array.isArray(data.rules)) throw new Error("Choose a Journey project naming profile.");
       profileDraft = data;
       $("registry-file-preview").textContent = `${data.project} · ${data.rules.map(rule => rule.example?.filename).join(" · ")}`;
       $("registry-activate").disabled = false;
@@ -353,6 +387,9 @@
   });
   $("inspect-registry").addEventListener("toggle", () => {
     if ($("inspect-registry").open) loadRegistry().catch(failure);
+  });
+  $("inspect-naming-audit").addEventListener("toggle", () => {
+    if ($("inspect-naming-audit").open) loadNamingAudit().catch(failure);
   });
   panel.addEventListener("submit", async (event) => {
     if (event.target.id === "inspect-selection") return;
@@ -370,7 +407,15 @@
         await api("registry-profile", {job, profile: profileDraft});
         registryOffset = 0;
         await loadRegistry();
+        if ($("inspect-naming-audit").open) await loadNamingAudit();
         notice("Project profile active for this inspection.");
+      } else if (event.target.id === "naming-audit-load") {
+        const file = $("naming-audit-file").files[0], selected = job;
+        if (!file || file.size > 62 * 1024) throw new Error("Choose a naming audit JSON under 62 KiB.");
+        const audit = JSON.parse((await file.text()).replace(/^\uFEFF/, ""));
+        if (job !== selected) return;
+        await api("naming-audit-load", {job, audit});
+        await loadNamingAudit();
       } else if (event.target.id === "registry-import") {
         $("registry-status").textContent = "Reading the selected file for project evidence.";
         const result = await api("registry-import", {job, path: data.path.trim().replace(/^"|"$/g, "")});

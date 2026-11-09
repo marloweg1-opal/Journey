@@ -14,6 +14,7 @@ from urllib.parse import parse_qs, urlsplit
 import webbrowser
 
 from core.circuit_breaker import OperationTooLarge
+from journey_navigator.conversation import LocalQwen, validate_prompt
 from journey_navigator.links import ProtectedPath
 from journey_navigator.ocr import find_local_ocr
 from journey_navigator.patrol import Patrol
@@ -80,7 +81,7 @@ def local_drives():
 class Navigator(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, workbench, port=0, *, owner=None, approver=None):
+    def __init__(self, workbench, port=0, *, owner=None, approver=None, interpreter=None):
         super().__init__(("127.0.0.1", port), Handler)
         self.workbench = workbench
         self.temporary = Workbench(workbench.data_dir, ocr=workbench.ocr, temporary=True)
@@ -93,6 +94,7 @@ class Navigator(ThreadingHTTPServer):
         self.closing = False
         self.restore_checkpoint = None
         self.patrol = Patrol(workbench, self.lock, approver=approver)
+        self.interpreter = interpreter or LocalQwen()
         self.host = f"127.0.0.1:{self.server_address[1]}"
         self.origin = f"http://{self.host}"
         self.static = {"/": ("text/html; charset=utf-8", navigator_page().encode("utf-8")),
@@ -205,6 +207,20 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(length))
             if not isinstance(body, dict):
                 raise ValueError("The Navigator request is invalid.")
+            if route == "/api/inspect/stewardship-plan":
+                use_model = body.get("use_model", False)
+                if type(use_model) is not bool:
+                    raise ValueError("Choose whether to use local Qwen3.")
+                body["provider"] = None
+                if use_model:
+                    prompt = validate_prompt(body["instruction"])
+                    with self.server.lock:
+                        if self.server.closing:
+                            return self._json({'error':'Navigator is closing after its safe checkpoint.'},409)
+                        self.server.patrol.row(body["destination"])
+                    # Only the live prompt goes to loopback. Keep the Patrol
+                    # lock free and recheck the selected scope before using it.
+                    body["provider"] = self.server.interpreter.interpret(prompt)
             with self.server.lock:
                 if self.server.closing:
                     return self._json({'error':'Navigator is closing after its safe checkpoint.'},409)
@@ -270,11 +286,24 @@ class Handler(BaseHTTPRequestHandler):
             return patrol.authorize(destination,body['batch'])
         if action == 'batch-undo':
             return patrol.guided.prepare_undo(patrol.row(destination)['job'],body['receipt'])
+        if action == "stewardship-plan":
+            return patrol.stewardship.plan(destination, body["instruction"], provider=body["provider"],
+                                           read_references=body.get("read_references", False))
+        if action == "stewardship-confirm":
+            return patrol.stewardship.confirm(destination, body["binding"], body["assets"],
+                                              body["reason"], body.get("replacement", ""))
+        if action == "stewardship-archive":
+            return patrol.stewardship.archive(destination, body["binding"], body["assets"],
+                                              body["decision"], body["folder"])
         if type(offset) is not int or not 0 <= offset <= 1_000_000:
             raise ValueError("Choose a valid results page.")
         registry = app.project_registry
         if action == "registry":
             return registry.catalog(job, offset)
+        if action == "naming-audit":
+            return app.project_audit.view(job)
+        if action == "naming-audit-load":
+            return app.project_audit.activate(job, body["audit"])
         if action == "registry-profile":
             return registry.activate(job, body["profile"])
         if action == "registry-deactivate":
@@ -321,7 +350,9 @@ class Handler(BaseHTTPRequestHandler):
         if action == "proposals":
             return app.permit_proposals(job, body["scope"], body["allowed"])
         if action == "revoke":
-            return app.revoke(job, body["scope"], body["permission"])
+            result = app.revoke(job, body["scope"], body["permission"])
+            patrol.stewardship.invalidate(job)
+            return result
         if action == "rule":
             return app.rule(job, body["project"], body["filename"], body["folder"])
         if action == "export":

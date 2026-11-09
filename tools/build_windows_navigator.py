@@ -37,7 +37,8 @@ def build(output, cache, wheel, zig):
         modules = {
             "journey_navigator": ("__init__.py", "__main__.py", "context.py", "links.py", "ocr.py", "workbench.py",
                                   "inspection.html", "inspection.js", "inspection.css", "approval.py", "guided.py", "migrations.py",
-                                  "patrol.py", "patrol.html", "patrol.js", "session.py", "install.py", "registry.py"),
+                                  "patrol.py", "patrol.html", "patrol.js", "session.py", "install.py", "registry.py",
+                                  "conversation.py", "project_audit.py", "stewardship.py"),
             "journey_planner": ("__init__.py", "catalog.py"),
             "journey_vision": ("__init__.py", "observe.py", "steward.py"),
             "core": tuple(item.name for item in (ROOT / 'core').glob('*.py')),

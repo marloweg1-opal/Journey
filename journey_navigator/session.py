@@ -17,7 +17,7 @@ from core.file_paths import safe_metadata
 from core.process_lock import ProcessBusyError, process_lock
 
 
-VERSION = "0.5 Project Asset Registry"
+VERSION = "0.6 Project Stewardship"
 APP_ID = "Journey.Navigator"
 
 

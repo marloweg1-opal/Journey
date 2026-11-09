@@ -176,7 +176,7 @@ def assess(registry, path, scope, asset, reviews, examples, ocr):
     signals = [_evidence(registry, "Filename", path.stem)]
     for parent in (Path(scope).name, *path.relative_to(scope).parts[:-1]):
         signals.append(_evidence(registry, "Folder", parent))
-    for line in ocr.get("lines", []):
+    for line in ocr.get("lines", []) if ocr.get("status") != "unreliable" else ():
         signals.append(_evidence(registry, "Image text", line["text"], confidence=line["confidence"], top=line["top"]))
     signals = [signal for signal in signals if signal]
     return {"identity": _context_identity(registry, asset, identities, examples, signals),

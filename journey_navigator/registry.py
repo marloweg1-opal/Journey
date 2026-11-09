@@ -12,10 +12,11 @@ from uuid import uuid4
 
 from core.file_paths import safe_metadata, signature
 from core.project_registry import (
-    CLAIM_TYPES, PROFILE_FORMAT, archive_claims, asset_name, claim_id, creation_index_claims, iso_date, key_for,
+    CLAIM_TYPES, DATE_ORDERS, PATTERN_FORMAT, PROFILE_FORMAT, archive_claims, asset_name, claim_id, creation_index_claims, iso_date, key_for,
     profile_date, render_name, text_field,
 )
 from journey_navigator.links import ProtectedPath
+from journey_navigator.stewardship import retirement_facts
 from journey_planner.catalog import absolute_path, check_local_drive, component
 from journey_vision.observe import IMAGE_FORMATS, image_bytes
 from journey_vision.steward import VERSION_TOKEN
@@ -24,6 +25,7 @@ from journey_vision.steward import VERSION_TOKEN
 ARCHIVE_BYTES = 64 * 1024 * 1024
 CLAIM_LIMIT = 20_000
 REGISTRY_PAGE = 16
+VARIATION = re.compile(r"(?:\b(?:variant|variation|rev(?:ision)?|candidate)[ _-]+[0-9]+\b|\([0-9]+\)$)", re.I)
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS project_profiles (
     job TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, revision TEXT NOT NULL, document TEXT NOT NULL,
@@ -92,35 +94,44 @@ def creation_dates(data):
 
 
 def validate_profile(value):
-    if not isinstance(value, dict) or value.get("format") != PROFILE_FORMAT:
+    if not isinstance(value, dict) or value.get("format") not in (PROFILE_FORMAT, PATTERN_FORMAT):
         raise ValueError("Choose a Journey project naming profile.")
+    legacy = value["format"] == PROFILE_FORMAT
     project = text_field(value["project"], 80)
     signals, rules = value["signals"], value["rules"]
     if not isinstance(signals, list) or not 1 <= len(signals) <= 20:
         raise ValueError("A project profile needs 1–20 project or asset search terms.")
     signals = [text_field(item, 80) for item in signals]
-    if not isinstance(rules, list) or not 1 <= len(rules) <= 20:
-        raise ValueError("A project profile needs 1–20 supported naming rules.")
+    if not isinstance(rules, list) or not int(legacy) <= len(rules) <= 20:
+        raise ValueError("Choose up to 20 supported rules. Legacy profiles require at least one.")
     validated = []
     classes = set()
     for rule in rules:
         subject, purpose = text_field(rule["subject"], 80), text_field(rule["purpose"], 80)
-        prefix = component(rule["prefix"])
-        extension = rule["extension"]
-        if extension not in IMAGE_FORMATS or rule["date_order"] != "DD_MM":
-            raise ValueError("Use a supported image extension and the DD_MM date format.")
+        extension, order = rule["extension"], rule["date_order"]
+        if extension not in IMAGE_FORMATS or order not in ({"DD_MM"} if legacy else DATE_ORDERS):
+            raise ValueError("Choose a supported image extension and date layout.")
+        if legacy:
+            layout = {"prefix": component(rule["prefix"])}
+        else:
+            pattern = text_field(rule["pattern"], 180)
+            literals = pattern.replace("{date}", "")
+            if pattern.count("{date}") != int(order != "NONE") or "{" in literals or "}" in literals:
+                raise ValueError("The pattern needs one date field when dated, with the rest as literal filename text.")
+            layout = {"pattern": pattern}
         asset_class = (subject.casefold(), purpose.casefold(), extension)
         if asset_class in classes:
             raise ValueError("The profile contains conflicting rules for one image class.")
         classes.add(asset_class)
         example = rule["example"]
-        example_date = iso_date(example["date"])
-        if render_name(rule, example_date, extension) != component(example["filename"]):
-            raise ValueError("The naming rule does not reproduce its dated example exactly.")
-        validated.append({"subject": subject, "purpose": purpose, "prefix": prefix, "extension": extension,
-                          "date_order": "DD_MM", "example": {"date": example_date, "filename": example["filename"]},
+        example_date = iso_date(example["date"]) if order != "NONE" else None
+        normalized = layout | {"date_order": order}
+        if render_name(normalized, example_date, extension) != component(example["filename"]):
+            raise ValueError("The naming rule does not reproduce its dated example or literal example exactly.")
+        validated.append({"subject": subject, "purpose": purpose, "extension": extension,
+                          **normalized, "example": {"date": example_date, "filename": example["filename"]},
                           "source": text_field(rule["source"], 400)})
-    return {"format": PROFILE_FORMAT, "project": project, "signals": signals, "rules": validated}
+    return {"format": value["format"], "project": project, "signals": signals, "rules": validated}
 
 
 def validate_claim(claim):
@@ -204,7 +215,7 @@ class ProjectRegistry:
 
     def forget(self, job_id):
         # Caller already holds the checkpoint cleanup transaction.
-        for table in ("project_profiles", "project_imports", "project_claims", "project_asset_dates"):
+        for table in ("project_profiles", "project_imports", "project_claims", "project_asset_dates", "stewardship_retirements"):
             self.conn.execute(f"DELETE FROM {table} WHERE job=?", (job_id,))
 
     def _insert(self, job_id, profile, claims):
@@ -411,9 +422,10 @@ class ProjectRegistry:
         return {"saved": True}
 
     def details(self, job, row, features, profile, record):
-        history = self._history(job, row) if profile else []
+        history = self._history(job, row)
         names = {filename_key(row["path"]), *(filename_key(item["from_path"]) for item in history)}
         evidence = self._evidence(job["id"], profile["fingerprint"], sorted(names)) if profile else []
+        retirements = retirement_facts(self.conn, job["id"], profile, row["path"], row["digest"], history)
         decisions = [json.loads(item[0]) for item in self.conn.execute("""SELECT evidence FROM project_asset_dates
             WHERE job=? AND profile=? AND digest=? ORDER BY id DESC LIMIT 20""",
             (job["id"], profile["fingerprint"], row["digest"]))] if profile else []
@@ -429,15 +441,17 @@ class ProjectRegistry:
         archive_rejected = bool(chosen and chosen.get("claim") and self.conn.execute(
             "SELECT 1 FROM project_claims WHERE job=? AND profile=? AND id=? AND decision='rejected'",
             (job["id"], profile["fingerprint"], chosen["claim"])).fetchone())
-        short_disagrees = bool(chosen and short and short["state"] == "observed"
-                               and chosen["date"][5:] != f"{short['month']:02d}-{short['day']:02d}")
+        short_disagrees = bool(chosen and short and short["state"] == "observed" and
+            (chosen["date"][5:] != f"{short['month']:02d}-{short['day']:02d}" or
+             ("year" in short and int(chosen["date"][:4]) != short["year"])))
         conflict = archive_rejected or (not decisions and (len(dates) > 1 or short_disagrees))
         return rule, {
             "original_filename": Path(history[-1]["from_path"] if history else row["path"]).name,
             "current_filename": Path(row["path"]).name, "filesystem_modified_ns": row["modified"],
             "date": chosen if not conflict else None, "date_state": "conflicted" if conflict else ("known" if chosen else "unknown"),
             "filename_date": short, "embedded_dates": embedded, "date_reviews": decisions,
-            "path_history": list(reversed(history)), "registry_evidence": evidence, "lifecycle": lifecycle(names, evidence),
+            "path_history": list(reversed(history)), "registry_evidence": evidence,
+            "lifecycle": "retired" if retirements else lifecycle(names, evidence), "retirements": retirements,
         }
 
 
@@ -447,14 +461,16 @@ def preview(path, record, metadata, rule):
         return result | {"reason": "The active profile has no validated rule for this subject, asset type, and extension."}
     if record["identity"]["state"] != "human_confirmed_identity" or record["purpose"]["state"] != "human_confirmed":
         return result | {"state": "needs_identification", "reason": "Confirm the subject and purpose before reviewing a rename."}
-    if not metadata["date"]:
+    dated = rule["date_order"] != "NONE"
+    if dated and not metadata["date"]:
         reason = ("Creation date evidence disagrees. Review the competing dates."
                   if metadata["date_state"] == "conflicted" else "A full asset creation date is needed. The file modification date is separate.")
         return result | {"state": "needs_date", "reason": reason}
-    name = component(render_name(rule, metadata["date"]["date"], path.suffix))
+    name = component(render_name(rule, metadata["date"]["date"] if dated else None, path.suffix))
     if name == path.name:
         return result | {"state": "matches_rule", "reason": "The filename already matches the validated profile."}
-    if VERSION_TOKEN.search(path.stem):
+    if VERSION_TOKEN.search(path.stem) or VARIATION.search(path.stem.replace("_", " ")):
         return result | {"state": "blocked", "reason": "The source name contains a version or variation and this profile has no rule for preserving it."}
     return {"state": "proposed", "destination": name, "executable": True,
-            "reason": "Uses the confirmed subject and purpose and the evidenced creation date with the validated DD_MM rule."}
+            "reason": "Uses the confirmed subject and purpose with the validated project pattern" +
+                      (" and evidenced creation date." if dated else ".")}

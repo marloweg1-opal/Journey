@@ -14,6 +14,16 @@ from core.read_guard import require_path_not_held
 TEXT_EXTENSIONS={'.ini','.json','.toml','.yaml','.yml','.xml','.cfg','.conf','.lua','.ps1','.js','.css','.html','.htm','.md','.url'}
 
 
+def reference_match(target, casefolded_text):
+    normalized = str(PureWindowsPath(target)).casefold()
+    forms = {normalized, normalized.replace('\\', '/'), normalized.replace('\\', '\\\\')}
+    if any(form in casefolded_text for form in forms):
+        return 'explicit_path'
+    if PureWindowsPath(target).name.casefold() in casefolded_text:
+        return 'basename_only'
+    return None
+
+
 def inspect_references(targets, roots, *, max_files=100, max_bytes=2_000_000, max_seconds=5,
                        privacy_conn=None):
     if any(type(value) is not int or value <= 0 for value in (max_files, max_bytes)):
@@ -98,9 +108,7 @@ def inspect_references(targets, roots, *, max_files=100, max_bytes=2_000_000, ma
                     'structured_parser_supported': path.suffix.lower() in STRUCTURED_EXTENSIONS,
                     'dependency_semantics_complete': False})
                 for target in targets:
-                    normalized=str(PureWindowsPath(target)).casefold()
-                    forms={normalized,normalized.replace('\\','/'),normalized.replace('\\','\\\\')}
-                    match='explicit_path' if any(form in text for form in forms) else 'basename_only' if PureWindowsPath(target).name.casefold() in text else None
+                    match=reference_match(target,text)
                     if match:
                         references.append({'target':target,'reference':str(path),'match':match,'fingerprint':fingerprint})
                     for literal in literals:

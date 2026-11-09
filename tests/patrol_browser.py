@@ -66,7 +66,7 @@ def run(browser,base):
         page=browser.new_page()
         page.on('pageerror',lambda error:errors.append(str(error)))
         page.goto(server.url)
-        expect(page.get_by_text('Journey 0.5 Project Asset Registry',exact=False)).to_be_visible()
+        expect(page.get_by_text('Journey 0.6 Project Stewardship',exact=False)).to_be_visible()
         page.get_by_label('Keep a local checkpoint',exact=False).check()
         page.get_by_label('Suggest names and draft a plan',exact=True).check()
         page.get_by_label('Folder or shortcut path').fill(str(source))

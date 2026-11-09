@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from core.file_paths import safe_metadata
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def prepare_patrol_schema(app):

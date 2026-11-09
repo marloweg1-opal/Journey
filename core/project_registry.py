@@ -9,6 +9,8 @@ from urllib.parse import unquote
 
 
 PROFILE_FORMAT = "journey-project-naming-1"
+PATTERN_FORMAT = "journey-project-naming-2"
+DATE_ORDERS = {"DD_MM", "YYYY-MM-DD", "NONE"}
 EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff", ".ico", ".svg")
 SUFFIXES = "|".join(suffix[1:] for suffix in EXTENSIONS)
 REFERENCE = re.compile(
@@ -52,23 +54,38 @@ def asset_name(value):
 
 
 def render_name(rule, full_date, extension):
+    pattern = rule.get("pattern") or rule.get("prefix", "") + "_{date}"
+    order = rule["date_order"]
+    if order == "NONE":
+        return pattern + extension
     day = date.fromisoformat(iso_date(full_date))
-    return f"{rule['prefix']}_{day.day:02d}_{day.month:02d}{extension}"
+    stamp = f"{day.day:02d}_{day.month:02d}" if order == "DD_MM" else day.isoformat()
+    return pattern.replace("{date}", stamp) + extension
 
 
 def profile_date(rule, name):
-    """Return the date fields of an exact profile-shaped name, without a year."""
-    match = re.fullmatch(re.escape(rule["prefix"]) + r"_([0-9]{2})_([0-9]{2})", PurePosixPath(name).stem)
+    """Parse only fields declared by an active profile. Filename dates remain observations."""
+    pattern = rule.get("pattern") or rule.get("prefix", "") + "_{date}"
+    order = rule["date_order"]
+    if order == "NONE":
+        return {"state": "undated"} if PurePosixPath(name).stem == pattern else None
+    date_rx = r"([0-9]{2})_([0-9]{2})" if order == "DD_MM" else r"([0-9]{4})-([0-9]{2})-([0-9]{2})"
+    match = re.fullmatch(re.escape(pattern).replace(re.escape("{date}"), date_rx), PurePosixPath(name).stem)
     if not match:
         return None
     if match.groups() == ("00", "00"):
         return {"day": None, "month": None, "state": "placeholder"}
-    day, month = map(int, match.groups())
+    if order == "DD_MM":
+        day, month = map(int, match.groups())
+        year = None
+    else:
+        year, month, day = map(int, match.groups())
+    fields = {"day": day, "month": month} if year is None else {"year": year, "day": day, "month": month}
     try:
-        date(2000, month, day)  # Leap day is possible until a year is known.
+        date(2000 if year is None else year, month, day)
     except ValueError:
-        return {"day": day, "month": month, "state": "invalid"}
-    return {"day": day, "month": month, "state": "observed"}
+        return fields | {"state": "invalid"}
+    return fields | {"state": "observed"}
 
 
 def _words(value):

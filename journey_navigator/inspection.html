@@ -46,6 +46,16 @@
             <p id="registry-status" role="status" aria-live="polite"></p>
             <div id="registry-results"></div>
           </details>
+          <details id="inspect-naming-audit">
+            <summary>Naming coverage and proof</summary>
+            <p>Load a project audit to compare scoped conventions, original evidence and current file examples.</p>
+            <form id="naming-audit-load" class="inspection-bar">
+              <label>Naming audit JSON <input type="file" id="naming-audit-file" accept=".json,application/json" required></label>
+              <button type="submit">Load naming evidence</button>
+            </form>
+            <p id="naming-audit-status" role="status" aria-live="polite"></p>
+            <div id="naming-audit-results"></div>
+          </details>
           <details id="inspect-naming">
             <summary>Trial naming formats</summary>
             <p>Trial formats help preview possible filenames. A validated project rule takes precedence when a profile is active. Trial fields include {project}, {subject}, {purpose}, {variation}, and {stamp}.</p>

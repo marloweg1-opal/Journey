@@ -1,10 +1,19 @@
-# Journey Navigator 0.5 Project Asset Registry
+# Journey Navigator 0.6 Project Stewardship
 
 Navigator can reconcile source-linked project references with a selected
 inventory. A reviewed profile supplies a convention for a specific subject,
 asset type and extension. A Guided rename requires the exact current preview,
 including its creation-date evidence. Original Unicode spelling, extension case
 and verified path history are retained in the image details and plan export.
+
+| Capability | 0.5 | 0.6 candidate |
+| --- | --- | --- |
+| Scoped inspection, local image text, checkpoint, and Guided receipts | Operational | Same workflow with separate unreliable and timed-out text states |
+| Project naming profiles | Explicit image rules using day and month | Explicit dated or undated patterns with project-specific field order |
+| Naming evidence across subjects and asset families | Imported candidate records | Scoped naming audit with provenance, conflicts, open fields, and observed file examples |
+| Conversational retirement | Structured controls only | Bounded retirement planning in Review, with an optional local interpreter |
+| Dependency checking for retirement | Account review and registered protections | Adds scoped reference evidence and rechecks it before an archive move |
+| Production deployment, broad conversational execution, or deletion | Unavailable | Unavailable |
 
 ## Open and upgrade
 
@@ -108,6 +117,53 @@ search signals, and rules. Each rule specifies `subject`, `purpose`,
 round-trip through the rule. Trial formats and historical evidence cannot
 activate a profile. Deactivate a profile in Inspect to withdraw its naming
 rules. Forget the retained inspection to clear its registry evidence.
+
+### Audit the naming grammar
+
+In **Inspect → Naming coverage and proof**, load a scoped naming audit JSON.
+The audit groups evidence by subject and asset family. Open a row to see the
+sources for its marker, tag, field order, date, extension, variation and version.
+An active rule, an archive filename reference, a direct-file sample and a
+verified current filename are distinct. A filename date is observed text.
+The asset's original creation date requires independent evidence.
+
+The audited project must match the active profile. An audit can also be loaded
+without an active naming profile. **Naming coverage and proof** never installs
+a naming rule. A new profile may use the `journey-project-naming-2` format with
+a literal stem pattern and an optional `{date}` field. The allowed date layouts
+are day and month, full year-first date, and undated. Every executable rule
+still needs its own scope, source, extension, and exact example. An evidence-only
+profile may carry zero rules. A source version or variation with no preservation
+rule blocks a proposed rename.
+
+### Review a retirement
+
+1. Inspect the project and open a saved **Destination → Review**. Open
+   **Talk to Journey about retirement** and enter one instruction naming the
+   design family. A quoted family makes the intended scope clear.
+2. **Interpret this instruction with local Qwen3** sends only that live prompt
+   to the existing Ollama service at loopback. It returns a candidate family
+   phrase. Navigator keeps the source inventory, history, paths, and execution
+   authority on its side of the interface. Explicit retirement instructions
+   also work with the built-in parser. Draft instructions stay in the session.
+3. Optionally enable **Read scoped documentation and configuration references**.
+   Review candidate files, exact copies at other paths, historical records,
+   existing protections, and dependency evidence. A limited or empty search
+   leaves external dependencies open.
+4. Select the assets, enter the reason and any known replacement, and choose
+   **Record selected retirements**. The scoped registry records the decision,
+   original path, fingerprint, and references. Existing historical documents
+   and unselected copies remain individually traceable.
+5. To move selected retired assets, choose an existing archive folder in
+   the same authorized scope and prepare an exact batch. Windows account
+   approval, fresh dependency checks, journal and receipt-based reversal
+   use the existing Guided workflow. Incomplete dependency coverage, a
+   current configuration reference, or a changed file holds the move.
+
+The retirement planner routes questions through current scope inventory,
+registry provenance, registered protections and optional reference reading,
+then hands an exact reviewed proposal to Guided. Each stage reports its
+own outcome. Its task set is limited to retirement review.
 
 ## Scope, authority and recovery
 

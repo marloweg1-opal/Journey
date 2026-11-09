@@ -10,7 +10,7 @@ import shutil
 import subprocess
 
 
-PIPELINE = "tesseract-eng-sparse-1600-v1"
+PIPELINE = "tesseract-eng-sparse-1600-v2"
 TIMEOUT = 3
 MAX_SIDE = 1600
 MAX_LINES = 160
@@ -58,9 +58,11 @@ class LocalOcr:
         text = self._run(("stdin", "stdout", *self.data_args, "-l", "eng", "--oem", "1",
                           "--psm", "11", "tsv"), pixels)
         lines = {}
+        raw_text = False
         for row in csv.DictReader(StringIO(text), delimiter="\t", quoting=csv.QUOTE_NONE):
             try:
                 value = (row["text"] or "").strip()[:240]
+                raw_text |= bool(value)
                 confidence = float(row["conf"])
                 if not value or confidence < MIN_WORD_CONFIDENCE:
                     continue
@@ -74,7 +76,10 @@ class LocalOcr:
                  "confidence": round(min(item[1] for item in words), 1),
                  "top": round(min(item[2] for item in words), 3)}
                 for words in list(lines.values())[:MAX_LINES]]
-        return {"status": "read" if rows else "no_text", "lines": rows, "provider": self.version,
+        readable = any(row["confidence"] >= 60 and any(re.search(r"[aeiouy]", word, re.I)
+                       for word in re.findall(r"[^\W\d_]{3,}", row["text"])) for row in rows)
+        status = "read" if readable else "unreliable" if raw_text else "no_text"
+        return {"status": status, "lines": rows, "provider": self.version,
                 "language": "eng", "model": self.model, "pipeline": PIPELINE}
 
 

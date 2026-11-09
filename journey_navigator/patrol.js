@@ -5,6 +5,7 @@
   const notify = value => { $("inspect-notice").textContent = value; const alert=$("journey-alert"); if (alert) alert.textContent=value; };
   let destination = "", current = null, offset = 0, polling = false, collection = "", questionMembers = null, batchId = "";
   let imageRequest=0, statusRequest=0, renderedSnapshot='', pollAgain=false;
+  let stewardshipReview = null, retirementDecision = "";
   const selections={'.patrol-asset':new Set(),'.patrol-name':new Set()};
   const clearSelections=()=>Object.values(selections).forEach(values=>values.clear());
   const client = sessionStorage.getItem("journey-window") || crypto.randomUUID();
@@ -38,6 +39,51 @@
     }
   });
   const failure = error => notify(error.error || error.message || String(error));
+  const stewardshipStatus = value => { $("stewardship-status").textContent = value; };
+  const readable = value => String(value || "").replaceAll("_", " ").toLowerCase();
+  const retirementAssets = () => [...document.querySelectorAll(".stewardship-asset:checked")].map(input => Number(input.value));
+
+  function resetStewardship() {
+    stewardshipReview = null;
+    retirementDecision = "";
+    $("stewardship-results").replaceChildren();
+    stewardshipStatus("");
+  }
+
+  function showStewardship(result) {
+    const slot = $("stewardship-results");
+    if (!result.binding) {
+      slot.replaceChildren();
+      stewardshipStatus(`${readable(result.state)} · ${result.reason}`);
+      return;
+    }
+    const {entries, dependencies} = result;
+    const candidates = entries.filter(item => item.group === "asset_candidate");
+    const rest = entries.filter(item => item.group !== "asset_candidate");
+    stewardshipStatus(`${readable(result.state)} · ${result.family} · Qwen3 ${readable(result.provider)}`);
+    const sources = entry => entry.evidence.map(item => `<p><small>${esc(item.source.role)} · ${esc(item.source.archive)} · ${esc(item.source.message)}</small></p>`).join("");
+    slot.innerHTML = `<p><strong>Review scope</strong> · ${esc(result.scope)}</p>
+      <p>${result.withheld_or_changed} matches withheld or changed. ${dependencies.files_checked} reference files checked · ${esc(readable(dependencies.state))}.</p>
+      <details><summary>What Journey checked</summary><dl>${Object.entries(result.questions).map(([question, state]) =>
+        `<dt>${esc(readable(question))}</dt><dd>${esc(readable(state))}</dd>`).join("")}</dl></details>
+      <h4>Asset candidates</h4>${candidates.map(item => `<div class="inspection-entry">
+        <label><input class="stewardship-asset" type="checkbox" value="${item.id}"> ${esc(item.path)}</label>
+        ${item.physical_blocker ? `<p>Archive hold · ${esc(item.physical_blocker)}</p>` : ""}
+        ${item.copy_paths.map(path => `<p>Identical content at a separate path · ${esc(path)}</p>`).join("")}
+        ${sources(item)}</div>`).join("") || "<p>Review references and scope before recording a retirement.</p>"}
+      <h4>Historical references and unresolved entries</h4>
+      ${rest.map(item => `<div class="inspection-entry"><p>${esc(item.path)} · ${esc(readable(item.group))}</p>${sources(item)}</div>`).join("")}
+      ${result.archive_evidence.map(item => `<p>${esc(item.name)} · ${esc(item.decision)} · ${esc(item.source.archive)} · ${esc(item.source.message)}</p>`).join("")}
+      <h4>Dependency evidence</h4>
+      ${dependencies.references.map(item => `<p>${esc(item.reference)} → ${esc(item.target)} · ${esc(readable(item.role))}</p>`).join("")}
+      ${candidates.length ? `<form id="stewardship-confirm" class="inspection-bar">
+        <label>Reason for retirement <input name="reason" maxlength="300" required></label>
+        <label>Replacement, if known <input name="replacement" maxlength="180"></label>
+        <button type="submit">Record selected retirements</button></form>
+      <form id="stewardship-archive" class="inspection-bar" hidden>
+        <label>Existing archive folder in this scope <input name="folder" required></label>
+        <button type="submit">Prepare exact archive batch</button></form>` : ""}`;
+  }
 
   async function list() {
     const {items} = await api("destinations");
@@ -149,11 +195,11 @@
     try {
       const data = Object.fromEntries(new FormData(event.target));
       const result = await api('destination-create', {...data,job:sessionStorage.getItem('journey-current-inspection'),max_files:Number(data.max_files),max_seconds:Number(data.max_seconds)});
-      destination = result.id; clearSelections(); renderedSnapshot=''; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status();
+      destination = result.id; resetStewardship(); clearSelections(); renderedSnapshot=''; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status();
     } catch (error) { failure(error); }
   });
   $("patrol-start").onclick = async () => { try { await api('patrol-begin',{destination}); poll(); } catch(error) { failure(error); } };
-  $("patrol-refresh").onclick = async () => { try { await api('patrol-begin',{destination,refresh:true}); poll(); } catch(error) { failure(error); } };
+  $("patrol-refresh").onclick = async () => { try { resetStewardship(); await api('patrol-begin',{destination,refresh:true}); poll(); } catch(error) { failure(error); } };
   $("patrol-pause").onclick = async () => { try { await api('patrol-pause',{destination}); await status(); } catch(error) { failure(error); } };
   $("patrol-accept-outcome").onclick = async () => {
     try { await api('destination-outcome',{destination,binding:current.outcome_binding}); await status(); }
@@ -182,13 +228,50 @@
       await status(); await viewBatch(batch.id);
     } catch(error) { failure(error); }
   };
+  $("stewardship-plan").onsubmit = async event => {
+    event.preventDefault();
+    const form = event.target, requested = destination;
+    const button = form.querySelector("button[type=submit]");
+    resetStewardship();
+    button.disabled = true;
+    stewardshipStatus("Inspecting the instruction and its scope.");
+    try {
+      const result = await api("stewardship-plan", {destination: requested, instruction: form.elements.instruction.value,
+        use_model: form.elements.use_model.checked, read_references: form.elements.read_references.checked});
+      if (destination !== requested) return;
+      stewardshipReview = result.binding ? result : null;
+      showStewardship(result);
+    } catch (error) { stewardshipStatus(error.error || error.message || String(error)); }
+    finally { button.disabled = false; }
+  };
+  $("stewardship-results").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!stewardshipReview) return;
+    const request = {destination, binding: stewardshipReview.binding, assets: retirementAssets()};
+    const data = Object.fromEntries(new FormData(event.target));
+    try {
+      if (event.target.id === "stewardship-confirm") {
+        const result = await api("stewardship-confirm", {...request, ...data});
+        if (destination !== request.destination || stewardshipReview?.binding !== request.binding) return;
+        retirementDecision = result.decision;
+        $("stewardship-archive").hidden = stewardshipReview.dependencies.state !== "CHECKED_WITHIN_SCOPE";
+        stewardshipStatus(`Recorded ${result.recorded} selected retirements in the registry.`);
+        await status();
+      } else {
+        const batch = await api("stewardship-archive", {...request, ...data, decision: retirementDecision});
+        if (destination !== request.destination || stewardshipReview?.binding !== request.binding) return;
+        await viewBatch(batch.id);
+        stewardshipStatus("Exact archive batch prepared for account review.");
+      }
+    } catch (error) { stewardshipStatus(error.error || error.message || String(error)); }
+  });
   $("review-previous").onclick = async () => { clearSelections(); offset=Math.max(0,offset-24); await images(); };
   $("review-next").onclick = async () => { clearSelections(); offset+=24; await images(); };
   document.addEventListener('click', async event => {
     const button=event.target.closest('button');
     if (!button) return;
     try {
-      if (button.dataset.destination) { destination=button.dataset.destination; clearSelections(); renderedSnapshot=''; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status(); poll(); }
+      if (button.dataset.destination) { destination=button.dataset.destination; resetStewardship(); clearSelections(); renderedSnapshot=''; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status(); poll(); }
       else if (button.dataset.collection) { clearSelections(); collection=button.dataset.collection; questionMembers=null; offset=0; setMode('review'); await images(); }
       else if (button.dataset.batch) await viewBatch(button.dataset.batch);
       else if (button.dataset.authorizeBatch) { await api('batch-authorize',{destination,batch:button.dataset.authorizeBatch}); notify('Complete account verification in the Journey Windows dialog.'); poll(); }
