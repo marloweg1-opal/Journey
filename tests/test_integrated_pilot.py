@@ -13,6 +13,7 @@ from PIL import Image, ImageDraw
 
 from core.naming_audit import FORMAT as AUDIT_FORMAT
 from journey_navigator.__main__ import Navigator
+from journey_navigator.context import assess, profile_registry
 from journey_navigator.conversation import explicit_intent
 from journey_navigator.patrol import Patrol
 from journey_navigator.registry import PATTERN_FORMAT
@@ -258,6 +259,16 @@ class IntegratedPilot(unittest.TestCase):
         self.assertEqual(explicit_intent("Heartfield Desk is 92 Carecycles past its expiration date, I don't need that design anymore."),
                          "Heartfield Desk")
         self.assertIsNone(explicit_intent("Do not retire Heartfield Desk."))
+
+    def test_ocr_sentence_fragment_remains_evidence_without_overriding_the_reference(self):
+        asset = {"digest": "fixture", "features": {"width": 1600, "height": 900, "transparency": 0}}
+        image = self.collection / "Cloudstone character design summary sheet.png"
+        result = assess(profile_registry(), image, self.collection, asset, ({}, {}), {}, {"status": "read",
+            "lines": [{"text": "to the Atmospheric Armory.", "confidence": 95, "top": .2}]})
+        self.assertEqual(result["purpose"]["label"], "Character Reference")
+        signal = next(item for item in result["signals"] if item["source"] == "Image text")
+        self.assertEqual(signal["strength"], "mention")
+        self.assertEqual(signal["purposes"], ["Equipment / Design Reference"])
 
 
 if __name__ == "__main__":

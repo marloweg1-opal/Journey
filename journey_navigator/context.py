@@ -30,6 +30,7 @@ ASSET_TYPES = {
     "Artwork": r"\bartwork\b",
 }
 MENTION_ONLY = re.compile(r"\b(?:not|versus|vs|compare|comparison|inspired by|resembles|unrelated|example of)\b", re.I)
+TITLE_FRAGMENT = re.compile(r"^\W*(?:and|for|from|into|of|or|through|to|with)\s+", re.I)
 NAMING_HOLD = ("Filename changes are held: this candidate has no validated project naming profile. "
                "A confirmed subject, a trial format, and batch approval do not validate the convention. "
                "Inspection, virtual collections, and reviewed moves that keep the exact filename remain available.")
@@ -110,7 +111,8 @@ def _evidence(registry, source, text, *, confidence=None, top=None):
         return None
     strength = "mention" if MENTION_ONLY.search(text.replace("_", " ")) else "direct"
     if source == "Image text":
-        strength = "title" if confidence >= 75 and top <= 0.33 and len(text.split()) <= 8 and strength == "direct" else "mention"
+        title = confidence >= 75 and top <= 0.33 and len(text.split()) <= 8 and strength == "direct"
+        strength = "title" if title and not TITLE_FRAGMENT.search(text) else "mention"
     return {"source": source, "text": text, "subjects": [registry["tokens"][key]["display_name"] for key in ids],
             "purposes": purposes, "versions": versions, "dates": dates, "strength": strength, "confidence": confidence,
             "ambiguous_references": compounds}
