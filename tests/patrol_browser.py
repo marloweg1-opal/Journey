@@ -13,6 +13,7 @@ from threading import Thread
 from playwright.sync_api import expect,sync_playwright
 
 from journey_navigator.__main__ import Navigator
+from journey_navigator.session import VERSION
 from journey_navigator.workbench import Workbench
 from navigator_fixtures import make_link
 from test_navigator_context import make_board, reader
@@ -66,7 +67,7 @@ def run(browser,base):
         page=browser.new_page()
         page.on('pageerror',lambda error:errors.append(str(error)))
         page.goto(server.url)
-        expect(page.get_by_text('Journey 0.6 Project Stewardship',exact=False)).to_be_visible()
+        expect(page.locator('.journey-build strong')).to_have_text(f'Journey {VERSION}')
         page.get_by_label('Keep a local checkpoint',exact=False).check()
         page.get_by_label('Suggest names and draft a plan',exact=True).check()
         page.get_by_label('Folder or shortcut path').fill(str(source))
