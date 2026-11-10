@@ -705,6 +705,17 @@ class Workbench:
         metadata["source_fingerprint_matches"] = exemplars
         if metadata["retirements"]:
             memberships.append("Retired · " + metadata["retirements"][0]["family"])
+        history_states = set()
+        for claim in historical:
+            if claim["source"]["role"] != "user":
+                continue
+            if claim["kind"] == "lifecycle" and claim["match"] == "filename candidate":
+                history_states.add(claim["value"])
+            if (claim["kind"] == "relationship" and claim["value"]["asset"].casefold() == path.name.casefold()
+                    and claim["value"]["relation"] in ("supersedes", "replaces")):
+                history_states.add("superseded")
+        for state in sorted(history_states):
+            memberships.append("Historical " + state + " claim")
         if proposals and profile:
             record["name"] = registry_preview(path, record, metadata, naming_rule)
             if naming_rule and (blocker := naming_blocker(audit, profile, naming_rule)):

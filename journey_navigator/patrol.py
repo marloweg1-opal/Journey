@@ -358,7 +358,8 @@ class Patrol:
                          or image['purpose'] in ('unknown','conflicting_evidence') for image in records)
         receipts=self.guided.history(row['job'])
         tasks=[dict(task) for task in self.conn.execute('SELECT kind,status,cursor,attempts,reason FROM patrol_tasks WHERE destination=?',(destination,))]
-        outcome_binding=sha256(json.dumps([row['objective'],row['success'],self.signature(row['job']),coverage['analyzed'],len(receipts)],sort_keys=True).encode()).hexdigest()
+        current_signature = self.signature(row['job'])
+        outcome_binding=sha256(json.dumps([row['objective'],row['success'],current_signature,coverage['analyzed'],len(receipts)],sort_keys=True).encode()).hexdigest()
         outcome=self.conn.execute('SELECT * FROM destination_outcomes WHERE destination=? AND binding=? ORDER BY id DESC LIMIT 1',(destination,outcome_binding)).fetchone()
         reviewed = sum(value['status']=='applied' for value in receipts)
         waiting = sum(value['status'] in ('review_required','authorizing') for value in batches)
@@ -370,6 +371,8 @@ class Patrol:
         reconciliation = next((task['reason'] for task in tasks if task['kind']=='reconcile' and task['status']=='complete'), '')
         if reconciliation:
             result += ' ' + reconciliation
+        if row['signature'] and row['signature'] != current_signature:
+            result += ' Evidence changed. Resume Patrol for a fresh assessment.'
         need=Need(row['id'],row['objective'],row['why']).assess({key:True for key in ('capability','environment','resources','authority','policy','evidence')},
             outcome_verified=outcome is not None,evidence_refs=(f'owner-outcome:{outcome["id"]}',) if outcome else ())
         return dict(row) | {'coverage':coverage,'inspection_epoch':self.app.job(row['job'])['epoch'],'metrics':{'proposed':states['proposed_identity'],'confirmed':states['human_confirmed_identity'],
@@ -395,7 +398,10 @@ class Patrol:
 
     def accept_outcome(self,destination,binding,notes):
         status=self.status(destination)
-        if binding!=status['outcome_binding'] or status['state'] in ACTIVE or any(batch['status']=='authorizing' for batch in status['batches']):
+        if (binding!=status['outcome_binding'] or status['state'] in ACTIVE
+                or status['signature'] != self.signature(status['job'])
+                or any(task['status'] in ('pending', 'running') for task in status['tasks'])
+                or any(batch['status']=='authorizing' for batch in status['batches'])):
             raise ValueError('The results are changing. Review the current completed cycle before accepting its outcome.')
         with self.conn:
             self.conn.execute('INSERT INTO destination_outcomes(destination,binding,notes,authority) VALUES(?,?,?,?)',

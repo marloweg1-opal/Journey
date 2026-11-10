@@ -59,7 +59,7 @@ def manifest(path):
             with urlopen(request,timeout=1) as response:
                 result=json.load(response)
             if result['session']==record['session']:
-                return record
+                return record | {'url': result['url']}
         except (OSError,ValueError):
             sleep(.1)
     raise AssertionError('The normal launcher did not publish a verified running session.')

@@ -9,6 +9,9 @@ from time import monotonic, sleep
 from urllib.request import Request, urlopen
 import unittest
 
+from PIL import Image, ImageDraw
+
+from core.naming_audit import FORMAT as AUDIT_FORMAT
 from journey_navigator.__main__ import Navigator
 from journey_navigator.conversation import explicit_intent
 from journey_navigator.patrol import Patrol
@@ -89,6 +92,7 @@ class IntegratedPilot(unittest.TestCase):
                         break
                     sleep(.025)
                 self.assertIn("CareRail UI / Design", {item["name"] for item in work["collections"]})
+                self.assertIn("Historical superseded claim", {item["name"] for item in work["collections"]})
                 self.assertEqual(api("history-status", job=job)["reconciliation"]["archive_bytes_verified"], 0)
                 self.assertEqual({path: digest(path) for path in untouched}, untouched)
                 self.assertEqual(api("history-forget", job=job)["claims"], 0)
@@ -160,6 +164,25 @@ class IntegratedPilot(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "its own folder"):
             self.app.history.preview(self.job, manifest)
         self.assertEqual(self.app.history.status(self.job)["files"], [])
+
+    def test_exact_attributed_exemplar_and_emblem_keep_their_original_names(self):
+        wall = self.collection / "Corestone Wallpaer Final.png"
+        illustration(wall, (1024, 576), "#5af0ca")
+        emblem = Image.new("RGBA", (320, 320))
+        ImageDraw.Draw(emblem).ellipse((55, 55, 265, 265), fill="#179d60")
+        emblem.save(self.collection / "Cloverstone.png")
+        self.app.project_registry.activate(self.job, {"format": PATTERN_FORMAT, "project": "CareBloomOS",
+            "signals": ["CareBloomOS"], "rules": []})
+        self.app.project_audit.activate(self.job, {"format": AUDIT_FORMAT, "project": "CareBloomOS",
+            "subjects": ["Corestone", "Cloverstone"], "families": [{"name": "Wallpaper", "terms": ["wallpaper"]}], "claims": [],
+            "examples": [{"filename": wall.name, "subject": "Corestone", "family": "Wallpaper", "sha256": digest(wall)[0],
+                          "source": {"role": "current_file", "locator": "Synthetic fixture fingerprint"}}]})
+        self.app.refresh(self.job)
+        self.finish_scan()
+        rows = {image["filename"]: image for image in self.app.images(self.job, 0, thumbnails=False)["items"]}
+        self.assertEqual(rows[wall.name]["purpose"]["label"], "Wallpaper")
+        self.assertEqual(rows[wall.name]["metadata"]["original_filename"], wall.name)
+        self.assertEqual(rows["Cloverstone.png"]["purpose"]["label"], "Emblem")
 
     def test_malformed_export_does_not_publish_partial_claims(self):
         preview = self.app.packs.preview(self.job, self.pack)

@@ -223,13 +223,13 @@ def assess(registry, path, scope, asset, reviews, examples, ocr, historical=(), 
             signals.append({"source": "Local history", "text": claim["name"], "subjects": [], "purposes": [claim["family"]],
                             "strength": "candidate", "provenance": source})
     for item in exemplars:
-        purposes = asset_families(Path(item["filename"]).stem)
+        exemplar_purposes = asset_families(Path(item["filename"]).stem)
         known = {"CareRail Panel": "CareRail UI / Design", "Icon": "Icons & Badges", "Badge": "Icons & Badges"}
         family = known.get(item["family"], item["family"])
-        if not purposes and family in ASSET_TYPES:
-            purposes = [family]
+        if not exemplar_purposes and family in ASSET_TYPES:
+            exemplar_purposes = [family]
         signals.append({"source": "Verified file exemplar", "text": item["filename"], "subjects": [item["subject"]],
-                        "purposes": purposes, "strength": "candidate", "provenance": item["source"]})
+                        "purposes": exemplar_purposes, "strength": "candidate", "provenance": item["source"]})
     for item in entity_links:
         signals.append({"source": "Local history", "text": item["name"], "subjects": [item["value"]["entity"]],
                         "purposes": [], "strength": "candidate", "provenance": item["source"]})
