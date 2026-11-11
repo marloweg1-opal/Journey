@@ -1,0 +1,89 @@
+name: Navigator linked inspection acceptance
+
+on:
+  push:
+    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol, work/navigator-provenance-naming, work/navigator-asset-registry, work/navigator-project-stewardship, work/journey-integrated-pilot, work/journey-incremental]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install test and build dependencies
+        run: |
+          python -m pip install Pillow==12.2.0 ziglang==0.15.2 playwright==1.62.0
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed.' }
+          python -m playwright install chromium --only-shell
+          if ($LASTEXITCODE -ne 0) { throw 'Browser installation failed.' }
+      - name: Build isolated Windows candidate
+        run: |
+          python -m pip download --only-binary=:all: --platform win_amd64 --python-version 3.14 --implementation cp --abi cp314 --dest "$env:RUNNER_TEMP" Pillow==12.2.0
+          if ($LASTEXITCODE -ne 0) { throw 'Pillow download failed.' }
+          python -B tools/build_windows_navigator.py dist --cache "$env:RUNNER_TEMP" --pillow-wheel "$env:RUNNER_TEMP/pillow-12.2.0-cp314-cp314-win_amd64.whl"
+          if ($LASTEXITCODE -ne 0) { throw 'Navigator build failed.' }
+      - name: Test native links and release compatibility
+        run: |
+          python -B -m unittest discover -s tests -p 'test_navigator_inspection.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Native Windows link tests failed.' }
+          python -B -m unittest discover -s tests -p 'test_folder_planner.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Planner regressions.' }
+          python -B -m unittest discover -s tests -p 'test_vision_lab.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Vision Lab regressions.' }
+      - name: Exercise the bundled Navigator in a browser
+        timeout-minutes: 10
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:PYTHONPATH = (Get-Location).Path
+          $destination = Join-Path $env:RUNNER_TEMP 'Navigator acceptance with spaces'
+          Expand-Archive -LiteralPath dist/Journey-Navigator-Guided-Patrol-Windows-x64.zip -DestinationPath $destination
+          $runtime = Join-Path $destination 'Journey Navigator/runtime/python.exe'
+          $env:JOURNEY_TEST_OCR = Join-Path $destination 'Journey Navigator/ocr'
+          python -B -m unittest discover -s tests -p 'test_navigator_context.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Navigator OCR or scope acceptance failed.' }
+          python -B -m unittest discover -s tests -p 'test_operational_patrol.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Patrol execution tests failed.' }
+          python -B -m unittest discover -s tests -p 'test_navigator_naming_hold.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Naming provenance or release hold tests failed.' }
+          python -B -m unittest discover -s tests -p 'test_navigator_registry.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Project registry or guided rename acceptance failed.' }
+          python -B -m unittest discover -s tests -p 'test_navigator_stewardship.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Naming audit or guided retirement acceptance failed.' }
+          python -B -m unittest discover -s tests -p 'test_integrated_pilot.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Integrated archive, classification, or lifecycle acceptance failed.' }
+          python -B -m unittest discover -s tests -p 'test_incremental_history.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Incremental historical reconciliation acceptance failed.' }
+          python -B -m unittest discover -s tests -p 'test_navigator_session.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Navigator ownership tests failed.' }
+          python -B tests/navigator_launcher.py --application (Join-Path $destination 'Journey Navigator/Journey Navigator.exe')
+          if ($LASTEXITCODE -ne 0) { throw 'Normal launcher lifecycle failed.' }
+          $env:JOURNEY_ACCEPTANCE_SCREENSHOT = Join-Path $env:RUNNER_TEMP 'patrol-review.png'
+          foreach ($attempt in 1..2) {
+            python -B tests/patrol_browser.py
+            if ($LASTEXITCODE -ne 0) { throw "Operational Patrol browser acceptance failed on pass $attempt." }
+          }
+          python -B tests/navigator_browser.py --runtime $runtime
+          if ($LASTEXITCODE -ne 0) { throw 'Navigator browser acceptance failed.' }
+          python -B tests/registry_browser.py
+          if ($LASTEXITCODE -ne 0) { throw 'Project registry browser acceptance failed.' }
+          python -B tests/stewardship_browser.py
+          if ($LASTEXITCODE -ne 0) { throw 'Project stewardship browser acceptance failed.' }
+      - name: Preserve generated acceptance screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-patrol-review
+          path: ${{ runner.temp }}/patrol-review.png
+          if-no-files-found: ignore
+      - name: Preserve verified Windows candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-navigator-windows
+          path: dist/Journey-Navigator-Guided-Patrol-Windows-x64.zip
+          if-no-files-found: error

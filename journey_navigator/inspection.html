@@ -1,0 +1,118 @@
+      <section class="panel" data-panel="inspect" id="inspection" aria-label="Folder inspection">
+        <div class="inspection-card">
+          <h2>Inspect an existing folder</h2>
+          <p>Choose a folder, Windows shortcut, or junction for read-only inspection. Journey checks filenames, image contents, and readable image text in the authorized folder.</p>
+          <form id="inspect-selection" class="inspection-bar">
+            <label>Folder or shortcut path <input name="path" id="inspect-path" autocomplete="off" required></label>
+            <button type="submit">Inspect selection</button>
+            <button type="button" data-inspect="browse">Browse folders</button>
+          </form>
+          <div class="inspection-options" aria-label="Inspection permissions">
+            <label><input type="checkbox" id="inspect-retain"> Keep a local checkpoint, including image text and corrections</label>
+            <label><input type="checkbox" id="inspect-propose"> Suggest names and draft a plan</label>
+          </div>
+          <div id="inspect-browser" hidden></div>
+          <div id="inspect-approval" hidden></div>
+          <p id="inspect-notice" role="status" aria-live="polite"></p>
+        </div>
+        <div id="inspect-review" class="inspection-card" hidden>
+          <h2>Inspection review</h2>
+          <p id="inspect-root"></p>
+          <p id="inspect-mode"></p>
+          <div id="inspect-counts" class="inspection-counts" aria-label="Coverage counts"></div>
+          <p id="inspect-progress" role="status" aria-live="polite"></p>
+          <div class="inspection-bar">
+            <button type="button" data-inspect="resume">Resume scan</button>
+            <button type="button" data-inspect="pause" disabled>Pause</button>
+            <button type="button" data-inspect="refresh">Refresh source</button>
+            <button type="button" data-inspect="export">Save plan</button>
+          </div>
+          <details id="inspect-access">
+            <summary>Review or revoke permissions</summary>
+            <div id="inspect-scopes"></div>
+          </details>
+          <details id="inspect-registry">
+            <summary>Project registry and validated naming</summary>
+            <p>Activate an evidence pack once for this inspection. The active project and reviewed naming rules reopen with the checkpoint.</p>
+            <form id="pack-preview" class="inspection-bar">
+              <label>Local project pack or evidence ZIP path <input name="path" autocomplete="off" required></label>
+              <button type="submit">Preview project pack</button>
+            </form>
+            <p id="pack-status-message" role="status" aria-live="polite"></p><div id="pack-results"></div>
+            <details open><summary>Individual project profile and legacy evidence files</summary>
+            <form id="registry-profile" class="inspection-bar">
+              <label>Project profile JSON <input id="registry-file" type="file" accept=".json,application/json" required></label>
+              <button type="submit" id="registry-activate" disabled>Use this profile in this folder</button>
+            </form>
+            <p id="registry-file-preview" role="status"></p>
+            <form id="registry-import" class="inspection-bar" hidden>
+              <label>Full local path to a conversation export or Asset Pipeline index (legacy single-file importer) <input name="path" autocomplete="off" required></label>
+              <button type="submit">Import selected evidence file</button>
+            </form>
+            </details>
+            <p id="registry-status" role="status" aria-live="polite"></p>
+            <div id="registry-results"></div>
+          </details>
+          <details id="inspect-history">
+            <summary>Local reference history</summary>
+            <p>Choose a local conversation JSON file, its export folder, or a supported manifest. Journey keeps project references and source locators in this checkpoint. This selection grants read access for the import.</p>
+            <form id="history-preview" class="inspection-bar">
+              <label>Local conversation export or folder path <input name="path" autocomplete="off" required></label>
+              <button type="submit">Preview archive selection</button>
+            </form>
+            <div id="history-selection"></div>
+            <p id="history-status" role="status" aria-live="polite"></p>
+            <div id="history-files"></div>
+            <div class="inspection-bar"><button type="button" data-project="history-status">Refresh history status</button>
+              <button type="button" data-project="history-pause">Pause import</button>
+              <button type="button" data-project="history-reconcile">Reconcile with inspected files</button>
+              <button type="button" data-project="history-forget">Forget imported archives</button></div>
+          </details>
+          <details id="inspect-watch">
+            <summary>Opt-in drift watch</summary>
+            <p>While Navigator is open, periodically sample local file metadata in this inspection’s original scope. Closing the last Navigator tab stops the session. Enable again after reopening.</p>
+            <p id="watch-status" role="status" aria-live="polite">Off</p>
+            <div class="inspection-bar"><button type="button" data-project="watch-enable">Enable for this session</button>
+              <button type="button" data-project="watch-stop">Stop drift watch</button>
+              <button type="button" data-project="watch-status">Check watch report</button></div>
+          </details>
+          <details id="inspect-naming-audit">
+            <summary>Naming coverage and proof</summary>
+            <p>Load a project audit to compare scoped conventions, original evidence and current file examples.</p>
+            <form id="naming-audit-load" class="inspection-bar">
+              <label>Naming audit JSON <input type="file" id="naming-audit-file" accept=".json,application/json" required></label>
+              <button type="submit">Load naming evidence</button>
+            </form>
+            <p id="naming-audit-status" role="status" aria-live="polite"></p>
+            <div id="naming-audit-results"></div>
+          </details>
+          <details id="inspect-naming">
+            <summary>Trial naming formats</summary>
+            <p>Trial formats help preview possible filenames. A validated project rule takes precedence when a profile is active. Trial fields include {project}, {subject}, {purpose}, {variation}, and {stamp}.</p>
+            <form id="inspect-rule" class="inspection-bar">
+              <label>Project label <input name="project"></label>
+              <label>Filename pattern <input name="filename" required></label>
+              <label>Destination folder pattern <input name="folder"></label>
+              <button type="submit">Save trial format</button>
+            </form>
+          </details>
+          <div class="inspection-bar" aria-label="Review views">
+            <button type="button" data-view="images" aria-pressed="true">Images</button>
+            <button type="button" data-view="groups" aria-pressed="false">Visual groups</button>
+            <button type="button" data-view="links" aria-pressed="false">Links and destinations</button>
+            <button type="button" data-view="issues" aria-pressed="false">Skipped entries</button>
+            <button type="button" data-inspect="layout" aria-pressed="false" id="inspect-layout">Compact list</button>
+          </div>
+          <div id="inspect-questions"></div>
+          <form id="inspect-filter" class="inspection-bar">
+            <label>Filter names, paths, or image text <input name="query"></label>
+            <button type="submit">Filter images</button>
+          </form>
+          <div id="inspect-results" aria-label="Inspection results"></div>
+          <div class="inspection-bar" id="inspect-pages">
+            <button type="button" data-inspect="previous">Previous</button>
+            <span id="inspect-page"></span>
+            <button type="button" data-inspect="next">Next</button>
+          </div>
+        </div>
+      </section>

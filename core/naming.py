@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from core.file_paths import RESERVED_WINDOWS_NAMES, TEMP_SUFFIXES
 from core.token_registry import resolve_token
 
 
@@ -21,13 +22,24 @@ SCRIPT_SUFFIXES = {".ps1", ".py", ".js", ".ts", ".bat", ".cmd", ".sh", ".lua"}
 DOC_SUFFIXES = {".md", ".txt", ".docx", ".pdf"}
 DATA_SUFFIXES = {".json", ".csv", ".tsv", ".xlsx", ".sqlite", ".db"}
 MEDIA_SUFFIXES = {".mp3", ".wav", ".flac", ".mp4", ".mov", ".mkv", ".webm"}
-TEMP_SUFFIXES = {".tmp", ".temp", ".part", ".crdownload", ".download"}
-RESERVED_WINDOWS_NAMES = {
-    "con", "prn", "aux", "nul",
-    "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
-    "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
-}
 MAX_RECOMMENDED_PATH_LENGTH = 220
+
+
+def observe_filename(value: str) -> dict[str, Any]:
+    """Record exact spelling and opaque fields without inventing a naming rule.
+
+    The parts concatenate to the original stem. Unicode sequences are recorded
+    verbatim, including variation selectors and adjacent symbols. A numeric
+    field is an observation, not an assumed version, counter, or date.
+    """
+    path = Path(value)
+    return {
+        "original": path.name, "stem": path.stem, "extension": path.suffix,
+        "parts": re.split(r"(_+|[ -]+)", path.stem),
+        "unicode_sequences": re.findall(r"[^\x00-\x7f]+", path.stem),
+        "numeric_fields": [{"text": match.group(), "offset": match.start(), "meaning": "unknown"}
+                           for match in re.finditer(r"(?<![^\W_])[0-9]+(?![^\W_])", path.stem)],
+    }
 
 
 def date_token(year: str, month: str, day: str) -> str:
@@ -40,12 +52,18 @@ def slug(value: str) -> str:
     return "_".join(parts)
 
 
-def detected_token_ids(registry: dict[str, Any], text: str) -> list[str]:
-    lowered = text.lower()
+def detected_token_ids(registry: dict[str, Any], text: str, *, whole_tokens: bool = False) -> list[str]:
+    lowered = text.casefold() if whole_tokens else text.lower()
+    words = f" {' '.join(re.findall(r'[^\W_]+', lowered))} " if whole_tokens else ""
     found = []
     for token_id, token in registry.get("tokens", {}).items():
         candidates = [token_id, token.get("display_name", ""), *token.get("aliases", [])]
-        if any(str(candidate).lower() in lowered for candidate in candidates if candidate):
+        if whole_tokens:
+            phrases = [" ".join(re.findall(r"[^\W_]+", str(value).casefold())) for value in candidates if value]
+            matches = any(phrase and f" {phrase} " in words for phrase in phrases)
+        else:
+            matches = any(str(value).lower() in lowered for value in candidates if value)
+        if matches:
             resolved = resolve_token(registry, token_id)
             canonical_id = resolved[0] if resolved else token_id
             if canonical_id not in found:

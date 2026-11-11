@@ -1,0 +1,38 @@
+name: Vision Lab Windows acceptance
+
+on:
+  push:
+    branches: [work/journey-visual-lab]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Build the separate offline ZIP
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python -m pip download --only-binary=:all: --platform win_amd64 --python-version 3.14 --implementation cp --abi cp314 --dest "$env:RUNNER_TEMP" Pillow==12.2.0
+          if ($LASTEXITCODE -ne 0) { throw 'Pillow download failed.' }
+          python -B tools/build_windows_vision_lab.py dist --cache "$env:RUNNER_TEMP" --pillow-wheel "$env:RUNNER_TEMP/pillow-12.2.0-cp314-cp314-win_amd64.whl"
+          if ($LASTEXITCODE -ne 0) { throw 'Vision Lab build failed.' }
+      - name: Verify the bundled app, acceptance, and RC2 compatibility
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $destination = Join-Path $env:RUNNER_TEMP 'Vision acceptance with spaces'
+          Expand-Archive -LiteralPath dist/Journey-Vision-Lab-0.1-Windows-x64.zip -DestinationPath $destination
+          $app = Join-Path $destination 'Journey Vision Lab'
+          & (Join-Path $app 'runtime\python.exe') -B -X utf8 -c "import sys,unittest; from journey_vision import __file__; print('Testing bundled app:', __file__); suite=unittest.TestSuite([unittest.defaultTestLoader.discover('tests','test_vision_lab.py'),unittest.defaultTestLoader.discover('tests','test_folder_planner.py')]); sys.exit(not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful())"
+          if ($LASTEXITCODE -ne 0) { throw 'Bundled tests failed.' }
+          Push-Location $env:RUNNER_TEMP
+          try {
+              & (Join-Path $app 'Start Vision Lab.cmd') demo --output "$env:RUNNER_TEMP"
+              if ($LASTEXITCODE -ne 0) { throw 'Launcher demonstration failed.' }
+          } finally { Pop-Location }

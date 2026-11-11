@@ -1,0 +1,26 @@
+name: Folder Planner Windows acceptance
+
+on:
+  push:
+    branches: [work/journey-1.0-folder-planner]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Build isolated portable ZIP
+        run: |
+          python -m pip install ziglang==0.15.2
+          python -B tools/build_windows_planner.py dist --cache "$env:RUNNER_TEMP/journey-downloads"
+      - name: Verify extracted Windows app
+        timeout-minutes: 2
+        run: |
+          tools/windows/verify_bundle.ps1 -Zip dist/Journey-1.0-RC2-Windows-x64.zip -Destination "$env:RUNNER_TEMP/Journey acceptance with spaces"

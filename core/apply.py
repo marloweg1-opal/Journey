@@ -382,6 +382,7 @@ def execute_apply(conn, plan: dict, tier: int = 3, verbose: bool = True, *, move
         return {"status": "blocked_by_circuit_breaker", "reason": str(e)}
 
     applied, failed = [], []
+    guard = move_verifier.guard_path if move_verifier is not None else None
 
     for entry in to_apply:
         item = conn.execute("SELECT * FROM proposal_items WHERE id = ?;", (entry["item_id"],)).fetchone()
@@ -413,12 +414,11 @@ def execute_apply(conn, plan: dict, tier: int = 3, verbose: bool = True, *, move
         action = entry["action"]
         if evidence is not None:
             try:
-                from core.read_guard import require_path_not_held
                 from core.media_inventory import safe_metadata
-                require_path_not_held(source)
-                require_path_not_held(dest)
-                safe_metadata(source, read_guard=require_path_not_held)
-                safe_metadata(dest.parent, read_guard=require_path_not_held)
+                guard(source)
+                guard(dest)
+                safe_metadata(source, read_guard=guard)
+                safe_metadata(dest.parent, read_guard=guard)
                 if is_protected(conn, str(dest)):
                     raise ValueError('Destination is protected')
             except (OSError, ValueError) as exc:
@@ -436,7 +436,7 @@ def execute_apply(conn, plan: dict, tier: int = 3, verbose: bool = True, *, move
             failed.append({"path": str(source), "reason": quarantine_hold()})
             continue
 
-        identity = file_identity(source) if action == 'move' else None
+        identity = file_identity(source, read_guard=guard) if action == 'move' else None
         if evidence is not None and identity != asdict(evidence.identity):
             failed.append({'path': str(source), 'reason': 'Source no longer matches reviewed identity'})
             continue
@@ -447,8 +447,8 @@ def execute_apply(conn, plan: dict, tier: int = 3, verbose: bool = True, *, move
         if action == 'move':
             try:
                 from core.media_inventory import safe_metadata
-                parent = safe_metadata(dest.parent)
-                source_now = safe_metadata(source)
+                parent = safe_metadata(dest.parent, read_guard=guard)
+                source_now = safe_metadata(source, read_guard=guard)
                 if platform.system() != 'Windows' or parent.st_dev != source_now.st_dev:
                     raise ValueError('Cross-volume or unsupported move requires staged recovery review')
                 if not dest.parent.is_dir():
@@ -487,12 +487,12 @@ def execute_apply(conn, plan: dict, tier: int = 3, verbose: bool = True, *, move
                 if evidence is not None:
                     if checked_evidence(move_verifier, conn, item, phase='before_mutation') != evidence:
                         raise MoveEvidenceDenied('Evidence changed after intent')
-                    require_path_not_held(source)
-                    require_path_not_held(dest)
-                    safe_metadata(dest.parent, read_guard=require_path_not_held)
+                    guard(source)
+                    guard(dest)
+                    safe_metadata(dest.parent, read_guard=guard)
                     if is_protected(conn, str(source)) or is_protected(conn, str(dest)) or get_active_dependents(conn, str(source)):
                         raise MoveEvidenceDenied('Protection or dependencies changed after intent')
-                if file_identity(source) != identity:
+                if file_identity(source, read_guard=guard) != identity:
                     raise RuntimeError('Source changed after intent; move stopped')
                 _move_no_replace(source, dest)
                 conn.execute("UPDATE files SET canonical_path = ? WHERE canonical_path = ?;",
@@ -509,10 +509,10 @@ def execute_apply(conn, plan: dict, tier: int = 3, verbose: bool = True, *, move
                 )
                 verified = dest.exists() and not source.exists()
 
-            destination_identity = file_identity(dest) if action == 'move' else None
+            destination_identity = file_identity(dest, read_guard=guard) if action == 'move' else None
             if action == 'move':
-                verified = verified and destination_identity is not None and destination_identity['sha256'] == identity['sha256']
-            journal.complete_operation(conn, op_id, new_state={"path": str(dest), 'identity':destination_identity}, verified=verified)
+                verified = verified and destination_identity == identity
+            journal.complete_operation(conn, op_id, new_state={"path": str(dest), 'identity':destination_identity}, verified=verified, read_guard=guard)
             if not verified:
                 raise RuntimeError("Filesystem result did not verify; manual recovery required")
             conn.execute(
@@ -549,7 +549,7 @@ def execute_apply(conn, plan: dict, tier: int = 3, verbose: bool = True, *, move
 # UNDO: Step 5 of the ritual, for actions this module performed
 # ---------------------------------------------------------------------
 
-def undo_apply(conn, op_id: int) -> dict:
+def undo_apply(conn, op_id: int, *, read_guard=None, authorize=None) -> dict:
     """
     Consult recorded intent and current identity. Historical permission
     does not authorize overwriting a new occupant or undoing content drift.
@@ -571,6 +571,11 @@ def undo_apply(conn, op_id: int) -> dict:
         new_state = _json.loads(row["new_state"])
         original_path = Path(previous_state["path"])
         current_path = Path(new_state["path"])
+        if authorize is not None:
+            authorize()
+        if read_guard is not None:
+            read_guard(original_path)
+            read_guard(current_path)
 
         if action == "file_shortcut":
             _remove_shortcut(current_path)
@@ -584,7 +589,7 @@ def undo_apply(conn, op_id: int) -> dict:
                     'physical_changes': False})
             if not current_path.exists():
                 raise FileNotFoundError(f"Cannot undo move: {current_path} no longer exists.")
-            if not new_state.get('identity') or file_identity(current_path) != new_state['identity']:
+            if not new_state.get('identity') or file_identity(current_path, read_guard=read_guard) != new_state['identity']:
                 raise journal.UndoConflict({'reason':'Moved object changed or lacks identity evidence; no automatic undo',
                     'original_path':str(original_path), 'current_path':str(current_path), 'physical_changes':False})
             if platform.system() != 'Windows':
@@ -595,11 +600,16 @@ def undo_apply(conn, op_id: int) -> dict:
             # Windows rename refuses an occupied destination atomically. Cross-volume
             # undo is held rather than falling back to a potentially overwriting copy.
             try:
+                if authorize is not None:
+                    authorize()
+                if read_guard is not None:
+                    read_guard(current_path)
+                    read_guard(original_path)
                 os.rename(current_path, original_path)
             except FileExistsError:
                 raise journal.UndoConflict({'reason':'Original path became occupied during undo; no overwrite',
                     'original_path':str(original_path), 'current_path':str(current_path), 'physical_changes':False})
-            if file_identity(original_path) != new_state['identity'] or os.path.lexists(current_path):
+            if file_identity(original_path, read_guard=read_guard) != new_state['identity'] or os.path.lexists(current_path):
                 raise RuntimeError('Undo physical result could not be verified')
             conn.execute("UPDATE files SET canonical_path = ? WHERE canonical_path = ?;",
                          (str(original_path), str(current_path)))
@@ -610,3 +620,35 @@ def undo_apply(conn, op_id: int) -> dict:
                 raise RuntimeError(f"Cannot undo quarantine: {result.get('reason', 'unknown error')}")
 
     return journal.undo_operation(conn, op_id, _reverse)
+
+
+def execute_folder(conn, destination, *, read_guard, authorize):
+    """Create one explicitly approved directory through the shared operation journal."""
+    destination = Path(destination)
+    authorize()
+    read_guard(destination)
+    from core.file_paths import safe_metadata, signature
+    parent = safe_metadata(destination.parent, read_guard=read_guard)
+    if is_protected(conn, str(destination)) or os.path.lexists(destination):
+        raise ValueError('Destination is protected or occupied')
+    preview = journal.preview_operation(conn, 'directory_create', 3, str(destination), {'dest': str(destination)})
+    receipt = journal.begin_transaction(conn, preview, {'path': str(destination), 'existed': False})
+    try:
+        authorize()
+        read_guard(destination)
+        journal.check_kill_switch()
+        if signature(safe_metadata(destination.parent, read_guard=read_guard)) != signature(parent):
+            raise ValueError('Destination parent changed after review')
+        destination.mkdir()
+        created = safe_metadata(destination, read_guard=read_guard)
+        verified = destination.is_dir() and not any(destination.iterdir())
+        journal.complete_operation(conn, receipt, {'path': str(destination), 'directory_identity': signature(created)},
+                                   verified, read_guard=read_guard)
+        if not verified:
+            raise ValueError('New folder did not verify')
+        return {'op_id': receipt, 'verified': True, 'action': 'directory_create', 'dest': str(destination)}
+    except Exception as error:
+        conn.execute("UPDATE action_log SET status='manual_recovery_required',new_state=? WHERE id=?",
+                     (json.dumps({'path': str(destination), 'error': str(error)}), receipt))
+        conn.commit()
+        raise

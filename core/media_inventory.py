@@ -6,6 +6,7 @@ from pathlib import Path
 import stat
 import time
 
+from core.file_paths import is_link, safe_metadata, signature
 from core.media_recovery import PHOTO, VIDEO, stable_hash
 
 
@@ -49,22 +50,6 @@ def require_read_allowed(conn, path):
     require_not_held(conn, path)
 
 
-def safe_metadata(path, *, read_guard=None):
-    # Reject reparse points on every ancestor, not only the leaf. This is not
-    # handle-based race protection; observations never authorize a later move.
-    path = Path(path)
-    if read_guard is not None:
-        read_guard(path)
-    for part in (*reversed(path.parents), path):
-        if read_guard is not None:
-            read_guard(path)
-            read_guard(part)
-        info = part.lstat()
-        if stat.S_ISLNK(info.st_mode) or getattr(info, 'st_file_attributes', 0) & 0x400:
-            raise ValueError('Reparse/symlink path requires review')
-    return info
-
-
 def register(conn, roots):
     initialize(conn)
     paths = []
@@ -79,10 +64,6 @@ def register(conn, roots):
         for path in paths:
             conn.execute('INSERT OR IGNORE INTO media_inventory_sources VALUES(?)', (path,))
             conn.execute('INSERT OR IGNORE INTO media_inventory_queue(source,path) VALUES(?,?)', (path,path))
-
-
-def signature(info):
-    return (info.st_dev, info.st_ino, info.st_mtime_ns)
 
 
 def _validate_budgets(max_seconds, **counts):
@@ -125,8 +106,7 @@ def batch(conn, *, max_directories=100, max_entries=20000, max_seconds=15, check
                     # Windows DirEntry.stat may omit file identity fields.
                     # Use the same lstat identity source as later verification.
                     info = Path(entry.path).lstat()
-                    reparse = stat.S_ISLNK(info.st_mode) or getattr(info,'st_file_attributes',0) & 0x400
-                    if reparse:
+                    if is_link(info):
                         children.append((source,entry.path,'HELD',json.dumps({'reason':'Reparse/symlink not followed'})))
                     elif stat.S_ISDIR(info.st_mode):
                         children.append((source,entry.path,'PENDING',None))

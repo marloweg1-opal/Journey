@@ -1,0 +1,69 @@
+      <section class="panel" data-panel="destination" aria-label="Destination">
+        <div class="inspection-card"><h2>Give Journey a destination</h2>
+          <p>Choose a project in Inspect with a local checkpoint, then describe the outcome that matters to you.</p>
+          <form id="destination-form">
+            <label>Intended outcome <textarea name="objective" required rows="2">Improve the organization and findability of my selected project assets while preserving identity, provenance, content, and relationships.</textarea></label>
+            <label>Why this matters <textarea name="why" required rows="2" placeholder="What would this help you do?"></textarea></label>
+            <label>Success looks like <textarea name="success" required rows="2">Supported images are searchable and grouped with evidence. Conflicts and remaining work are clear. Any authorized physical changes are verified.</textarea></label>
+            <div class="inspection-bar"><label>Entry ceiling per cycle <input name="max_files" type="number" value="20000" min="1" max="100000"></label>
+              <label>Seconds per cycle <input name="max_seconds" type="number" value="300" min="10" max="1800"></label>
+              <button type="submit">Save Destination</button></div>
+          </form>
+          <p id="destination-scope"></p><div id="destination-list"></div>
+        </div>
+      </section>
+      <section class="panel" data-panel="patrol" aria-label="Patrol">
+        <div class="inspection-card"><h2>Foreground Patrol</h2>
+          <p id="patrol-objective">Choose a saved Destination.</p>
+          <details><summary>Purpose and success criterion</summary><p id="patrol-intent"></p></details>
+          <p id="patrol-state" role="status" aria-live="polite">Not started</p>
+          <p id="patrol-reason"></p><div id="patrol-authority"></div>
+          <div class="inspection-bar"><button type="button" id="patrol-start">Begin or resume Patrol</button>
+            <button type="button" id="patrol-pause">Pause Patrol</button>
+            <button type="button" id="patrol-refresh">Refresh source and Patrol</button>
+            <button type="button" id="patrol-review">Open Review</button></div>
+          <button type="button" id="patrol-accept-outcome">This meets my success criterion</button>
+          <div id="patrol-metrics" class="inspection-counts"></div>
+          <h3>Virtual collections</h3><div id="patrol-collections"></div>
+          <h3>Work and remaining decisions</h3><div id="patrol-work"></div>
+        </div>
+      </section>
+      <section class="panel" data-panel="review" aria-label="Review">
+        <div class="inspection-card"><h2>Review what changes the outcome</h2>
+          <p>Inspect the evidence and select the images a decision applies to. One correction can address a related group.</p>
+          <div id="patrol-questions"></div>
+          <details id="stewardship">
+            <summary>Talk to Journey about your work</summary>
+            <p>Ask to find a term, organize the selected scope, or retire a named design. Journey will show the evidence or prepare a review.</p>
+            <form id="stewardship-plan">
+              <label>Stewardship instruction <textarea name="instruction" rows="3" maxlength="2000" required placeholder='Retire “Design Family” assets.'></textarea></label>
+              <div class="inspection-options">
+                <label><input type="checkbox" name="use_model"> Interpret this instruction with local Qwen3</label>
+                <label><input type="checkbox" name="read_references"> Read scoped documentation and configuration references</label>
+              </div>
+              <button type="submit">Inspect instruction</button>
+            </form>
+            <p id="stewardship-status" role="status" aria-live="polite"></p>
+            <div id="stewardship-results"></div>
+          </details>
+          <details><summary>Classify selected assets together</summary><div id="patrol-review-images" class="inspection-gallery"></div>
+            <form id="patrol-answer"><div class="inspection-bar">
+              <label>Decision <select name="decision"><option value="confirm">Confirm identity</option><option value="reject">Reject identity</option><option value="purpose">Record purpose</option></select></label>
+              <label>Identity <input name="label"></label><label>Purpose <input name="purpose"></label>
+              <button type="submit">Apply grouped correction</button></div></form>
+            <div class="inspection-bar"><button id="review-previous" type="button">Previous images</button><span id="review-page"></span><button id="review-next" type="button">Next images</button></div>
+          </details>
+          <h3>Physical organization</h3><p>Review an exact batch before account authorization. Inspection and virtual organization can continue while a batch waits.</p>
+          <p>Review a rename here when Inspect has a validated project rule, a confirmed subject and purpose, and creation-date evidence. Reviewed moves keep the exact filename.</p>
+          <div id="patrol-names"></div><button type="button" id="patrol-naming-batch">Review selected naming changes</button>
+          <details><summary>Review a folder creation or within-scope move</summary>
+            <form id="patrol-operation"><div class="inspection-bar">
+              <label>Operation <select name="kind" aria-label="Operation"><option value="mkdir">Create a folder</option><option value="move">Move selected image, preserve filename</option></select></label>
+              <label>Exact destination path <input name="destination" required></label>
+              <label>Reason this improves the collection <input name="reason" required></label>
+              <button type="submit">Prepare exact batch</button></div></form>
+          </details>
+          <div id="patrol-batches"></div><div id="patrol-batch-details"></div>
+          <h3>Verified operations and recovery</h3><div id="patrol-history"></div>
+        </div>
+      </section>

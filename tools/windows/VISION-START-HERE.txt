@@ -1,0 +1,17 @@
+JOURNEY VISION LAB 0.1
+Local experiment for Windows x64
+
+1. Extract the whole ZIP and open Start Vision Lab.cmd.
+2. Choose D to run the included 40-image sample. Choose I to inspect a local
+   image folder. Keep the lab workspace outside the source you choose.
+3. Open the review sheet to see thumbnails, overlapping virtual collections,
+   visual relationships, and grouped questions. For your own scan, use the
+   image number in the console to confirm, reject, or record a purpose.
+4. Use the naming-rule option to define a filename pattern and an optional
+   destination folder pattern. The plan records naming rationale and blockers.
+
+This standalone lab reads up to 50 raster images per scan and writes its cache,
+review history, review sheets, and JSON plans to the workspace. Treat those
+files as private when your source is private. Source images are read-only.
+The lab uses pixels and saved local examples. Optional model experiments and
+reproduction instructions are described in VISUAL-LAB.md.

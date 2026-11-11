@@ -21,6 +21,20 @@ from pathlib import Path
 KILL_SWITCH_FLAG = Path(__file__).parent.parent / "ARK_EXECUTION_DISABLED.flag"
 
 
+def _console_line(value):
+    """Display a preview even when a Windows output pipe cannot encode it.
+
+    Escaping affects only the console representation. Preview values, paths
+    and journal records keep their exact Unicode text. Other I/O failures are
+    still errors rather than being silently discarded.
+    """
+    try:
+        print(value)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+        print(value.encode(encoding, errors="backslashreplace").decode(encoding))
+
+
 class ExecutionDisabled(Exception):
     """Raised when the external kill-switch flag is present."""
     pass
@@ -66,9 +80,9 @@ def preview_operation(conn, action_type: str, tier: int, target_path: str,
     print(f"MINI ARK PROPOSED OPERATION")
     print(f"  Action:       {action_type}")
     print(f"  Tier:         {tier}")
-    print(f"  Target:       {target_path}")
+    _console_line(f"  Target:       {target_path}")
     for k, v in planned_changes.items():
-        print(f"  {k}: {v}")
+        _console_line(f"  {k}: {v}")
     print(f"  [PREVIEW ONLY -- nothing has been changed]")
     return {
         "action_type": action_type,
@@ -104,7 +118,7 @@ def begin_transaction(conn, preview: dict, previous_state: dict, *, proposal_ite
     return cur.lastrowid
 
 
-def complete_operation(conn, op_id: int, new_state: dict, verified: bool) -> dict:
+def complete_operation(conn, op_id: int, new_state: dict, verified: bool, *, read_guard=None) -> dict:
     """
     Step 4: VERIFICATION. The caller performed the actual filesystem
     action and confirms whether the resulting state matches what was
@@ -124,7 +138,7 @@ def complete_operation(conn, op_id: int, new_state: dict, verified: bool) -> dic
 
     status = "COMPLETE" if verified else "COMPLETE (unverified)"
     from core.recovery_inspection import inspect_operation
-    undo_state = inspect_operation(conn, op_id)['state']
+    undo_state = inspect_operation(conn, op_id, read_guard=read_guard)['state']
     print(f"{'OK' if verified else 'WARNING'} {status}")
     print(f"  Operation ID: OP-{op_id:06d}")
     print(f"  Undo state: {undo_state}")

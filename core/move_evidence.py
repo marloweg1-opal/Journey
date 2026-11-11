@@ -49,6 +49,11 @@ class MoveEvidence:
 
 
 class MoveEvidenceVerifier(ABC):
+    def guard_path(self, path):
+        """Default policy remains the existing application-owned source hold store."""
+        from core.read_guard import require_path_not_held
+        require_path_not_held(path)
+
     @abstractmethod
     def verify(self, conn, item, *, phase):
         """Return authenticated MoveEvidence, or deny; recheck revocation each call.
