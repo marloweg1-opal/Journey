@@ -2,7 +2,7 @@ name: Navigator linked inspection acceptance
 
 on:
   push:
-    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol, work/navigator-provenance-naming, work/navigator-asset-registry, work/navigator-project-stewardship, work/journey-integrated-pilot, work/journey-incremental]
+    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol, work/navigator-provenance-naming, work/navigator-asset-registry, work/navigator-project-stewardship, work/journey-integrated-pilot, work/journey-incremental, work/journey-guided-workflow]
 
 permissions:
   contents: read
@@ -37,7 +37,7 @@ jobs:
           python -B -m unittest discover -s tests -p 'test_vision_lab.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Vision Lab regressions.' }
       - name: Exercise the bundled Navigator in a browser
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
           $ErrorActionPreference = 'Stop'
           $env:PYTHONPATH = (Get-Location).Path
@@ -45,6 +45,15 @@ jobs:
           Expand-Archive -LiteralPath dist/Journey-Navigator-Guided-Patrol-Windows-x64.zip -DestinationPath $destination
           $runtime = Join-Path $destination 'Journey Navigator/runtime/python.exe'
           $env:JOURNEY_TEST_OCR = Join-Path $destination 'Journey Navigator/ocr'
+          python -B -m unittest discover -s tests -p 'test_carebloom_workflow.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'CareBloomOS HTTP workflow acceptance failed.' }
+          python -B tests/carebloom_workflow_browser.py --runtime $runtime
+          if ($LASTEXITCODE -ne 0) { throw 'Guided CareBloomOS collection workflow failed.' }
+          $env:JOURNEY_SCAN_DIAGNOSTICS = Join-Path $env:RUNNER_TEMP 'scan-diagnostics'
+          foreach ($attempt in 1..2) {
+            python -B tests/navigator_browser.py --runtime $runtime
+            if ($LASTEXITCODE -ne 0) { throw "Large inspection resume failed on pass $attempt." }
+          }
           python -B -m unittest discover -s tests -p 'test_navigator_context.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Navigator OCR or scope acceptance failed.' }
           python -B -m unittest discover -s tests -p 'test_operational_patrol.py' -v
@@ -68,12 +77,17 @@ jobs:
             python -B tests/patrol_browser.py
             if ($LASTEXITCODE -ne 0) { throw "Operational Patrol browser acceptance failed on pass $attempt." }
           }
-          python -B tests/navigator_browser.py --runtime $runtime
-          if ($LASTEXITCODE -ne 0) { throw 'Navigator browser acceptance failed.' }
           python -B tests/registry_browser.py
           if ($LASTEXITCODE -ne 0) { throw 'Project registry browser acceptance failed.' }
           python -B tests/stewardship_browser.py
           if ($LASTEXITCODE -ne 0) { throw 'Project stewardship browser acceptance failed.' }
+      - name: Preserve scan failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-failure-diagnostics
+          path: ${{ runner.temp }}/scan-diagnostics
+          if-no-files-found: ignore
       - name: Preserve generated acceptance screenshot
         if: always()
         uses: actions/upload-artifact@v4

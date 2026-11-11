@@ -40,3 +40,28 @@ Evaluate keyboard-only and assistive-technology interaction, status and error an
 See [Project Boundaries](PROJECT_BOUNDARIES.md), [Forward Architecture](JOURNEY_FORWARD_ARCHITECTURE.md), and [Public Checkpoint](JOURNEY_PUBLIC_CHECKPOINT.md) for technical responsibilities and verified scope.
 
 **The boundaries of this program are not the boundaries of human possibility. Participation is the blessing.**
+
+## Accessibility feature disclosure and task-based verification (November 2026)
+
+Inspired by Apple's Accessibility Nutrition Labels, this project will maintain a **feature-by-feature disclosure** rather than treating an accessibility statement as proof of usability. Apple's App Store labels are a reference framework, not a certification or a claim that this project qualifies for an App Store label.
+
+| Access feature | Current public evidence | Required verification before claiming support |
+| --- | --- | --- |
+| Screen reader / VoiceOver-equivalent on supported platforms | Not comprehensively verified | Navigate, understand, operate, and recover from every common workflow using a screen reader alone; verify focus order, names, roles, status and error announcements. On Windows, test applicable Windows screen readers rather than assuming Apple VoiceOver applies. |
+| Voice control / speech input | Not comprehensively verified | Complete common workflows using voice commands alone, including approval, refusal, correction and recovery. |
+| Larger text (including 200% scaling) | Not comprehensively verified | Test text scaling without clipped controls, hidden actions or lost content. |
+| Dark interface | Visual presentation is not equivalent to verified accessibility | Verify functional readability and contrast in both dark and light presentations where offered. |
+| Differentiate without color alone | Not comprehensively verified | Every essential state, warning and permission must also have text, shape, or another perceivable indicator. |
+| Sufficient contrast | Not comprehensively verified | Measure text and control contrast against applicable WCAG criteria, including focus indicators. |
+| Reduced motion | Not comprehensively verified | Honor reduced-motion preferences; retain equivalent meaning and functionality without nonessential animation. |
+| Captions | Not comprehensively verified for any applicable media | Caption meaningful speech and relevant sounds in instructional or interactive media. |
+| Audio descriptions / nonvisual equivalents | Not comprehensively verified for applicable visual media | Provide descriptions or equivalent access to essential visual information. |
+| Keyboard, switch and alternative input | Not comprehensively verified | Complete common workflows without a pointer; verify focus visibility, logical order and absence of traps. |
+
+**Disclosure statuses:** Verified (with date, platform, version, assistive technology and tested tasks); Partial (state exactly which tasks work and fail); Untested; Not supported; Not applicable (with reason). No feature is promoted to Verified merely because an OS setting exists or an isolated control responds.
+
+**Task-based acceptance:** For each release, enumerate common tasks, then test each relevant access mode *alone*, including onboarding, navigation, completing the primary task, reviewing and correcting mistakes, refusing or cancelling, understanding errors, and recovering safely. Record barriers, workarounds, affected participation, evidence and owners. Less common but important tasks must also be tracked; the label-style common-task threshold is a floor, not the whole accessibility commitment.
+
+**Presentation independence:** Accessibility preferences adjust presentation and interaction without replacing the project's chosen visual identity or theme. Do not force a separate 'accessibility theme'. Provide accessible equivalents that preserve agency and meaning.
+
+**Release discipline:** This section documents criteria and unknowns, not implementation. Keep production changes, deployment and permissions behind their existing acceptance and approval gates. Collect no disability or health information as a prerequisite for reporting an accessibility barrier.
