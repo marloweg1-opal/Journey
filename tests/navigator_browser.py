@@ -5,6 +5,9 @@ from contextlib import contextmanager
 from hashlib import sha256
 import json
 import os
+import shutil
+import sqlite3
+from time import monotonic
 from pathlib import Path
 import subprocess
 import sys
@@ -37,7 +40,20 @@ def running_navigator(runtime, data, cwd):
     finally:
         if process.poll() is None:
             process.terminate()
-        process.communicate(timeout=15)
+        _, errors = process.communicate(timeout=15)
+        if errors:
+            print("Navigator server diagnostics:", errors[-12000:], flush=True)
+        if sys.exc_info()[0] is not None and os.environ.get("JOURNEY_SCAN_DIAGNOSTICS"):
+            target = Path(os.environ["JOURNEY_SCAN_DIAGNOSTICS"])
+            target.mkdir(parents=True, exist_ok=True)
+            database = Path(data) / "navigator-inspection.sqlite"
+            if database.exists():
+                with sqlite3.connect(database) as connection:
+                    for table in ("dirs", "files", "gaps"):
+                        fields = "status,count(*)" if table != "gaps" else "reason,count(*)"
+                        print("Checkpoint", table, connection.execute(f"SELECT {fields} FROM {table} GROUP BY 1").fetchall(), flush=True)
+                shutil.copy2(database, target / "failed-scan.sqlite")
+            (target / "server-errors.txt").write_text(errors[-12000:], encoding="utf-8")
 
 
 def fingerprint(paths):
@@ -49,7 +65,12 @@ def count(page, key):
 
 
 def completed(page, files, images):
-    expect(page.locator('[data-count="files"]')).to_have_text(f"{files:,}", timeout=90_000)
+    try:
+        expect(page.locator('[data-count="files"]')).to_have_text(f"{files:,}", timeout=90_000)
+    except AssertionError:
+        print("Scan failure UI", {key: page.locator('#' + key).inner_text() for key in
+            ('inspect-progress', 'inspect-notice', 'inspect-counts')}, flush=True)
+        raise
     expect(page.locator('[data-count="analyzed"]')).to_have_text(f"{images:,}", timeout=90_000)
     expect(page.locator("#inspect-progress")).to_contain_text("Finished inspecting", timeout=90_000)
     assert count(page, "files") == files, count(page, "files")
@@ -117,6 +138,17 @@ def run(browser, runtime, base):
     def open_page(url):
         page = browser.new_page()
         page.on("pageerror", lambda error: errors.append(str(error)))
+        started = monotonic()
+        def progress(response):
+            if response.url.endswith('/api/inspect/step'):
+                try:
+                    value = response.json()
+                    print("Scan checkpoint", json.dumps({"seconds": round(monotonic()-started, 2),
+                        "http": response.status, **{k: value.get(k) for k in
+                        ('files', 'analyzed', 'pending', 'pending_folders', 'skipped', 'error')}}), flush=True)
+                except Exception as error:
+                    print("Unreadable scan checkpoint", type(error).__name__, flush=True)
+        page.on("response", progress)
         page.goto(url)
         expect(page.get_by_role("heading", name="Journey Navigator",exact=True)).to_be_visible()
         return page
