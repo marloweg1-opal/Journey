@@ -35,6 +35,7 @@ def exercise(url, base):
         expect(page.locator("#history-status")).to_contain_text("2 exports indexed · 3 distinct messages", timeout=30000)
         expect(panel).to_contain_text("CareRail UI / Design", timeout=30000)
         expect(page.locator("#history-files")).to_contain_text("overlapping assertions reused")
+        page.get_by_text("Archive coverage and gaps", exact=True).click()
         page.get_by_role("button", name="Monitor this reviewed export folder", exact=True).click()
         expect(page.locator("#history-files")).to_contain_text("Export monitoring · watching")
         page.get_by_role("button", name="Stop export monitoring", exact=True).click()
