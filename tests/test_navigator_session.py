@@ -51,6 +51,29 @@ class NavigatorSessionTests(unittest.TestCase):
         self.assertIsNone(next_owner.enter());next_owner.close()
         self.assertTrue((self.data/'navigator-session.lock').exists())
 
+    def test_verified_activation_retries_a_transport_reset_without_acquiring_ownership(self):
+        other = SessionOwner(self.data)
+        record = {"session": "verified-record"}
+        with patch.object(other, '_request', side_effect=[ConnectionResetError('fixture reset'), {"url": "verified-url"}]) as request:
+            with patch('journey_navigator.session.sleep') as wait:
+                self.assertEqual(other._activate(record), 'verified-url')
+        self.assertEqual(request.call_count, 2)
+        self.assertEqual(request.call_args_list[0].args, (record, 'activate'))
+        wait.assert_called_once_with(.1)
+        self.assertFalse(other.owns)
+
+    def test_activation_retries_are_bounded_and_never_ignore_an_identity_denial(self):
+        other = SessionOwner(self.data)
+        with patch.object(other, '_request', side_effect=ConnectionResetError('fixture reset')):
+            with patch('journey_navigator.session.monotonic', side_effect=[0, 9]):
+                with self.assertRaisesRegex(ValueError, 'still owns its checkpoint'):
+                    other._activate({})
+        with patch.object(other, '_request', side_effect=ValueError('session identity mismatch')) as request:
+            with self.assertRaisesRegex(ValueError, 'identity mismatch'):
+                other._activate({})
+        self.assertEqual(request.call_count, 1)
+        self.assertFalse(other.owns)
+
     def test_legacy_locked_database_yields_clear_recovery_without_removing_lock(self):
         app=Workbench(self.data)
         try:

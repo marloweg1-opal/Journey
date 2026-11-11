@@ -159,6 +159,18 @@ class SessionOwner:
             raise ValueError("The responding service has a different session identity.")
         return result
 
+    def _activate(self, record):
+        deadline = monotonic() + 8
+        while True:
+            try:
+                return self._request(record, "activate")["url"]
+            except (OSError, http.client.HTTPException):
+                # Activation is idempotent. Revalidate the same process/session on every
+                # retry; a transport reset never permits lock removal or a second owner.
+                if monotonic() >= deadline:
+                    raise ValueError("The verified Navigator still owns its checkpoint but could not activate its window. Open the existing window or try again.") from None
+                sleep(.1)
+
     def enter(self):
         deadline = monotonic() + 8
         while True:
@@ -179,9 +191,9 @@ class SessionOwner:
                 sleep(.1)
         self.reopened = record
         if record["build"] == self.info["build"]:
-            return self._request(record, "activate")["url"]
+            return self._activate(record)
         if not confirm_handoff(record, self.info):
-            return self._request(record, "activate")["url"]
+            return self._activate(record)
         self._request(record, "shutdown")
         deadline = monotonic() + 30
         while monotonic() < deadline:
