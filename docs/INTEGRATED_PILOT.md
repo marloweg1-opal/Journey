@@ -20,6 +20,8 @@ Journey helps a Windows user inspect, understand, organize and resume work in a 
 
 The Windows workflow builds an installable candidate. It uses an automated fixture actor only in execution tests, and exercises the installed application through a real browser. The product uses the actual Windows account approval path. A fixture actor cannot be enabled in the shipped app.
 
+The [incremental history guide](INCREMENTAL_HISTORY.md) covers overlapping exports, affected-asset reassessment, source citations and opt-in export monitoring.
+
 ## Daily operation
 
 - Use **Setup Journey.exe** from the extracted Windows package. One managed shortcut opens the compatible running session. A changed build asks before checkpointing and handing off. The running build and commit appear in Navigator. **Manage** lists saved inspections, managed builds and available recovery snapshots.
@@ -31,6 +33,6 @@ The Windows workflow builds an installable candidate. It uses an automated fixtu
 
 ## Participation and release boundaries
 
-The pilot is for users who can identify a local folder and interpret evidence or previewed changes. It offers keyboard controls, readable status and text provenance. Nonvisual recognition of unfamiliar artwork and a complete screen-reader task pass need direct testing. OCR uses English data and can leave stylized or low-quality text unreadable. Permission-bound background maintenance here covers metadata drift observation. Task scheduling across sessions, arbitrary workflow planning, standing physical authority, managed build cleanup and icon foundry remain future work. Contributions that bring a reproducible input, expected behavior and observed result are welcome.
+The pilot is for users who can identify a local folder and interpret evidence or previewed changes. It offers keyboard controls, readable status and text provenance. Nonvisual recognition of unfamiliar artwork and a complete screen-reader task pass need direct testing. OCR uses English data and can leave stylized or low-quality text unreadable. Permission-bound background maintenance here covers metadata drift observation and explicitly enabled export-folder ingestion with bounded virtual reconciliation. Task scheduling across sessions, arbitrary workflow planning, standing physical authority, managed build cleanup and icon foundry remain future work. Contributions that bring a reproducible input, expected behavior and observed result are welcome.
 
 The boundaries of this program are not the boundaries of human possibility.

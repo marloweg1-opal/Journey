@@ -75,7 +75,11 @@
     }
   });
 
+  let evidenceSequence = null;
   function renderHistory(data, job) {
+    const sequence = (data.incremental || [])[0]?.sequence || 0;
+    if (evidenceSequence !== null && evidenceSequence !== sequence) window.dispatchEvent(new Event("journey-evidence-change"));
+    evidenceSequence = sequence;
     clearTimeout(historyTimer);
     const complete = data.files.filter(item => item.status === "complete").length;
     const queued = data.files.filter(item => item.status === "queued").length;
@@ -102,12 +106,34 @@
         recap.byte_verified_exemplars + " matching project-pack fingerprints. Export attachment pointers have no accessible bytes." +
         (recap.current ? "" : " Refresh reconciliation after the inventory or evidence changes.")));
     }
+    for (const change of data.incremental || []) {
+      body.append(paragraph(change.export + " · " + change.new_claims + " new assertions · " + change.changed_claims +
+        " changed claims · " + change.overlapping_claims + " overlapping assertions reused · " + change.affected_assets + " affected assets"));
+      const proof = document.createElement("details");
+      proof.append(paragraph("Trace new conclusions to their sources", "summary"));
+      for (const claim of change.changes) proof.append(paragraph(claim.name + " · " + claim.kind + " · " +
+        JSON.stringify(claim.value) + " · " + claim.source.role + " · conversation " + claim.source.conversation + " · message " + claim.source.message));
+      body.append(proof);
+    }
+    const monitor = data.monitor;
+    if (monitor) {
+      body.append(paragraph("Export monitoring · " + monitor.state + " · " + monitor.checked + " entries checked · " +
+        monitor.queued + " new exports queued · " + monitor.gaps + " gaps. Monitoring stops when Navigator closes or import is paused."));
+      if (monitor.enabled) body.append(button("Stop export monitoring", errorHandler("history-status", async () => {
+        await api("history-monitor-stop", {job}); await history();
+      })));
+      else if (monitor.available_folder) body.append(paragraph("Allow new conversations*.json exports in " + monitor.available_folder +
+        " to enrich this project's retained knowledge and refresh affected saved virtual groups this session. Every 60 seconds, at most 24 folder entries and 24 asset reassessments, with a soft 150 ms folder scan. Import budgets still apply."),
+        button("Monitor this reviewed export folder", errorHandler("history-status", async () => {
+          await api("history-monitor-enable", {job}); await history();
+        })));
+    }
     for (const file of data.files) {
       body.append(paragraph(file.name + " · " + file.status + " · " + file.records + " conversations" +
         (file.gaps ? " · " + file.gaps + " excluded by export privacy flag" : "") + (file.error ? " · " + file.error : "")));
     }
-    if (queued) {
-      historyPending = true;
+    if (queued || (data.monitor && data.monitor.enabled)) {
+      historyPending = historyPending || queued > 0;
       historyTimer = setTimeout(() => history().catch(error => status("history-status", errorText(error))), 1300);
     } else if (historyPending && selected() === job) {
       historyPending = false;

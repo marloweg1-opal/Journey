@@ -27,6 +27,11 @@ CREATE TABLE IF NOT EXISTS patrol_tasks (
  attempts INTEGER NOT NULL DEFAULT 0,reason TEXT NOT NULL DEFAULT '',PRIMARY KEY(destination,kind));
 CREATE TABLE IF NOT EXISTS patrol_assets (
  destination TEXT NOT NULL,asset INTEGER NOT NULL,record TEXT NOT NULL,PRIMARY KEY(destination,asset));
+CREATE TABLE IF NOT EXISTS patrol_evidence_checkpoint (
+ destination TEXT PRIMARY KEY, base TEXT NOT NULL, history INTEGER NOT NULL,
+ mode TEXT NOT NULL DEFAULT 'full', reassessed INTEGER NOT NULL DEFAULT 0, reused INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS patrol_evidence_queue (
+ destination TEXT NOT NULL,asset INTEGER NOT NULL,PRIMARY KEY(destination,asset));
 CREATE TABLE IF NOT EXISTS virtual_collections (
  destination TEXT NOT NULL,name TEXT NOT NULL,kind TEXT NOT NULL,PRIMARY KEY(destination,name));
 CREATE TABLE IF NOT EXISTS virtual_memberships (
@@ -64,7 +69,15 @@ class Patrol:
         self.started = {}
         self.start_counts = {}
         self.closed = False
+        self.history_due = 0
         self.approval_threads = []
+        # Upgrade an already completed checkpoint without reinterpreting its assets.
+        with self.conn:
+            for saved in self.conn.execute("SELECT id,job,signature FROM destinations WHERE signature<>''").fetchall():
+                complete = not self.conn.execute("SELECT 1 FROM patrol_tasks WHERE destination=? AND status<>'complete'", (saved['id'],)).fetchone()
+                if complete and saved['signature'] == self.signature(saved['job']):
+                    self.conn.execute("INSERT OR IGNORE INTO patrol_evidence_checkpoint(destination,base,history,mode) VALUES(?,?,?,'complete')",
+                        (saved['id'], self.signature(saved['job'], include_history=False), self.app.history.change_cursor(saved['job'])))
         self.worker = Thread(target=self._run, name='Journey foreground Patrol', daemon=False)
         self.worker.start()
 
@@ -136,6 +149,8 @@ class Patrol:
                 self.conn.execute("UPDATE patrol_tasks SET status='pending',cursor=0,attempts=0 WHERE destination=?",(destination,))
                 self.conn.execute('DELETE FROM patrol_assets WHERE destination=?',(destination,))
                 self.conn.execute('DELETE FROM virtual_memberships WHERE destination=?',(destination,))
+                self.conn.execute('DELETE FROM patrol_evidence_checkpoint WHERE destination=?',(destination,))
+                self.conn.execute('DELETE FROM patrol_evidence_queue WHERE destination=?',(destination,))
         self.started[destination]=monotonic()
         baseline=self.app.summary(row['job'])
         self.start_counts[destination]=baseline['files']+baseline['folders']
@@ -157,17 +172,17 @@ class Patrol:
         self.app.pause()
         return self.status(destination)
 
-    def signature(self, job):
+    def signature(self, job, *, include_history=True):
         row=self.app.job(job)
         revision=self.conn.execute('SELECT max(id) FROM reviews WHERE job=?',(job,)).fetchone()[0]
         profile = self.app.project_registry.profile(job)
         knowledge = [profile['revision'], profile['knowledge_version']] if profile else None
         retirements = self.conn.execute('SELECT max(id) FROM stewardship_retirements WHERE job=?',(job,)).fetchone()[0]
         audit = self.app.project_audit.binding(job)
-        history = self.app.history.binding(job)
+        history = self.app.history.binding(job) if include_history else None
         return sha256(json.dumps(['integrated-pilot',row['epoch'],row['rule'],revision,knowledge,retirements,audit,history],sort_keys=True).encode()).hexdigest()
 
-    def _assess(self, destination, row):
+    def _assess(self, destination, row, *, background=False):
         task=self.conn.execute("SELECT * FROM patrol_tasks WHERE destination=? AND kind='assess'",(destination,)).fetchone()
         binding = self.signature(row['job'])
         if task['cursor'] and binding != row['signature']:
@@ -176,8 +191,16 @@ class Patrol:
         if not task['cursor']:
             with self.conn:
                 self.conn.execute('UPDATE destinations SET signature=? WHERE id=?',(binding,destination))
-        page=self.app.images(row['job'],task['cursor'],thumbnails=False)
+        checkpoint = self.conn.execute('SELECT * FROM patrol_evidence_checkpoint WHERE destination=?', (destination,)).fetchone()
+        selective = checkpoint is not None and checkpoint['mode'] == 'incremental'
+        selected = [item[0] for item in self.conn.execute('SELECT asset FROM patrol_evidence_queue WHERE destination=? ORDER BY asset LIMIT 24', (destination,))] if selective else None
+        page=self.app.images(row['job'], 0 if selective else task['cursor'], thumbnails=False, asset_ids=selected)
+        if selective:
+            page['more'] = self.conn.execute('SELECT count(*) FROM patrol_evidence_queue WHERE destination=?', (destination,)).fetchone()[0] > len(selected)
         with self.conn:
+            if selective:
+                self.conn.executemany('DELETE FROM patrol_evidence_queue WHERE destination=? AND asset=?', ((destination, asset) for asset in selected))
+                self.conn.execute('UPDATE patrol_evidence_checkpoint SET reassessed=reassessed+? WHERE destination=?', (len(page['items']), destination))
             for image in page['items']:
                 self.conn.execute('INSERT OR REPLACE INTO patrol_assets VALUES(?,?,?)',(destination,image['id'],json.dumps(image)))
                 self.conn.execute('DELETE FROM virtual_memberships WHERE destination=? AND asset=?',(destination,image['id']))
@@ -194,15 +217,38 @@ class Patrol:
             self.conn.execute("UPDATE patrol_tasks SET cursor=cursor+24,status=? WHERE destination=? AND kind='assess'",('pending' if page['more'] else 'complete',destination))
             if not page['more']:
                 self.conn.execute('UPDATE destinations SET signature=? WHERE id=?',(self.signature(row['job']),destination))
+                if selective:
+                    self.conn.execute("UPDATE patrol_evidence_checkpoint SET mode='complete' WHERE destination=?", (destination,))
+                else:
+                    self.conn.execute("INSERT OR REPLACE INTO patrol_evidence_checkpoint(destination,base,history,mode,reassessed,reused) VALUES(?,?,?,'complete',?,0)",
+                        (destination, self.signature(row['job'], include_history=False), self.app.history.change_cursor(row['job']),
+                         self.conn.execute('SELECT count(*) FROM patrol_assets WHERE destination=?', (destination,)).fetchone()[0]))
                 self._questions(destination)
-        if not page['more']:
+        if background:
+            self._state(destination, 'Partially completed', 'Historical evidence updated within the monitored scope. Review the refreshed virtual groups and remaining questions.')
+        elif not page['more']:
             self._finish(destination)
 
     def _reset_assessment(self, destination):
+        row = self.row(destination)
+        checkpoint = self.conn.execute('SELECT * FROM patrol_evidence_checkpoint WHERE destination=?', (destination,)).fetchone()
+        base = self.signature(row['job'], include_history=False)
+        selective = checkpoint is not None and checkpoint['base'] == base
         with self.conn:
             self.conn.execute("UPDATE patrol_tasks SET status='pending',cursor=0 WHERE destination=? AND kind IN ('reconcile','assess')", (destination,))
-            self.conn.execute('DELETE FROM patrol_assets WHERE destination=?',(destination,))
-            self.conn.execute('DELETE FROM virtual_memberships WHERE destination=?',(destination,))
+            if selective:
+                affected = self.app.history.affected_since(row['job'], checkpoint['history'])
+                self.conn.executemany('INSERT OR IGNORE INTO patrol_evidence_queue VALUES(?,?)', ((destination, asset) for asset in affected))
+                total = self.conn.execute('SELECT count(*) FROM patrol_assets WHERE destination=?', (destination,)).fetchone()[0]
+                # Stamp the new evidence before processing so an interrupted queue can resume.
+                self.conn.execute("UPDATE patrol_evidence_checkpoint SET history=?,mode='incremental',reassessed=0,reused=? WHERE destination=?",
+                    (self.app.history.change_cursor(row['job']), max(0, total-self.conn.execute('SELECT count(*) FROM patrol_evidence_queue WHERE destination=?', (destination,)).fetchone()[0]), destination))
+                self.conn.execute('UPDATE destinations SET signature=? WHERE id=?', (self.signature(row['job']), destination))
+            else:
+                self.conn.execute('DELETE FROM patrol_evidence_checkpoint WHERE destination=?', (destination,))
+                self.conn.execute('DELETE FROM patrol_evidence_queue WHERE destination=?', (destination,))
+                self.conn.execute('DELETE FROM patrol_assets WHERE destination=?',(destination,))
+                self.conn.execute('DELETE FROM virtual_memberships WHERE destination=?',(destination,))
 
     def _questions(self, destination):
         groups={}
@@ -268,6 +314,10 @@ class Patrol:
             self._state(destination,'Partially completed','Inspection entry budget reached. Resume for another bounded cycle.')
             return
         task=self.conn.execute("SELECT * FROM patrol_tasks WHERE destination=? AND status='pending' ORDER BY CASE kind WHEN 'inspect' THEN 0 WHEN 'reconcile' THEN 1 ELSE 2 END LIMIT 1",(destination,)).fetchone()
+        checkpoint = self.conn.execute('SELECT base FROM patrol_evidence_checkpoint WHERE destination=?', (destination,)).fetchone()
+        if checkpoint and row['signature'] != self.signature(row['job']) and not (task and task['kind'] == 'inspect'):
+            self._reset_assessment(destination)
+            return
         if task and task['kind']=='inspect':
             self._state(destination,'Inspecting','Inventory, local OCR and contextual analysis are continuing within this scope.')
             coverage=self.capabilities.inspect(row['job'])
@@ -293,15 +343,44 @@ class Patrol:
             return
         self._finish(destination)
 
+    def _background_history(self):
+        history = self.app.history
+        if not history.monitor or monotonic() < self.history_due or read_state(self.conn)['paused']:
+            return
+        job = history.monitor[0]
+        if self.conn.execute("SELECT 1 FROM history_sources WHERE job=? AND status='queued'", (job,)).fetchone():
+            return
+        self.history_due = monotonic() + 60
+        # Read-only virtual updates use a separate route that cannot execute batches.
+        for row in self.conn.execute("""SELECT d.* FROM destinations d JOIN patrol_evidence_checkpoint c ON c.destination=d.id
+                WHERE d.job=? AND d.state IN ('Completed','Partially completed','Awaiting clarification','Awaiting authorization')
+                ORDER BY d.updated,d.id""", (job,)).fetchall():
+            checkpoint = self.conn.execute('SELECT * FROM patrol_evidence_checkpoint WHERE destination=?', (row['id'],)).fetchone()
+            if checkpoint['base'] != self.signature(job, include_history=False):
+                continue  # Profile, file or operator-decision changes require ordinary Patrol review.
+            if row['signature'] != self.signature(job):
+                self._reset_assessment(row['id'])
+                row = self.row(row['id'])
+            elif checkpoint['mode'] != 'incremental':
+                continue
+            self._assess(row['id'], row, background=True)
+            return  # At most one 24-asset page per minute, across all saved Destinations.
+
     def _run(self):
         while not self.stop.is_set():
-            self.wake.wait(timeout=max(0, self.watch.due - monotonic()) if self.watch.target else None)
+            deadlines = ([self.watch.due] if self.watch.target else []) + ([self.app.history.monitor_due, max(self.history_due, monotonic() + 1)] if self.app.history.monitor else [])
+            self.wake.wait(timeout=max(0, min(deadlines) - monotonic()) if deadlines else None)
             self.wake.clear()
             while not self.stop.is_set():
                 with self.lock:
                     rows=self.conn.execute("SELECT id FROM destinations WHERE state IN ('Inspecting','Assessing','Working','Verifying')").fetchall()
                     self.watch.tick()
+                    self.app.history.monitor_tick()
                     reading = self.capabilities.history_step()
+                    try:
+                        self._background_history()
+                    except (OSError, ValueError):
+                        self.app.history.monitor_stop()
                     if not rows and not reading:
                         break
                     for row in rows:
@@ -375,7 +454,10 @@ class Patrol:
             result += ' Evidence changed. Resume Patrol for a fresh assessment.'
         need=Need(row['id'],row['objective'],row['why']).assess({key:True for key in ('capability','environment','resources','authority','policy','evidence')},
             outcome_verified=outcome is not None,evidence_refs=(f'owner-outcome:{outcome["id"]}',) if outcome else ())
-        return dict(row) | {'coverage':coverage,'inspection_epoch':self.app.job(row['job'])['epoch'],'metrics':{'proposed':states['proposed_identity'],'confirmed':states['human_confirmed_identity'],
+        checkpoint = self.conn.execute('SELECT mode,reassessed,reused,history FROM patrol_evidence_checkpoint WHERE destination=?', (destination,)).fetchone()
+        if checkpoint:
+            result += f" Evidence update reassessed {checkpoint['reassessed']} assets and reused {checkpoint['reused']} saved assessments."
+        return dict(row) | {'incremental': dict(checkpoint) if checkpoint else None, 'coverage':coverage,'inspection_epoch':self.app.job(row['job'])['epoch'],'metrics':{'proposed':states['proposed_identity'],'confirmed':states['human_confirmed_identity'],
             'unresolved':unresolved,'collections':len(collections),'memberships':sum(value['members'] for value in collections),
             'physical_verified':reviewed},'questions':questions,'collections':collections,
             'batches':batches,'batches_waiting':waiting,'report':result,

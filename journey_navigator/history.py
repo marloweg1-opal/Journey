@@ -4,6 +4,7 @@ from codecs import getincrementaldecoder
 import json
 import os
 from pathlib import Path
+from time import monotonic
 import re
 import stat
 from uuid import uuid4
@@ -43,6 +44,15 @@ CREATE TABLE IF NOT EXISTS history_claims (
 CREATE INDEX IF NOT EXISTS history_match ON history_claims(job,project,match_key,kind);
 CREATE INDEX IF NOT EXISTS history_relation ON history_claims(job,project,related_key);
 CREATE INDEX IF NOT EXISTS history_kind ON history_claims(job,project,kind);
+CREATE TABLE IF NOT EXISTS history_changes (
+    seq INTEGER PRIMARY KEY, source TEXT NOT NULL UNIQUE, job TEXT NOT NULL, project TEXT NOT NULL,
+    summary TEXT NOT NULL, created TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS history_change_scope ON history_changes(job,project,seq);
+CREATE TABLE IF NOT EXISTS history_impacts (
+    change INTEGER NOT NULL, asset INTEGER NOT NULL, epoch INTEGER NOT NULL,
+    PRIMARY KEY(change,asset)
+) WITHOUT ROWID;
 CREATE TABLE IF NOT EXISTS history_reconciliation (
     job TEXT PRIMARY KEY, project TEXT NOT NULL, epoch INTEGER NOT NULL,
     binding TEXT NOT NULL, summary TEXT NOT NULL, checked TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -244,6 +254,12 @@ class ArchiveHistory:
         self.conn.create_function("history_match_key", 1, match_key, deterministic=True)
         self.tickets = {}
         self.coverage_cache = {}
+        self.authorized_folders = {}
+        self.preview_folders = {}
+        self.monitor = None
+        self.monitor_due = 0
+        self.monitor_job = None
+        self.monitor_report = {"state": "off", "checked": 0, "queued": 0, "gaps": 0}
         with self.conn:
             self.conn.execute("UPDATE history_sources SET status='paused' WHERE status='queued'")
 
@@ -271,7 +287,9 @@ class ArchiveHistory:
         check_local_drive(path)
         info = safe_metadata(path, read_guard=self.app.project_registry._archive_access)
         skipped = 0
+        folder = None
         if stat.S_ISDIR(info.st_mode):
+            folder = (str(path), list(signature(info))[:2])
             paths = []
             with os.scandir(path) as entries:
                 for index, entry in enumerate(entries):
@@ -311,9 +329,12 @@ class ArchiveHistory:
             raise ValueError("Choose 1–128 supported exports with a combined size up to 768 MiB.")
         ticket = uuid4().hex
         if len(self.tickets) >= 8:
+            self.preview_folders.pop(next(iter(self.tickets)), None)
             self.tickets.pop(next(iter(self.tickets)))
         self.tickets[ticket] = (job, self.project(profile), rows)
-        return {"ticket": ticket, "project": profile["project"], "files": rows, "bytes": total, "other_entries": skipped}
+        if folder:
+            self.preview_folders[ticket] = folder
+        return {"ticket": ticket, "project": profile["project"], "files": rows, "bytes": total, "other_entries": skipped, "monitor_folder": folder[0] if folder else None}
 
     def enqueue(self, job, ticket):
         _, profile = self.context(job)
@@ -343,12 +364,98 @@ class ArchiveHistory:
             self.conn.executemany("""INSERT INTO history_sources(id,job,project,path,name,signature,size,status)
                 VALUES(?,?,?,?,?,?,?,'queued')""",
                 ((uuid4().hex, job, key, row["path"], row["name"], json.dumps(row["signature"]), row["size"]) for row in pending))
+        folder = self.preview_folders.pop(ticket, None)
+        if folder:
+            self.authorized_folders[job] = (key, *folder)
         return self.status(job)
 
+    def monitor_status(self, job):
+        enabled = self.monitor is not None and self.monitor[0] == job
+        return (self.monitor_report if self.monitor_job == job else {"state": "off", "checked": 0, "queued": 0, "gaps": 0}) | {
+            "enabled": enabled, "folder": self.monitor[2] if enabled else None,
+            "available_folder": self.authorized_folders.get(job, (None, None))[1],
+            "interval_seconds": 60, "entry_budget": 24, "session_only": True}
+
+    def monitor_enable(self, job):
+        _, profile = self.context(job)
+        grant = self.authorized_folders.get(job)
+        if not grant or grant[0] != self.project(profile):
+            raise ValueError("Import a reviewed export folder in this session before enabling monitoring.")
+        if self.monitor and self.monitor[0] != job:
+            raise ValueError("Stop the other history monitor first.")
+        self.monitor_stop()
+        self.monitor = (job, *grant)
+        self.monitor_job = job
+        self.monitor_due = 0
+        self.monitor_report = {"state": "watching", "checked": 0, "queued": 0, "gaps": 0}
+        self.monitor_entries = None
+        self.monitor_seen = 0
+        return self.monitor_status(job)
+
+    def monitor_stop(self, job=None):
+        if self.monitor and (job is None or self.monitor[0] == job):
+            if self.monitor_entries is not None:
+                self.monitor_entries.close()
+            self.monitor_entries = None
+            self.monitor = None
+            self.monitor_report["state"] = "stopped"
+        return self.monitor_status(job)
+
+    def monitor_tick(self):
+        if not self.monitor or monotonic() < self.monitor_due:
+            return
+        self.monitor_due = monotonic() + 60
+        job, project, folder, identity = self.monitor
+        started = monotonic()
+        try:
+            _, profile = self.context(job)
+            info = safe_metadata(Path(folder), read_guard=self.app.project_registry._archive_access)
+            if self.project(profile) != project or list(signature(info))[:2] != identity or not stat.S_ISDIR(info.st_mode):
+                raise PermissionError("History monitor scope changed.")
+            if self.monitor_entries is None:
+                self.monitor_entries = os.scandir(folder)
+                self.monitor_seen = 0
+            for _ in range(24):
+                if monotonic() - started >= .15:
+                    break
+                try:
+                    entry = next(self.monitor_entries)
+                except StopIteration:
+                    self.monitor_entries.close()
+                    self.monitor_entries = None
+                    break
+                self.monitor_seen += 1
+                self.monitor_report["checked"] += 1
+                if self.monitor_seen > 4000:
+                    raise ValueError("Monitored folder exceeds the entry budget.")
+                if not re.fullmatch(r"conversations(?:[-_ (][^/\\]*)?\.json", entry.name, re.I):
+                    continue
+                path = Path(folder) / entry.name
+                observed = self._file(path)
+                prior = self.conn.execute("SELECT 1 FROM history_sources WHERE job=? AND project=? AND path=? AND signature=?",
+                    (job, project, str(path), json.dumps(list(signature(observed))))).fetchone()
+                if prior:
+                    continue
+                # The explicit session grant covers only matching regular files in this folder.
+                # Existing import budgets and before/after signature checks remain authoritative.
+                preview = self.preview(job, str(path))
+                self.enqueue(job, preview["ticket"])
+                self.monitor_report["queued"] += 1
+        except (OSError, ValueError):
+            self.monitor_report["gaps"] += 1
+            self.monitor_stop(job)
+            self.monitor_report["state"] = "blocked; review folder access or import budget"
+
     def pause(self, job=None):
+        self.monitor_stop(job)
         self.conn.execute("UPDATE history_sources SET status='paused' WHERE status='queued' AND (? IS NULL OR job=?)", (job, job))
 
     def forget(self, job):
+        self.monitor_stop(job)
+        self.authorized_folders.pop(job, None)
+        self.preview_folders.clear()
+        self.conn.execute("DELETE FROM history_impacts WHERE change IN (SELECT seq FROM history_changes WHERE job=?)", (job,))
+        self.conn.execute("DELETE FROM history_changes WHERE job=?", (job,))
         self.tickets = {ticket: draft for ticket, draft in self.tickets.items() if draft[0] != job}
         self.conn.execute("DELETE FROM history_messages WHERE source IN (SELECT id FROM history_sources WHERE job=?)", (job,))
         self.conn.execute("DELETE FROM history_claims WHERE job=?", (job,))
@@ -358,7 +465,7 @@ class ArchiveHistory:
         if self.conn.execute("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='patrol_tasks'").fetchone():
             destinations = "SELECT id FROM destinations WHERE job=?"
             self.conn.execute(f"UPDATE patrol_tasks SET status='pending',cursor=0 WHERE kind IN ('assess','reconcile') AND destination IN ({destinations})", (job,))
-            for table in ("patrol_assets", "patrol_questions", "virtual_memberships", "virtual_collections"):
+            for table in ("patrol_assets", "patrol_questions", "virtual_memberships", "virtual_collections", "patrol_evidence_checkpoint", "patrol_evidence_queue"):
                 self.conn.execute(f"DELETE FROM {table} WHERE destination IN ({destinations})", (job,))
 
     def binding(self, job):
@@ -437,7 +544,66 @@ class ArchiveHistory:
                 status=?,finished=CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END WHERE id=?""",
                 (offset, phase, records, count, gaps, "complete" if complete else "queued", complete, source["id"]))
             if complete:
-                self.app.project_registry._changed(source["job"])
+                self._publish_delta(source)
+
+    @staticmethod
+    def semantic(claim):
+        # Export/message identifiers establish provenance, not a different assertion.
+        return key_for([claim["kind"], claim["name"].casefold(), claim["value"], claim.get("family"), claim["source"]["role"]])
+
+    def _publish_delta(self, source):
+        previous, slots = set(), set()
+        for item in self.conn.execute("""SELECT c.record FROM history_claims c JOIN history_sources s ON s.id=c.source
+                WHERE c.job=? AND c.project=? AND s.status='complete' AND s.id<>?""",
+                (source["job"], source["project"], source["id"])):
+            claim = json.loads(item[0])
+            previous.add(self.semantic(claim))
+            slots.add((claim["kind"], name_key(claim["name"])))
+        added, duplicate = {}, 0
+        for item in self.conn.execute("SELECT record FROM history_claims WHERE source=?", (source["id"],)):
+            claim = json.loads(item[0])
+            key = self.semantic(claim)
+            if key in previous or key in added:
+                duplicate += 1
+            else:
+                added[key] = claim
+        names, aliases = set(), set()
+        changed = 0
+        for claim in added.values():
+            changed += (claim["kind"], name_key(claim["name"])) in slots
+            if claim["kind"] == "entity":
+                aliases.add(_words(claim["name"]))
+            else:
+                names.add(match_key(claim["name"]))
+                if claim["kind"] == "relationship":
+                    names.add(match_key(claim["value"]["asset"]))
+        root = self.app.job(source["job"])
+        impacted = []
+        for asset in self.conn.execute("SELECT id,path FROM files WHERE job=? AND epoch=? AND scope=? AND status='analyzed'",
+                                       (source["job"], root["epoch"], root["root"])):
+            path = Path(asset["path"])
+            stem = _words(path.stem)
+            if match_key(path.name) in names or any(stem == alias or stem.startswith(alias + " ") and asset_families(stem) for alias in aliases):
+                impacted.append(asset["id"])
+        summary = {"export": source["name"], "new_claims": len(added), "changed_claims": changed,
+                   "overlapping_claims": duplicate, "affected_assets": len(impacted),
+                   "changes": [{"kind": c["kind"], "name": c["name"], "value": c["value"],
+                                "family": c.get("family"), "source": c["source"]} for c in list(added.values())[:64]],
+                   "changes_truncated": len(added) > 64}
+        seq = self.conn.execute("INSERT INTO history_changes(source,job,project,summary) VALUES(?,?,?,?)",
+            (source["id"], source["job"], source["project"], json.dumps(summary))).lastrowid
+        self.conn.executemany("INSERT INTO history_impacts VALUES(?,?,?)", ((seq, asset, root["epoch"]) for asset in impacted))
+
+    def change_cursor(self, job):
+        profile = self.app.project_registry.profile(job)
+        return self.conn.execute("SELECT coalesce(max(seq),0) FROM history_changes WHERE job=? AND project=?",
+                                 (job, self.project(profile))).fetchone()[0] if profile else 0
+
+    def affected_since(self, job, cursor):
+        row, profile = self.context(job)
+        return [item[0] for item in self.conn.execute("""SELECT DISTINCT i.asset FROM history_impacts i
+            JOIN history_changes c ON c.seq=i.change WHERE c.job=? AND c.project=? AND c.seq>? AND i.epoch=? ORDER BY i.asset""",
+            (job, self.project(profile), cursor, row["epoch"]))]
 
     def evidence(self, job, profile, name):
         if not profile:
@@ -498,7 +664,9 @@ class ArchiveHistory:
             reconciliation = json.loads(last["summary"]) | {"checked": last["checked"],
                 "current": last["binding"] == self.reconciliation_binding(job) and last["epoch"] == current["epoch"]}
         return {"files": rows, "unique_messages": unique, "claims": counts[0], "referenced_assets": counts[1],
-                "attachment_records": counts[2], "reconciliation": reconciliation}
+                "attachment_records": counts[2], "reconciliation": reconciliation,
+                "monitor": self.monitor_status(job), "incremental": [json.loads(item["summary"]) | {"sequence": item["seq"], "created": item["created"]}
+                    for item in self.conn.execute("SELECT seq,summary,created FROM history_changes WHERE job=? AND project=? ORDER BY seq DESC LIMIT 8", key)]}
 
     def reconciliation_binding(self, job):
         return key_for([self.binding(job), self.app.project_audit.binding(job)])

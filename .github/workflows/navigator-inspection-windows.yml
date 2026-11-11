@@ -2,7 +2,7 @@ name: Navigator linked inspection acceptance
 
 on:
   push:
-    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol, work/navigator-provenance-naming, work/navigator-asset-registry, work/navigator-project-stewardship, work/journey-integrated-pilot]
+    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol, work/navigator-provenance-naming, work/navigator-asset-registry, work/navigator-project-stewardship, work/journey-integrated-pilot, work/journey-incremental]
 
 permissions:
   contents: read
@@ -57,6 +57,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Naming audit or guided retirement acceptance failed.' }
           python -B -m unittest discover -s tests -p 'test_integrated_pilot.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Integrated archive, classification, or lifecycle acceptance failed.' }
+          python -B -m unittest discover -s tests -p 'test_incremental_history.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Incremental historical reconciliation acceptance failed.' }
           python -B -m unittest discover -s tests -p 'test_navigator_session.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Navigator ownership tests failed.' }
           python -B tests/navigator_launcher.py --application (Join-Path $destination 'Journey Navigator/Journey Navigator.exe')

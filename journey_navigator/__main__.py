@@ -350,6 +350,12 @@ class Handler(BaseHTTPRequestHandler):
             with app.conn:
                 app.history.pause(job)
             return app.history.status(job)
+        if action == "history-monitor-enable":
+            result = app.history.monitor_enable(job)
+            patrol.wake.set()
+            return result
+        if action == "history-monitor-stop":
+            return app.history.monitor_stop(job)
         if action == "history-status":
             return app.history.status(job)
         if action == "history-reconcile":

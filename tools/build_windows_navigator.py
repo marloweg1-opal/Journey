@@ -55,6 +55,8 @@ def build(output, cache, wheel, zig):
         profile.mkdir(parents=True)
         shutil.copyfile(ROOT / "examples" / "carebloom" / "project_tokens.json", profile / "project_tokens.json")
         shutil.copyfile(ROOT / "docs/NAVIGATOR_PATROL.md", package / "START-HERE.md")
+        shutil.copyfile(ROOT / "docs/INTEGRATED_PILOT.md", package / "INTEGRATED-PILOT.md")
+        shutil.copyfile(ROOT / "docs/INCREMENTAL_HISTORY.md", package / "INCREMENTAL_HISTORY.md")
         shutil.copyfile(ROOT / "LICENSE", package / "LICENSE.txt")
         commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         (package / "BUILD.txt").write_text(f"Journey source commit {commit}\nCPython {PYTHON_VERSION}\nPillow 12.2.0\nTesseract OCR 5.5.4 (English)\n", encoding="utf-8")
