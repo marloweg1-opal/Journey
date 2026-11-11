@@ -212,6 +212,13 @@
       destination = result.id; resetStewardship(); clearSelections(); renderedSnapshot=''; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status();
     } catch (error) { failure(error); }
   });
+  $("patrol-save-preview").onclick = async () => {
+    try {
+      if (!current) throw new Error('Choose a saved Destination first.');
+      const saved = await api('export', {job:current.job});
+      $("patrol-preview-result").textContent = 'Organization preview saved to ' + saved.path + '. Saving this preview does not change source files. Physical changes require separate exact-batch approval.';
+    } catch(error) { failure(error); }
+  };
   $("patrol-start").onclick = async () => { try { await api('patrol-begin',{destination}); poll(); } catch(error) { failure(error); } };
   $("patrol-refresh").onclick = async () => { try { resetStewardship(); await api('patrol-begin',{destination,refresh:true}); poll(); } catch(error) { failure(error); } };
   $("patrol-pause").onclick = async () => { try { await api('patrol-pause',{destination}); await status(); } catch(error) { failure(error); } };

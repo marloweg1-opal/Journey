@@ -21,7 +21,9 @@
           <div class="inspection-bar"><button type="button" id="patrol-start">Begin or resume Patrol</button>
             <button type="button" id="patrol-pause">Pause Patrol</button>
             <button type="button" id="patrol-refresh">Refresh source and Patrol</button>
-            <button type="button" id="patrol-review">Open Review</button></div>
+            <button type="button" id="patrol-review">Open Review</button>
+            <button type="button" id="patrol-save-preview">Save organization preview</button></div>
+          <p id="patrol-preview-result" role="status" aria-live="polite"></p>
           <button type="button" id="patrol-accept-outcome">This meets my success criterion</button>
           <div id="patrol-metrics" class="inspection-counts"></div>
           <h3>Virtual collections</h3><div id="patrol-collections"></div>
@@ -41,6 +43,7 @@
                 <label><input type="checkbox" name="use_model"> Interpret this instruction with local Qwen3</label>
                 <label><input type="checkbox" name="read_references"> Read scoped documentation and configuration references</label>
               </div>
+              <p>Local Qwen3 can interpret this one instruction. Archive contents stay in Journey's local index. No model or additional agent is required for Find, Organize, or supported retirement commands.</p>
               <button type="submit">Inspect instruction</button>
             </form>
             <p id="stewardship-status" role="status" aria-live="polite"></p>

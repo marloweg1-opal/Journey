@@ -77,6 +77,7 @@
 
   let evidenceSequence = null;
   function renderHistory(data, job) {
+    window.dispatchEvent(new CustomEvent('journey-history-status', {detail: {job, data}}));
     const sequence = (data.incremental || [])[0]?.sequence || 0;
     if (evidenceSequence !== null && evidenceSequence !== sequence) window.dispatchEvent(new Event("journey-evidence-change"));
     evidenceSequence = sequence;

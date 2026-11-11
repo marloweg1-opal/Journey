@@ -15,6 +15,70 @@
   const views = {images: "images", groups: "groups", links: "links", issues: "skipped entries"};
   let job = "", view = "images", series = "", query = "", offset = 0, running = false, sequence = 0;
   let profileDraft = null, registryOffset = 0, auditRows = [];
+  let flowCoverage = null, flowProfile = null, flowHistory = null, flowTarget = "images", flowReviewed = false, flowSkip = false;
+
+  function collectionFlow() {
+    if (!flowCoverage || !job) return;
+    const pending = flowCoverage.pending || flowCoverage.pending_folders;
+    let message, title, disabled = false;
+    $("collection-flow-skip").hidden = true;
+    if (pending || running) {
+      flowTarget = "resume";
+      message = `Inspection · ${flowCoverage.files.toLocaleString()} entries found, ${flowCoverage.analyzed.toLocaleString()} images examined. ${running ? "Continuing in bounded batches." : "Saved at a checkpoint. Resume when ready."}`;
+      title = "Resume inspection"; disabled = running;
+    } else if (!flowCoverage.retains) {
+      flowTarget = "images"; title = "Review interpretations";
+      message = "Temporary inspection is ready. To retain project context and decisions, select this folder with a local checkpoint enabled.";
+    } else if (!flowProfile) {
+      flowTarget = "profile"; title = "Add project context";
+      message = "Inspection finished. Preview a project pack to establish which project's evidence and naming rules apply to this collection.";
+    } else if (flowHistory?.files.some(file => file.status === "queued")) {
+      flowTarget = "history"; title = "View import progress";
+      message = `${flowProfile.project} · Importing the reviewed historical selection. Completed sources will update relevant interpretations.`;
+    } else if (!flowHistory?.files.some(file => file.status === "complete") && !flowSkip) {
+      flowTarget = "history"; title = "Add historical context";
+      message = `${flowProfile.project} · Project context is active. Import reviewed local exports, or continue with the evidence already available.`;
+      $("collection-flow-skip").hidden = false;
+    } else if (!flowReviewed) {
+      flowTarget = "images"; title = "Review interpretations";
+      message = `${flowProfile.project} · Context is ready for review. Inspect identity, purpose, source citations and open questions before organization.`;
+    } else {
+      flowTarget = "destination"; title = "Preview organization";
+      message = `${flowProfile.project} · Describe the result you want, then review Journey's evidence-linked virtual groups. Saving a preview preserves the source files.`;
+    }
+    $("collection-flow-status").textContent = message;
+    $("collection-flow-next").textContent = title;
+    $("collection-flow-next").disabled = disabled;
+  }
+
+  async function collectionNext() {
+    if (flowTarget === "resume") return run();
+    if (flowTarget === "profile" || flowTarget === "history") {
+      const section = $(flowTarget === "profile" ? "inspect-registry" : "inspect-history");
+      section.open = true;
+      section.scrollIntoView({block: "start"});
+      section.querySelector('input').focus();
+    } else if (flowTarget === "destination") {
+      document.querySelector('.journey-tools [data-select="destination"]').click();
+      $("destination-form").elements.why.focus();
+    } else {
+      flowReviewed = true;
+      view = "images"; offset = 0; series = ""; query = "";
+      $("inspect-filter").reset();
+      panel.querySelectorAll('[data-view]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.view === view)));
+      await loadView();
+      results.scrollIntoView({block: "start"});
+      collectionFlow();
+    }
+  }
+
+  window.addEventListener('journey-history-status', event => {
+    if (event.detail.job !== job) return;
+    const data = event.detail.data;
+    if (flowHistory && (flowHistory.incremental?.[0]?.sequence || 0) !== (data.incremental?.[0]?.sequence || 0)) flowReviewed = false;
+    flowHistory = data;
+    collectionFlow();
+  });
 
   function failure(error) {
     notice(error.error || error.message || String(error));
@@ -71,6 +135,8 @@
     panel.querySelector('[data-inspect="pause"]').disabled = !running;
     panel.querySelector('[data-inspect="refresh"]').disabled = running;
     panel.querySelector('[data-inspect="export"]').disabled = running || !data.retains || !data.proposals;
+    flowCoverage = data;
+    collectionFlow();
   }
 
   function sourceLabel(source) {
@@ -124,6 +190,8 @@
     const selected = job, page = registryOffset;
     const data = await api("registry", {job: selected, offset: page});
     if (selected !== job || page !== registryOffset) return;
+    flowProfile = data.profile;
+    collectionFlow();
     $("registry-import").hidden = !data.profile;
     $("registry-status").textContent = data.profile ?
       `${data.profile.project} · ${data.profile.rules.length} validated naming rules · ${data.claims} evidence records · ${data.archives} imported files` :
@@ -268,6 +336,7 @@
   async function openJob(id) {
     const data = await api("summary", {job: id});
     job = id;
+    flowCoverage = null; flowProfile = null; flowHistory = null; flowReviewed = false; flowSkip = false;
     sessionStorage.setItem("journey-current-inspection", job);
     setMode("inspect");
     $("inspect-review").hidden = false;
@@ -465,6 +534,8 @@
   });
 
   const commands = {
+    "workflow-next": collectionNext,
+    "workflow-skip": async () => { flowSkip = true; flowTarget = "images"; await collectionNext(); },
     "audit-row": auditProof,
     layout: () => {
       const compact = results.classList.toggle("compact-layout");

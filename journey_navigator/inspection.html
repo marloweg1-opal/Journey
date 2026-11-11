@@ -18,6 +18,16 @@
         <div id="inspect-review" class="inspection-card" hidden>
           <h2>Inspection review</h2>
           <p id="inspect-root"></p>
+          <div class="inspection-entry" aria-label="Collection workflow">
+            <h3>Collection workflow</h3>
+            <p id="collection-flow-status" role="status" aria-live="polite"></p>
+            <div class="inspection-bar"><button type="button" id="collection-flow-next" data-inspect="workflow-next">Continue collection review</button>
+              <button type="button" id="collection-flow-skip" data-inspect="workflow-skip" hidden>Continue with current evidence</button></div>
+            <details><summary>Steps and boundaries</summary>
+              <p>Select a collection → inspect → add project and historical context → review interpretations → preview organization → save a reviewable result.</p>
+              <p>Project context and history have separate reviewed selections. Unknowns stay open. This guide does not approve physical changes.</p>
+            </details>
+          </div>
           <p id="inspect-mode"></p>
           <div id="inspect-counts" class="inspection-counts" aria-label="Coverage counts"></div>
           <p id="inspect-progress" role="status" aria-live="polite"></p>
