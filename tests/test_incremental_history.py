@@ -236,6 +236,53 @@ class IncrementalHistory(TestCase):
         with patch.object(self.patrol, '_assess', side_effect=AssertionError('Pause disables background work')):
             self.patrol._background_history()
 
+    def test_completed_pre_incremental_patrol_is_baselined_without_reassessment(self):
+        before = self.saved()
+        self.patrol.close()
+        with self.app.conn:
+            self.app.conn.execute('DELETE FROM patrol_evidence_checkpoint')
+        self.patrol = Patrol(self.app, self.lock)
+        self.patrol.stop.set()
+        self.patrol.wake.set()
+        self.patrol.worker.join(5)
+        self.addCleanup(self.patrol.close)
+        self.assertEqual(self.saved(), before)
+        checkpoint = self.patrol.status(self.destination)['incremental']
+        self.assertIsNotNone(checkpoint)
+        self.assertEqual(checkpoint['reassessed'], 0)
+        export = self.exports / 'conversations-new.json'
+        export.write_text(json.dumps([native_record('new', [('duo', 'user',
+            'Musicstone: Beat and Melody each have a reference sheet.', [])], 'CareBloomOS')]), encoding='utf-8')
+        self.import_file(export)
+        self.run_patrol()
+        self.assertEqual(self.patrol.status(self.destination)['incremental']['reassessed'], 2)
+        self.assertEqual(self.patrol.status(self.destination)['incremental']['reused'], 1)
+
+    def test_monitor_does_not_follow_a_replaced_folder_or_an_external_file_link(self):
+        first = self.exports / 'conversations-001.json'
+        first.write_text('[]', encoding='utf-8')
+        self.import_file(self.exports)
+        self.app.history.monitor_enable(self.job)
+        outside = self.root / 'outside.json'
+        outside.write_text('[]', encoding='utf-8')
+        link = self.exports / 'conversations-linked.json'
+        try:
+            link.symlink_to(outside)
+        except (OSError, NotImplementedError):
+            link = None  # Windows fixture account may lack symlink creation privilege.
+        if link:
+            self.app.history.monitor_tick()
+            self.assertFalse(self.app.history.monitor_status(self.job)['enabled'])
+            self.assertEqual(len(self.app.history.status(self.job)['files']), 1)
+            link.unlink()
+        self.app.history.monitor_enable(self.job)
+        self.exports.rename(self.root / 'Previous exports')
+        self.exports.mkdir()
+        (self.exports / 'conversations-new.json').write_text('[]', encoding='utf-8')
+        self.app.history.monitor_tick()
+        self.assertFalse(self.app.history.monitor_status(self.job)['enabled'])
+        self.assertEqual(len(self.app.history.status(self.job)['files']), 1)
+
     def test_monitored_import_is_explicit_bounded_session_only_and_respects_pause(self):
         first = self.exports / 'conversations-001.json'
         first.write_text('[]', encoding='utf-8')

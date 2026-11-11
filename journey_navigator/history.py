@@ -465,8 +465,10 @@ class ArchiveHistory:
         if self.conn.execute("SELECT 1 FROM sqlite_schema WHERE type='table' AND name='patrol_tasks'").fetchone():
             destinations = "SELECT id FROM destinations WHERE job=?"
             self.conn.execute(f"UPDATE patrol_tasks SET status='pending',cursor=0 WHERE kind IN ('assess','reconcile') AND destination IN ({destinations})", (job,))
+            tables = {row[0] for row in self.conn.execute("SELECT name FROM sqlite_schema WHERE type='table'")}
             for table in ("patrol_assets", "patrol_questions", "virtual_memberships", "virtual_collections", "patrol_evidence_checkpoint", "patrol_evidence_queue"):
-                self.conn.execute(f"DELETE FROM {table} WHERE destination IN ({destinations})", (job,))
+                if table in tables:
+                    self.conn.execute(f"DELETE FROM {table} WHERE destination IN ({destinations})", (job,))
 
     def binding(self, job):
         profile = self.app.project_registry.profile(job)
