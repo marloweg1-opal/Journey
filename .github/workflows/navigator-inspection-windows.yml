@@ -53,6 +53,8 @@ jobs:
           Expand-Archive -LiteralPath dist/Journey-Navigator-Guided-Patrol-Windows-x64.zip -DestinationPath $destination
           $runtime = Join-Path $destination 'Journey Navigator/runtime/python.exe'
           $env:JOURNEY_TEST_OCR = Join-Path $destination 'Journey Navigator/ocr'
+          python -B tests/housekeeping_browser.py
+          if ($LASTEXITCODE -ne 0) { throw 'Housekeeping browser acceptance failed.' }
           python -B -m unittest discover -s tests -p 'test_carebloom_workflow.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'CareBloomOS HTTP workflow acceptance failed.' }
           python -B tests/carebloom_workflow_browser.py --runtime $runtime
@@ -85,8 +87,6 @@ jobs:
             python -B tests/patrol_browser.py
             if ($LASTEXITCODE -ne 0) { throw "Operational Patrol browser acceptance failed on pass $attempt." }
           }
-          python -B tests/housekeeping_browser.py
-          if ($LASTEXITCODE -ne 0) { throw 'Housekeeping browser acceptance failed.' }
           python -B tests/registry_browser.py
           if ($LASTEXITCODE -ne 0) { throw 'Project registry browser acceptance failed.' }
           python -B tests/stewardship_browser.py
