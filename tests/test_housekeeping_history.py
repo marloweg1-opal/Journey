@@ -56,4 +56,16 @@ class HousekeepingHistory(TestCase):
         self.assertEqual(self.app.history.change_cursor(self.job),cursor)
         self.assertEqual(self.app.history.status(self.job)['unique_messages'],5)
 
+
+    def test_new_character_relationship_reaches_an_already_confirmed_opaque_asset(self):
+        image=next(i for i in self.app.images(self.job,0,thumbnails=False)['items'] if i['filename']=='render_17.png')
+        self.app.review(self.job,image['id'],'confirm','Heartstone')
+        self.ingest(self.exports/'conversations-001.json')
+        cursor=self.app.history.change_cursor(self.job)
+        self.ingest(self.exports/'conversations-002.json')
+        self.assertIn(image['id'],self.app.history.affected_since(self.job,cursor))
+        current=next(i for i in self.app.images(self.job,0,thumbnails=False)['items'] if i['id']==image['id'])
+        self.assertEqual(current['identity']['state'],'human_confirmed_identity')
+        self.assertTrue(any(c['kind']=='entity' and c['name']=='Primrose Hinamori' for c in current['metadata']['local_history']))
+
 if __name__=='__main__':main()

@@ -689,7 +689,8 @@ class Workbench:
             ocr["refresh_available"] = True
         historical = self.history.evidence(job["id"], profile, path.name)
         entity_links = self.history.entity_links(job["id"], profile, path.name,
-            [line["text"] for line in ocr.get("lines", [])] if ocr.get("status") == "read" else ())
+            [line["text"] for line in ocr.get("lines", [])] if ocr.get("status") == "read" else (),
+            subjects=[event['label'] for event in reviews[0].get(row['digest'],{}).values() if event['action']=='confirm'])
         exemplars = [item for item in audit["examples"] if item.get("sha256") == row["digest"]] if (
             audit and profile and audit["project"].casefold() == profile["project"].casefold()) else []
         record = assess(recognizer, path, row["scope"], asset, reviews, evidence, ocr, historical, exemplars, entity_links)

@@ -616,19 +616,25 @@ class ArchiveHistory:
             changed += (claim["kind"], name_key(claim["name"])) in slots
             if claim["kind"] == "entity":
                 aliases.add(_words(claim["name"]))
+                aliases.add(_words(claim["value"]["entity"]))
             else:
                 names.add(match_key(claim["name"]))
                 if claim["kind"] == "relationship":
                     names.add(match_key(claim["value"]["asset"]))
         root = self.app.job(source["job"])
         impacted = []
-        for asset in self.conn.execute("""SELECT f.id,f.path,o.ocr FROM files f LEFT JOIN observations o ON
+        accepted={}
+        for reviewed in self.conn.execute('SELECT event FROM reviews WHERE job=? ORDER BY id',(source['job'],)):
+            event=json.loads(reviewed[0]);labels=accepted.setdefault(event['digest'],set())
+            if event['action']=='confirm':labels.add(_words(event['label']))
+            elif event['action']=='reject':labels.discard(_words(event['label']))
+        for asset in self.conn.execute("""SELECT f.id,f.path,f.digest,o.ocr FROM files f LEFT JOIN observations o ON
                 o.job=f.job AND o.scope=f.scope AND o.digest=f.digest
                 WHERE f.job=? AND f.epoch=? AND f.scope=? AND f.status='analyzed'""",
                                        (source["job"], root["epoch"], root["root"])):
             path = Path(asset["path"])
             stem = _words(path.stem)
-            if match_key(path.name) in names or any(stem == alias or stem.startswith(alias + " ") and asset_families(stem)
+            if accepted.get(asset['digest'],set()) & aliases or match_key(path.name) in names or any(stem == alias or stem.startswith(alias + " ") and asset_families(stem)
                     or " " + alias + " " in " " + _words(asset["ocr"] or "") + " " for alias in aliases):
                 impacted.append(asset["id"])
         summary = {"export": source["name"], "new_claims": len(added), "changed_claims": changed,
@@ -666,7 +672,7 @@ class ArchiveHistory:
             records.append(record | {"match": match})
         return records
 
-    def entity_links(self, job, profile, name, texts=()):
+    def entity_links(self, job, profile, name, texts=(), subjects=()):
         if not profile:
             return []
         stem = _words(Path(name).stem)
@@ -675,7 +681,8 @@ class ArchiveHistory:
             (job, self.project(profile)))
         records = (json.loads(row[0]) for row in rows)
         text = " " + _words(" ".join(texts)) + " "
-        return [item for item in records if stem == _words(item["name"]) or
+        known={_words(subject) for subject in subjects}
+        return [item for item in records if _words(item['value']['entity']) in known or stem == _words(item["name"]) or
                 stem.startswith(_words(item["name"]) + " ") and asset_families(stem) or
                 " " + _words(item["name"]) + " " in text or
                 stem.startswith(_words(item["value"]["entity"]) + " ") or stem == _words(item["value"]["entity"])]

@@ -130,6 +130,19 @@ class DuplicateTests(TestCase):
         with self.assertRaises(PermissionError):self.d.prepare_restore(self.job,recovery['id'])
         self.grant();self.assertEqual(self.approve(self.d.prepare_restore(self.job,recovery['id']))['status'],'completed')
 
+
+    def test_interrupted_staging_holds_its_entire_exact_group(self):
+        (self.root/'.journey-remove-interrupted').write_bytes((self.root/'Heartstone.png').read_bytes())
+        a=self.audit()
+        group=next(g for g in a['exact_groups'] if g['keep']['name'].startswith('.journey-'))
+        self.assertEqual(group['remove'],[])
+        self.assertEqual(len(group['held']),2)
+        self.assertTrue(all('interrupted' in i['hold'] for i in group['held']))
+
+    def test_paused_foreground_and_monitor_fail_with_a_clear_result(self):
+        self.p.pause(self.dest)
+        with self.assertRaisesRegex(PermissionError,'paused'):self.d.queue(self.job)
+        with self.assertRaisesRegex(PermissionError,'paused'):self.d.watch(self.job,True)
+        self.assertFalse(self.d.pending_audits);self.assertFalse(self.d.watches)
+
 if __name__=='__main__':main()
-
-

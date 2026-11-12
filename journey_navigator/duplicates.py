@@ -120,7 +120,9 @@ class DuplicatePatrol:
         return self.status(job)
 
     def queue(self, job, read_references=False):
-        self.scope(job);self.app.refresh(job)
+        self.scope(job)
+        if read_state(self.conn)['paused']:raise PermissionError('Patrol is paused. Resume Patrol before starting a duplicate audit.')
+        self.app.refresh(job)
         self.begin(job,read_references)
         self.pending_audits.add(job);self.audit_errors.pop(job,None)
         self.patrol.wake.set()
@@ -219,12 +221,14 @@ class DuplicatePatrol:
         referenced={r['target'] for r in refs['references']}
         groups=[]
         for items in repeated:
+            interrupted=any(Path(item['path']).name.startswith('.journey-') for item in items)
             # Protections and accepted paths outrank lexical copy hints.
             items=sorted(items,key=lambda x:(not(bool(self.blockers(x['path'],accepted)) or x['path'] in referenced),
                 bool(COPY.search(Path(x['path']).stem)),len(x['path']),x['path']))
             keep=items[0];remove=[];held=[]
             for item in items[1:]:
-                reason=self.blockers(item['path'],accepted)
+                reason=('An interrupted managed operation holds this entire duplicate group for recovery review.'
+                        if interrupted else self.blockers(item['path'],accepted))
                 if item['path'] in referenced:reason='Scoped documentation or configuration references this path.'
                 if item['identity']['inode']==keep['identity']['inode'] and item['identity']['device']==keep['identity']['device']:
                     reason='Hard-link aliases do not represent separately reclaimable file content.'
@@ -375,9 +379,13 @@ class DuplicatePatrol:
             raw.flush();os.fsync(raw.fileno())
         with gzip.open(backup,'rb') as stream:
             if sha256(stream.read(RECOVERY_FILE+1)).hexdigest()!=identity['sha256']:raise ValueError('Recovery verification failed.')
-        preview=journal.preview_operation(guided.conn,'duplicate_remove',3,str(path),{'retained':operation['destination'],'recovery_days':7})
-        receipt=journal.begin_transaction(guided.conn,preview,{'path':str(path),'identity':identity,'keeper':operation['destination'],
-            'recovery':identifier,'staging_path':str(stage),'backup':str(backup)})
+        try:
+            preview=journal.preview_operation(guided.conn,'duplicate_remove',3,str(path),{'retained':operation['destination'],'recovery_days':7})
+            receipt=journal.begin_transaction(guided.conn,preview,{'path':str(path),'identity':identity,'keeper':operation['destination'],
+                'recovery':identifier,'staging_path':str(stage),'backup':str(backup)})
+        except Exception:
+            backup.unlink(missing_ok=True)  # No source mutation has begun; discard only this operation's new checkpoint.
+            raise
         with self.conn:self.conn.execute('INSERT INTO duplicate_recovery VALUES(?,?,?,?,?,?,?,?,?,?,?)',
             (identifier,batch['id'],receipt,str(path),str(backup),identity['sha256'],identity['size'],stat.S_IMODE(info.st_mode),info.st_mtime_ns,time()+RETENTION,'prepared'))
         try:
@@ -423,6 +431,7 @@ class DuplicatePatrol:
         self.scope(job)
         if type(enabled) is not bool or type(read_references) is not bool:raise ValueError('Use explicit monitoring/reference choices.')
         if enabled:
+            if read_state(self.conn)['paused']:raise PermissionError('Patrol is paused. Resume Patrol before enabling monitoring.')
             if self.watches and job not in self.watches:raise ValueError('Stop the other scoped duplicate monitor first.')
             self.watch_errors.pop(job,None)
             self.watches[job]={'phase':'discover','read_references':read_references}
