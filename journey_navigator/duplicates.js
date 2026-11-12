@@ -24,7 +24,7 @@
     $('duplicate-recovery').innerHTML=`<h4>Recovery checkpoints</h4>${value.recovery.map(r=>`<p>${esc(r.source)} · ${esc(r.state)} · expires ${new Date(r.expires*1000).toLocaleString()} ${r.state==='removed'?`<button type="button" data-duplicate-restore="${esc(r.id)}">Review restore</button>`:''}</p>`).join('') || '<p>No files removed in this scope.</p>'}`;
     clearTimeout(timer);if(value.running || value.monitor)timer=setTimeout(()=>status().catch(failure),2500);
   }
-  function failure(error){$('duplicate-status').textContent=`Stopped: ${error.message}`;}
+  function failure(error){$('duplicate-status').textContent=`Stopped: ${error.error || error.message || String(error)}`;}
   async function review(result){window.dispatchEvent(new CustomEvent('journey-duplicate-batch',{detail:result}));}
   document.addEventListener('change',event=>{const id=event.target.dataset.duplicateAsset;if(id){if(event.target.checked)selected.add(Number(id));else selected.delete(Number(id));}});
   document.addEventListener('click',async event=>{
@@ -48,6 +48,6 @@
   $('history-text-search').addEventListener('submit',async event=>{
     event.preventDefault();try{const result=await api('history-text-search',{job:job(),query:new FormData(event.target).get('query')});
       $('history-text-results').innerHTML=result.items.map(r=>`<div class="inspection-entry"><strong>${esc(r.title)}</strong><p>${esc(r.excerpt)}</p><p>Conversation timestamp: ${esc(String(r.authored))}. Imported: ${esc(r.imported)}. Source: ${esc(r.name)} · message ${esc(r.message)} · ${esc(r.role)}</p></div>`).join('') || '<p>No completed imported messages matched.</p>';
-    }catch(error){$('history-text-results').textContent=error.message;}
+    }catch(error){$('history-text-results').textContent=error.error || error.message || String(error);}
   });
 })();

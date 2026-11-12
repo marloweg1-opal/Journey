@@ -557,7 +557,7 @@
     export: async () => {
       const result=$("inspect-export-result"); result.textContent="Saving inspection snapshot…";
       try { const output=await api("export",{job}); result.textContent=`Saved inspection snapshot: ${output.path}. This preserves review state; execution requires a separately approved batch.`; notice(result.textContent); }
-      catch(error) { result.textContent=`Save failed: ${error.message}`; throw error; }
+      catch(error) { result.textContent=`Save failed: ${error.error || error.message || String(error)}`; throw error; }
     },
     "allow-plans": async (value) => {
       const [scope, allowed] = JSON.parse(value);
