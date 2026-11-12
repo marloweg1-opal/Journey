@@ -36,7 +36,7 @@ def build(output, cache, wheel, zig):
         stage_ocr(package / "ocr", cache / "ocr")
         modules = {
             "journey_navigator": ("__init__.py", "__main__.py", "context.py", "links.py", "ocr.py", "workbench.py",
-                                  "inspection.html", "inspection.js", "inspection.css", "approval.py", "guided.py", "migrations.py",
+                                  "inspection.html", "inspection.js", "inspection.css", "approval.py", "guided.py", "duplicates.py", "duplicates.js", "migrations.py",
                                   "patrol.py", "patrol.html", "patrol.js", "session.py", "install.py", "registry.py",
                                   "conversation.py", "project_audit.py", "stewardship.py", "history.py", "capabilities.py",
                                   "watch.py", "project_pack.py", "project_ui.js"),
@@ -57,8 +57,13 @@ def build(output, cache, wheel, zig):
         shutil.copyfile(ROOT / "docs/NAVIGATOR_PATROL.md", package / "START-HERE.md")
         shutil.copyfile(ROOT / "docs/INTEGRATED_PILOT.md", package / "INTEGRATED-PILOT.md")
         shutil.copyfile(ROOT / "docs/INCREMENTAL_HISTORY.md", package / "INCREMENTAL_HISTORY.md")
-        for document in ("COLLECTION_WORKFLOW.md", "COMPONENT_STATUS.md", "ACCESSIBILITY_AND_PARTICIPATION.md"):
+        for document in ("COLLECTION_WORKFLOW.md", "COMPONENT_STATUS.md", "ACCESSIBILITY_AND_PARTICIPATION.md", "DUPLICATE_PATROL.md"):
             shutil.copyfile(ROOT / "docs" / document, package / document)
+        sys.path.insert(0,str(ROOT))
+        from tools.demo_duplicate_patrol import make_demo
+        make_demo(package / "Housekeeping demonstration")
+        (package / "Start isolated housekeeping demo.cmd").write_text(
+            '@echo off\ncd /d "%~dp0"\nstart "Journey isolated housekeeping demonstration" "runtime\\pythonw.exe" -B -m journey_navigator --data-dir "%~dp0Housekeeping checkpoint"\n',encoding='ascii')
         shutil.copyfile(ROOT / "LICENSE", package / "LICENSE.txt")
         commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         (package / "BUILD.txt").write_text(f"Journey source commit {commit}\nCPython {PYTHON_VERSION}\nPillow 12.2.0\nTesseract OCR 5.5.4 (English)\n", encoding="utf-8")

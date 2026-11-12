@@ -28,6 +28,8 @@ class WindowsApprover:
             self.active.terminate()
 
     def verify(self, binding, description):
+        if len(description.encode('utf-8'))>59000:
+            raise PermissionError('This batch exceeds the native review text budget. Select fewer files so every path can be reviewed.')
         if self.cancelled.is_set():
             raise PermissionError('Navigator is closing. Account approval was canceled.')
         if os.name != "nt":

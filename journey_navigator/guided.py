@@ -76,6 +76,7 @@ class Guided:
         initialize_schema(self.conn)
         self.conn.executescript(SCHEMA)
         self.retirement_guard = None
+        self.duplicate_handler = None
         path = workbench.data_dir / 'guided-approval-key.dat'
         if path.exists():
             safe_metadata(path)
@@ -126,6 +127,10 @@ class Guided:
             raise PermissionError('This path is protected or has an active registered dependency.')
 
     def validate_operation(self, batch, operation, *, source):
+        if operation['kind'] in ('dedupe_delete','dedupe_restore'):
+            if self.duplicate_handler is None:
+                raise PermissionError('Recoverable duplicate cleanup is unavailable.')
+            return self.duplicate_handler.validate(batch,operation,source=source)
         scope = Path(batch['scope'])
         destination = Path(operation['destination'])
         if operation['kind'] in ('rename', 'move') and Path(operation['source']).name != destination.name:
@@ -231,6 +236,36 @@ class Guided:
             raise
         return self.view(batch_id)
 
+    def prepare_duplicate(self, job_id, operations):
+        if self.duplicate_handler is None or not 1<=len(operations)<=100:
+            raise PermissionError('Duplicate cleanup requires its verified adapter and a bounded batch.')
+        job=self.workbench.job(job_id)
+        if any(op['kind'] not in ('dedupe_delete','dedupe_restore') for op in operations):
+            raise ValueError('Only exact duplicate removal or checkpoint restoration is allowed.')
+        batch_id=uuid4().hex
+        payload={'job':job_id,'scope':job['root'],'operations':operations,'execution_contract':'recoverable-exact-duplicates-1'}
+        binding=sha256(encoded(payload).encode()).hexdigest()
+        with self.conn:
+            self.conn.execute("INSERT INTO guided_batches(id,job,scope,payload,binding,status) VALUES(?,?,?,?,?,'review_required')",
+                (batch_id,job_id,job['root'],encoded(payload),binding))
+            self.conn.executemany('INSERT INTO guided_operations(batch,position) VALUES(?,?)',((batch_id,i) for i in range(len(operations))))
+        for operation in operations:self.validate_operation(self.row(batch_id),operation,source=True)
+        return self.view(batch_id)
+
+    def accept_rule(self, batch_id, identifier):
+        if self.duplicate_handler is None:raise PermissionError('The scoped cleanup rule is unavailable.')
+        grant=self.duplicate_handler.verify_rule(batch_id,identifier)
+        batch=self.row(batch_id)
+        if batch['status']!='review_required':raise PermissionError('The rule can authorize only a fresh exact batch.')
+        for operation in json.loads(batch['payload'])['operations']:self.validate_operation(batch,operation,source=True)
+        approval={'binding':batch['binding'],'account':grant['account'],'verified_at':grant['verified_at'],
+            'expires_at':grant['expires_at'],'method':'Derived from explicit Windows-approved duplicate rule',
+            'rule_grant':identifier,'batch_issued_at':time.time(),
+            'dependency_disposition':'Explicit same-folder copy-suffix role rule; scoped and registered references revalidated.'}
+        proof=hmac.new(self.key,(batch['payload']+encoded(approval)).encode(),'sha256').hexdigest()
+        with self.conn:self.conn.execute("UPDATE guided_batches SET status='approved',approval=?,proof=? WHERE id=?",(encoded(approval),proof,batch_id))
+        return self.view(batch_id)
+
     def view(self, batch_id):
         batch = self.row(batch_id)
         self.workbench.policy.refresh()
@@ -276,7 +311,7 @@ class Guided:
         batch = self.row(batch_id)
         lines = ['Review this exact Guided Patrol batch.', 'Scope: '+batch['scope'], 'Batch: '+batch['binding'], '']
         for operation in self.pending_operations(batch_id):
-            lines += [operation['kind'].upper(), operation.get('source','New folder'), '→ '+operation['destination'], operation['reason'], '']
+            lines += [operation['kind'].upper(), (operation.get('source') or 'Recovery checkpoint / new folder'), '→ '+operation['destination'], operation['reason'], '']
         lines += ['Approving confirms the listed changes and your assessment that these exact source paths have no unresolved external use or references within your responsibility.',
                   'Known protections and registered dependencies still block execution. Approve using your current Windows account?']
         return '\n'.join(lines)
@@ -339,7 +374,9 @@ class Guided:
             self.validate_operation(batch, operation, source=True)
             with self.conn:
                 self.conn.execute("UPDATE guided_batches SET status='working' WHERE id=?",(batch_id,))
-            if operation['kind'] == 'undo':
+            if operation['kind'] in ('dedupe_delete','dedupe_restore'):
+                receipt=self.duplicate_handler.execute(batch,operation);status='verified'
+            elif operation['kind'] == 'undo':
                 result=executor.undo_apply(self.conn,operation['receipt'],read_guard=lambda p:self.guard(batch_id,p),
                     authorize=lambda:self.authorized(batch_id))
                 if result['status']!='reversed':
@@ -378,7 +415,7 @@ class Guided:
             elif failures:
                 final = 'partially_completed' if verified else ('failed' if receipt else 'blocked')
             self.conn.execute('UPDATE guided_batches SET status=?,reason=? WHERE id=?',(final,reason,batch_id))
-        if status=='verified' and 'source' in operation:
+        if status=='verified' and operation.get('source') and operation['kind'] not in ('dedupe_delete','dedupe_restore'):
             with self.workbench.conn:
                 self.workbench.conn.execute('INSERT INTO asset_transitions(job,scope,digest,from_path,to_path,receipt) VALUES(?,?,?,?,?,?)',
                     (batch['job'],batch['scope'],operation['identity']['sha256'],operation['source'],operation['destination'],receipt))

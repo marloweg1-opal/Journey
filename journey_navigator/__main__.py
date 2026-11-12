@@ -60,7 +60,7 @@ def navigator_page():
             .replace('    refreshStatus();', '', 1)
             .replace('    async function refreshStatus() {','    async function refreshStatus() { return;',1)
             .replace('from Navigator and ARK memory.', 'from this inspection.', 1)
-            .replace('</body>', '<script src="/inspection.js"></script><script src="/project_ui.js"></script><script src="/patrol.js"></script></body>'))
+            .replace('</body>', '<script src="/inspection.js"></script><script src="/project_ui.js"></script><script src="/patrol.js"></script><script src="/duplicates.js"></script></body>'))
 
 
 def local_drives():
@@ -105,6 +105,7 @@ class Navigator(ThreadingHTTPServer):
                        "/inspection.js": ("text/javascript; charset=utf-8", (MODULE / "inspection.js").read_bytes()),
                        "/project_ui.js": ("text/javascript; charset=utf-8", (MODULE / "project_ui.js").read_bytes()),
                        "/inspection.css": ("text/css; charset=utf-8", (MODULE / "inspection.css").read_bytes()),
+                       "/duplicates.js": ("text/javascript; charset=utf-8", (MODULE / "duplicates.js").read_bytes()),
                        "/patrol.js": ("text/javascript; charset=utf-8", (MODULE / "patrol.js").read_bytes())}
 
     @property
@@ -287,6 +288,24 @@ class Handler(BaseHTTPRequestHandler):
         if action == 'detach':
             self.server.detached(str(body['client'])[:100])
             return {'detached':True}
+        if action == 'duplicates-audit':
+            return patrol.duplicates.queue(job,body.get('read_references',False))
+        if action == 'duplicates-status':
+            return patrol.duplicates.status(job)
+        if action == 'duplicates-permission':
+            return patrol.authorize_duplicate_permission(job,body.get('automatic',False))
+        if action == 'duplicates-revoke':
+            return patrol.duplicates.revoke(job)
+        if action == 'duplicates-watch':
+            result=patrol.duplicates.watch(job,body['enabled'],body.get('read_references',False))
+            patrol.wake.set()
+            return result
+        if action in ('duplicates-prepare','duplicates-restore'):
+            batch=(patrol.duplicates.prepare(job,body['audit'],body['assets']) if action=='duplicates-prepare'
+                   else patrol.duplicates.prepare_restore(job,body['recovery']))
+            return {'batch':batch['id'],'destination':patrol.duplicate_destination(job)}
+        if action == 'history-text-search':
+            return {'items':app.history.text_search(job,body['query'])}
         if action == 'destinations':
             return {'items':patrol.list()}
         if action == 'destination-create':

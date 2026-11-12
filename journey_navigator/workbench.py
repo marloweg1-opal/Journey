@@ -535,7 +535,7 @@ class Workbench:
             self._validate_scope(job, scope)
             checked.add(scope)
 
-    def _analyze(self, job, row, checked):
+    def _analyze(self, job, row, checked, *, read_text=True):
         from PIL import Image
 
         path = Path(row["path"])
@@ -574,7 +574,7 @@ class Workbench:
                     series = new_series
                 self.conn.execute("""INSERT INTO observations(job,scope,digest,features,bucket,representative,series)
                     VALUES(?,?,?,?,?,?,?)""", (*key, json.dumps(features), bucket, series == new_series, series))
-            if self.ocr and (not cached or cached["ocr_key"] != self.ocr.key):
+            if read_text and self.ocr and (not cached or cached["ocr_key"] != self.ocr.key):
                 if image is None:
                     image = decode_image(data, fmt)
                 try:
@@ -589,7 +589,7 @@ class Workbench:
         except (OSError, ValueError, Image.DecompressionBombError) as error:
             self.conn.execute("UPDATE files SET status='skipped',reason=? WHERE id=?", (_message(error), row["id"]))
 
-    def step(self, job_id):
+    def step(self, job_id, *, analyze=True):
         self.policy.refresh()
         job = self.job(job_id)
         self._validate_scope(job, job["root"])
@@ -601,7 +601,7 @@ class Workbench:
                     break
             rows = self.conn.execute("SELECT * FROM files WHERE job=? AND epoch=? AND status='pending' ORDER BY id LIMIT ?",
                                      (job_id, job["epoch"], TEXT_BATCH if self.ocr else IMAGE_BATCH)).fetchall()
-            for row in rows:
+            for row in rows if analyze else ():
                 self._analyze(job, row, checked)
         return self.summary(job_id)
 
@@ -688,7 +688,8 @@ class Workbench:
         if self.ocr and row["ocr_key"] and row["ocr_key"] != self.ocr.key:
             ocr["refresh_available"] = True
         historical = self.history.evidence(job["id"], profile, path.name)
-        entity_links = self.history.entity_links(job["id"], profile, path.name)
+        entity_links = self.history.entity_links(job["id"], profile, path.name,
+            [line["text"] for line in ocr.get("lines", [])] if ocr.get("status") == "read" else ())
         exemplars = [item for item in audit["examples"] if item.get("sha256") == row["digest"]] if (
             audit and profile and audit["project"].casefold() == profile["project"].casefold()) else []
         record = assess(recognizer, path, row["scope"], asset, reviews, evidence, ocr, historical, exemplars, entity_links)
@@ -930,6 +931,11 @@ class Workbench:
                             break
                         offset += PAGE
                     stream.write("]")
+                table=self.conn.execute("SELECT 1 FROM sqlite_schema WHERE name='duplicate_audits'").fetchone()
+                if table:
+                    duplicate=self.conn.execute('SELECT record FROM duplicate_audits WHERE job=?',(job_id,)).fetchone()
+                    stream.write(',"duplicate_preview":')
+                    json.dump(json.loads(duplicate[0]) if duplicate else None,stream)
                 stream.write("}\n")
                 stream.flush()
                 os.fsync(stream.fileno())
@@ -942,4 +948,5 @@ class Workbench:
         finally:
             if temporary is not None:
                 temporary.unlink(missing_ok=True)
-        return {"path": str(path)}
+        return {"path": str(path), "kind": "inspection_snapshot", "actionable": False,
+                "message": "Inspection snapshot saved. It records evidence and previews; it does not authorize or schedule file operations."}

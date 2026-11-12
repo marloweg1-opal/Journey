@@ -37,6 +37,27 @@
             <button type="button" data-inspect="refresh">Refresh source</button>
             <button type="button" data-inspect="export">Save plan</button>
           </div>
+          <p id="inspect-export-result" role="status" aria-live="polite"></p>
+          <details id="inspect-duplicates">
+            <summary>Duplicate Patrol and broad organization</summary>
+            <p>Audit exact copies first. Different image versions remain in review. Removal is locked until scoped permission and exact batch approval.</p>
+            <label><input type="checkbox" id="duplicate-read-references"> Read scoped documents and configuration to check references before removal</label>
+            <div class="inspection-bar">
+              <button type="button" data-duplicate="audit">Audit duplicates</button>
+              <button type="button" data-duplicate="status">Refresh report</button>
+              <button type="button" data-duplicate="watch">Monitor this scope for this session</button>
+              <button type="button" data-duplicate="stop">Stop monitor and revoke cleanup permission</button>
+            </div>
+            <p id="duplicate-status" role="status" aria-live="polite"></p>
+            <div id="duplicate-report"></div>
+            <details><summary>Establish cleanup permission</summary>
+              <p>This is a separate, deliberate change to the copy-only trial boundary for this scope, for at most one hour. A Windows account dialog describes the exact permission.</p>
+              <label><input type="checkbox" id="duplicate-automatic"> Also authorize the bounded same-folder exact copy-suffix rule</label>
+              <button type="button" data-duplicate="permission">Review scoped cleanup permission</button>
+            </details>
+            <button type="button" data-duplicate="prepare">Review selected exact removals as one batch</button>
+            <div id="duplicate-recovery"></div>
+          </details>
           <details id="inspect-access">
             <summary>Review or revoke permissions</summary>
             <div id="inspect-scopes"></div>
@@ -65,7 +86,7 @@
           </details>
           <details id="inspect-history">
             <summary>Local reference history</summary>
-            <p>Choose a local conversation JSON file, its export folder, or a supported manifest. Journey keeps project references and source locators in this checkpoint. This selection grants read access for the import.</p>
+            <p>Choose a local conversation JSON file, its export folder, or a supported manifest. Journey keeps searchable conversation text, original timestamps, project references and source locators locally in this checkpoint. This selection grants read access for the import.</p>
             <form id="history-preview" class="inspection-bar">
               <label>Local conversation export or folder path <input name="path" autocomplete="off" required></label>
               <button type="submit">Preview archive selection</button>
@@ -73,6 +94,8 @@
             <div id="history-selection"></div>
             <p id="history-status" role="status" aria-live="polite"></p>
             <div id="history-files"></div>
+            <form id="history-text-search" class="inspection-bar"><label>Search imported conversation text <input name="query" required></label><button type="submit">Search history</button></form>
+            <div id="history-text-results"></div>
             <div class="inspection-bar"><button type="button" data-project="history-status">Refresh history status</button>
               <button type="button" data-project="history-pause">Pause import</button>
               <button type="button" data-project="history-reconcile">Reconcile with inspected files</button>

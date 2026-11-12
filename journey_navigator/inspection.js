@@ -554,7 +554,11 @@
     "cancel-approval": () => { approval.hidden = true; notice("Current inspection scope retained."); },
     resume: run, pause,
     refresh: async () => { coverage(await api("refresh", {job})); await run(); },
-    export: async () => { const output = await api("export", {job}); notice(`Plan saved to ${output.path}`); },
+    export: async () => {
+      const result=$("inspect-export-result"); result.textContent="Saving inspection snapshot…";
+      try { const output=await api("export",{job}); result.textContent=`Saved inspection snapshot: ${output.path}. This preserves review state; execution requires a separately approved batch.`; notice(result.textContent); }
+      catch(error) { result.textContent=`Save failed: ${error.message}`; throw error; }
+    },
     "allow-plans": async (value) => {
       const [scope, allowed] = JSON.parse(value);
       await api("proposals", {job, scope, allowed});
