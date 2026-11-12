@@ -309,6 +309,12 @@
       else if (button.dataset.select === 'review') { await list(); await status(); await images(); }
     } catch(error) { failure(error); }
   });
+  window.addEventListener('journey-duplicate-batch', async event => {
+    try { destination=event.detail.destination; await list(); destination=event.detail.destination;
+      await status(); await viewBatch(event.detail.batch); document.querySelector('[data-select="review"]')?.click(); poll();
+      $("patrol-batch-details").scrollIntoView({block:'center'});
+    } catch(error) { failure(error); }
+  });
   window.addEventListener('journey-manage', async () => {
     try {
       const [{items}, builds]=await Promise.all([api('checkpoints'), api('managed-builds')]);

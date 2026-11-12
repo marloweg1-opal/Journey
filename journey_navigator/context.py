@@ -222,7 +222,7 @@ def assess(registry, path, scope, asset, reviews, examples, ocr, historical=(), 
     for claim in historical:
         if claim.get("family") and claim["match"] in ("filename candidate", "variant candidate"):
             source = claim["source"]
-            signals.append({"source": "Local history", "text": claim["name"], "subjects": [], "purposes": [claim["family"]],
+            signals.append({"source": "Local history", "text": claim["name"], "subjects": (_evidence(registry, "Local history", Path(claim["name"]).stem) or {}).get("subjects", []), "purposes": [claim["family"]],
                             "strength": "candidate", "provenance": source})
     for item in exemplars:
         exemplar_purposes = asset_families(Path(item["filename"]).stem)

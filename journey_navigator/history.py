@@ -44,6 +44,12 @@ CREATE TABLE IF NOT EXISTS history_claims (
 CREATE INDEX IF NOT EXISTS history_match ON history_claims(job,project,match_key,kind);
 CREATE INDEX IF NOT EXISTS history_relation ON history_claims(job,project,related_key);
 CREATE INDEX IF NOT EXISTS history_kind ON history_claims(job,project,kind);
+CREATE TABLE IF NOT EXISTS history_text (
+ source TEXT NOT NULL,message TEXT NOT NULL,authored TEXT,conversation TEXT NOT NULL,role TEXT NOT NULL,
+ title TEXT NOT NULL,text TEXT NOT NULL,truncated INTEGER NOT NULL DEFAULT 0,
+ imported TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(source,message)
+) WITHOUT ROWID;
+CREATE VIRTUAL TABLE IF NOT EXISTS history_fts USING fts5(source UNINDEXED,message UNINDEXED,title,text);
 CREATE TABLE IF NOT EXISTS history_changes (
     seq INTEGER PRIMARY KEY, source TEXT NOT NULL UNIQUE, job TEXT NOT NULL, project TEXT NOT NULL,
     summary TEXT NOT NULL, created TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -187,6 +193,18 @@ def attachment_record(item, *, part=False):
 def entity_claims(line, project, source):
     if project != "carebloomos" or source["role"] != "user":
         return
+    # Explicit historical identity associations remain candidates, never approved canon.
+    if not re.search(r"\b(?:not|never|maybe|could|example|suppose)\b|[?]", line, re.I):
+        pairs = [(m.group(1), m.group(2)) for m in re.finditer(
+            r"\b(Heartstone|Moonstone|Cloverstone|Cloudstone|Corestone|Wishstone|Musicstone)\s*[:=(\-]\s*(Primrose(?: Hinamori)?|Celeste|Bastian|Kenneth|Zéphyr)\b", line, re.I)]
+        pairs += [(m.group(2), m.group(1)) for m in re.finditer(
+            r"\b(Primrose(?: Hinamori)?|Celeste|Bastian|Kenneth|Zéphyr)\s+(?:is|serves as|acts as)\s+(?:the )?(Heartstone|Moonstone|Cloverstone|Cloudstone|Corestone|Wishstone|Musicstone)\b", line, re.I)]
+        pairs += [(m.group(1), m.group(2)) for m in re.finditer(
+            r"\b(Heartstone|Moonstone|Cloverstone|Cloudstone|Corestone|Wishstone|Musicstone)\s+aka\s+(Primrose(?: Hinamori)?|Celeste|Bastian|Kenneth|Zéphyr)\b", line, re.I)]
+        pairs += [(m.group(2), m.group(1)) for m in re.finditer(
+            r"\b(Primrose(?: Hinamori)?|Celeste|Bastian|Kenneth|Zéphyr)\s*[/,]\s*(Heartstone|Moonstone|Cloverstone|Cloudstone|Corestone|Wishstone|Musicstone)\b", line, re.I)]
+        for subject, character in pairs:
+            yield {"kind": "entity", "name": character, "value": {"entity": subject.title(), "relation": "historical character identity candidate"}, "source": source}
     if re.search(r"\b(?:musicstone\b.{0,65}\b(?:beat and melody|melody and beat)|(?:beat and melody|melody and beat)\b.{0,45}\bmusicstone)\b", line, re.I):
         for member in ("Beat", "Melody"):
             yield {"kind": "entity", "name": member, "value": {"entity": "Musicstone", "relation": "duo member"}, "source": source}
@@ -194,7 +212,7 @@ def entity_claims(line, project, source):
         yield {"kind": "entity", "name": "Opalstone", "value": {"entity": "Corestone", "relation": "identity and current project role"}, "source": source}
 
 
-def extract(record, archive, signals, project):
+def extract(record, archive, signals, project, *, retain_text=False):
     """Yield a message hash and only the structured observations worth retaining."""
     if record.get("is_do_not_remember") is True:
         return
@@ -244,7 +262,12 @@ def extract(record, archive, signals, project):
             name, value = attachment
             if in_project or (name and _matches(signals, name)):
                 claims.append({"kind": "attachment", "name": name, "value": value, "source": source})
-        yield message_key, claims[:128]
+        if retain_text:
+            original = "\n".join(_texts(message))
+            yield message_key, claims[:128], {"authored": source.get("authored"), "conversation": source["conversation"],
+                "role": source["role"], "title": title, "text": original[:120000], "truncated": len(original)>120000}
+        else:
+            yield message_key, claims[:128]
 
 
 class ArchiveHistory:
@@ -343,7 +366,7 @@ class ArchiveHistory:
         if not draft or draft[:2] != (job, key):
             raise ValueError("Preview the authorized local archive selection again.")
         saved = {(row["path"], row["signature"]): row for row in self.conn.execute(
-            "SELECT id,path,signature,status,size FROM history_sources WHERE job=? AND project=?", (job, key))}
+            "SELECT id,path,signature,status,size,messages FROM history_sources WHERE job=? AND project=?", (job, key))}
         pending = []
         for row in draft[2]:
             path = Path(row["path"])
@@ -359,6 +382,9 @@ class ArchiveHistory:
         with self.conn:
             for row in draft[2]:
                 prior = saved.get((row["path"], json.dumps(row["signature"])))
+                if prior and prior["status"] == "complete" and prior["messages"] and not self.conn.execute(
+                        'SELECT 1 FROM history_text WHERE source=? LIMIT 1',(prior['id'],)).fetchone():
+                    self.conn.execute("UPDATE history_sources SET status='queued',offset=0,phase='start',records=0,messages=0,gaps=0 WHERE id=?",(prior['id'],))
                 if prior and prior["status"] == "paused":
                     self.conn.execute("UPDATE history_sources SET status='queued' WHERE id=?", (prior["id"],))
             self.conn.executemany("""INSERT INTO history_sources(id,job,project,path,name,signature,size,status)
@@ -457,6 +483,8 @@ class ArchiveHistory:
         self.conn.execute("DELETE FROM history_impacts WHERE change IN (SELECT seq FROM history_changes WHERE job=?)", (job,))
         self.conn.execute("DELETE FROM history_changes WHERE job=?", (job,))
         self.tickets = {ticket: draft for ticket, draft in self.tickets.items() if draft[0] != job}
+        self.conn.execute("DELETE FROM history_fts WHERE source IN (SELECT id FROM history_sources WHERE job=?)", (job,))
+        self.conn.execute("DELETE FROM history_text WHERE source IN (SELECT id FROM history_sources WHERE job=?)", (job,))
         self.conn.execute("DELETE FROM history_messages WHERE source IN (SELECT id FROM history_sources WHERE job=?)", (job,))
         self.conn.execute("DELETE FROM history_claims WHERE job=?", (job,))
         self.conn.execute("DELETE FROM history_sources WHERE job=?", (job,))
@@ -495,6 +523,8 @@ class ArchiveHistory:
                 self.pause(source["job"])
         except (ValueError, OSError, OverflowError, RecursionError):
             with self.conn:
+                self.conn.execute("DELETE FROM history_fts WHERE source=?", (source["id"],))
+                self.conn.execute("DELETE FROM history_text WHERE source=?", (source["id"],))
                 self.conn.execute("DELETE FROM history_claims WHERE source=?", (source["id"],))
                 self.conn.execute("DELETE FROM history_messages WHERE source=?", (source["id"],))
                 self.conn.execute("""UPDATE history_sources SET status='failed',
@@ -508,7 +538,7 @@ class ArchiveHistory:
             return list(signature(info)) == expected and info.st_size == source["size"]
         if not unchanged(self._file(path)):
             raise ValueError("Export changed before reading.")
-        messages, claims = set(), {}
+        messages, claims, text_records = set(), {}, {}
         phase, records, count, gaps = source["phase"], 0, 0, 0
         complete = True
         with path.open("rb") as stream:
@@ -519,11 +549,15 @@ class ArchiveHistory:
                 records += 1
                 if record.get("is_do_not_remember") is True:
                     gaps += 1
-                for message_key, observed in extract(record, source["name"], terms, source["project"]):
+                for message_key, observed, text_record in extract(record, source["name"], terms, source["project"], retain_text=True):
                     count += 1
                     messages.add(message_key)
+                    text_records.setdefault(message_key, text_record)
                     for claim in observed:
                         identifier = key_for([message_key, claim["kind"], claim["name"], claim["value"], claim.get("family")])
+                        if claim["kind"] == "reference":
+                            candidates = re.findall(r"\b(?:Heartstone|Moonstone|Cloverstone|Cloudstone|Corestone|Wishstone|Musicstone)\b", claim["name"], re.I)
+                            claim["subjects"] = sorted(set(name.title() for name in candidates))
                         claims.setdefault(identifier, claim)
                         if len(claims) > 4000 or count > 18_000:
                             raise ValueError("Conversation evidence exceeds the per-checkpoint budget.")
@@ -537,6 +571,11 @@ class ArchiveHistory:
                 ((source["id"], identifier, source["job"], source["project"], name_key(claim["name"]), match_key(claim["name"]),
                   name_key(claim["value"]["asset"]) if claim["kind"] == "relationship" else "", claim["kind"], json.dumps(claim))
                  for identifier, claim in claims.items()))
+            for message, item in text_records.items():
+                inserted = self.conn.execute("""INSERT OR IGNORE INTO history_text(source,message,authored,conversation,role,title,text,truncated)
+                    VALUES(?,?,?,?,?,?,?,?)""", (source["id"], message, item["authored"], item["conversation"], item["role"], item["title"], item["text"], item["truncated"]))
+                if inserted.rowcount:
+                    self.conn.execute("INSERT INTO history_fts(source,message,title,text) VALUES(?,?,?,?)", (source["id"], message, item["title"], item["text"]))
             counters = self.conn.execute("SELECT sum(messages) FROM history_sources WHERE job=? AND project=? AND status<>'failed'",
                                          (source["job"], source["project"])).fetchone()[0] or 0
             if counters + count > MAX_MESSAGES or self.conn.execute(
@@ -554,6 +593,8 @@ class ArchiveHistory:
         return key_for([claim["kind"], claim["name"].casefold(), claim["value"], claim.get("family"), claim["source"]["role"]])
 
     def _publish_delta(self, source):
+        if self.conn.execute('SELECT 1 FROM history_changes WHERE source=?',(source['id'],)).fetchone():
+            return  # Text-index backfill reuses an already published evidence generation.
         previous, slots = set(), set()
         for item in self.conn.execute("""SELECT c.record FROM history_claims c JOIN history_sources s ON s.id=c.source
                 WHERE c.job=? AND c.project=? AND s.status='complete' AND s.id<>?""",
@@ -575,17 +616,26 @@ class ArchiveHistory:
             changed += (claim["kind"], name_key(claim["name"])) in slots
             if claim["kind"] == "entity":
                 aliases.add(_words(claim["name"]))
+                aliases.add(_words(claim["value"]["entity"]))
             else:
                 names.add(match_key(claim["name"]))
                 if claim["kind"] == "relationship":
                     names.add(match_key(claim["value"]["asset"]))
         root = self.app.job(source["job"])
         impacted = []
-        for asset in self.conn.execute("SELECT id,path FROM files WHERE job=? AND epoch=? AND scope=? AND status='analyzed'",
+        accepted={}
+        for reviewed in self.conn.execute('SELECT event FROM reviews WHERE job=? ORDER BY id',(source['job'],)):
+            event=json.loads(reviewed[0]);labels=accepted.setdefault(event['digest'],set())
+            if event['action']=='confirm':labels.add(_words(event['label']))
+            elif event['action']=='reject':labels.discard(_words(event['label']))
+        for asset in self.conn.execute("""SELECT f.id,f.path,f.digest,o.ocr FROM files f LEFT JOIN observations o ON
+                o.job=f.job AND o.scope=f.scope AND o.digest=f.digest
+                WHERE f.job=? AND f.epoch=? AND f.scope=? AND f.status='analyzed'""",
                                        (source["job"], root["epoch"], root["root"])):
             path = Path(asset["path"])
             stem = _words(path.stem)
-            if match_key(path.name) in names or any(stem == alias or stem.startswith(alias + " ") and asset_families(stem) for alias in aliases):
+            if accepted.get(asset['digest'],set()) & aliases or match_key(path.name) in names or any(stem == alias or stem.startswith(alias + " ") and asset_families(stem)
+                    or " " + alias + " " in " " + _words(asset["ocr"] or "") + " " for alias in aliases):
                 impacted.append(asset["id"])
         summary = {"export": source["name"], "new_claims": len(added), "changed_claims": changed,
                    "overlapping_claims": duplicate, "affected_assets": len(impacted),
@@ -622,16 +672,40 @@ class ArchiveHistory:
             records.append(record | {"match": match})
         return records
 
-    def entity_links(self, job, profile, name):
+    def entity_links(self, job, profile, name, texts=(), subjects=()):
         if not profile:
             return []
         stem = _words(Path(name).stem)
         rows = self.conn.execute("""SELECT c.record FROM history_claims c JOIN history_sources s ON s.id=c.source
-            WHERE c.job=? AND c.project=? AND s.status='complete' AND c.kind='entity' GROUP BY c.name_key LIMIT 30""",
+            WHERE c.job=? AND c.project=? AND s.status='complete' AND c.kind='entity' GROUP BY c.name_key,json_extract(c.record,'$.value.entity') LIMIT 400""",
             (job, self.project(profile)))
         records = (json.loads(row[0]) for row in rows)
-        return [item for item in records if stem == _words(item["name"]) or
-                stem.startswith(_words(item["name"]) + " ") and asset_families(stem)]
+        text = " " + _words(" ".join(texts)) + " "
+        known={_words(subject) for subject in subjects}
+        return [item for item in records if _words(item['value']['entity']) in known or stem == _words(item["name"]) or
+                stem.startswith(_words(item["name"]) + " ") and asset_families(stem) or
+                " " + _words(item["name"]) + " " in text or
+                stem.startswith(_words(item["value"]["entity"]) + " ") or stem == _words(item["value"]["entity"])]
+
+    def text_search(self, job, query, limit=12):
+        _, profile = self.context(job)
+        words = re.findall(r"[^\W_]+", query[:200], re.UNICODE)[:12]
+        if not words:
+            return []
+        expression = ' AND '.join('"' + word + '"' for word in words)
+        rows = self.conn.execute("""SELECT t.message,t.authored,t.imported,t.role,t.conversation,t.title,s.name,
+            snippet(history_fts,3,'[',']',' … ',24) AS excerpt,t.truncated
+            FROM history_fts JOIN history_text t ON t.source=history_fts.source AND t.message=history_fts.message
+            JOIN history_sources s ON s.id=t.source WHERE history_fts MATCH ? AND s.job=? AND s.project=?
+            AND s.status='complete' ORDER BY t.authored DESC LIMIT ?""",
+            (expression,job,self.project(profile),min(limit,50)*8))
+        result=[];seen=set()
+        for row in rows:
+            item=dict(row);key=(item['message'],item['excerpt'])
+            if key not in seen:
+                result.append(item);seen.add(key)
+            if len(result)>=min(limit,50):break
+        return result
 
     def find(self, job, query, limit=18):
         profile = self.app.project_registry.profile(job)
@@ -667,6 +741,9 @@ class ArchiveHistory:
                 "current": last["binding"] == self.reconciliation_binding(job) and last["epoch"] == current["epoch"]}
         return {"files": rows, "unique_messages": unique, "claims": counts[0], "referenced_assets": counts[1],
                 "attachment_records": counts[2], "reconciliation": reconciliation,
+                "text_index": dict(self.conn.execute("""SELECT count(DISTINCT t.message) AS indexed_messages,
+                    coalesce(sum(t.truncated),0) AS truncated_records FROM history_text t JOIN history_sources s ON s.id=t.source
+                    WHERE s.job=? AND s.project=? AND s.status='complete'""", key).fetchone()),
                 "monitor": self.monitor_status(job), "incremental": [json.loads(item["summary"]) | {"sequence": item["seq"], "created": item["created"]}
                     for item in self.conn.execute("SELECT seq,summary,created FROM history_changes WHERE job=? AND project=? ORDER BY seq DESC LIMIT 8", key)]}
 

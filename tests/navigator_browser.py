@@ -228,7 +228,7 @@ def run(browser, runtime, base):
         page.get_by_role("button", name="Visual groups").click()
         expect(page.get_by_role("button", name="Browse series").first).to_be_visible()
         page.get_by_role("button", name="Save plan").click()
-        expect(page.locator("#inspect-notice")).to_contain_text("Plan saved to")
+        expect(page.locator("#inspect-export-result")).to_contain_text("Saved inspection snapshot:")
         plan = json.loads(next(data.glob("Inspection-*.json")).read_text(encoding="utf-8"))
         assert len(plan["images"]) == 76
         named = next(image for image in plan["images"] if image["filename"] == FIRST)

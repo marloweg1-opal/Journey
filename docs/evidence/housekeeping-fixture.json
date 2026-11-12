@@ -1,0 +1,133 @@
+{
+  "test_scope": "Disposable files, actual runtime and filesystem operations. Fixture consent, not live HEXSEED owner verification.",
+  "files_audited": 14,
+  "exact_proposed": 1,
+  "variation_pairs_preserved": 77,
+  "initial_cleanup_completed": true,
+  "recovery_completed": true,
+  "subsequent_duplicate_patrol_completed": true,
+  "exports_indexed": 2,
+  "unique_messages": 5,
+  "searchable_messages": 5,
+  "source_files_unchanged_except_approved_redundant_copies": true,
+  "before_after": [
+    {
+      "file": "Primrose Hinamori Character Sheet.png",
+      "before_identity": "",
+      "after_identity": "Heartstone",
+      "history_citations": 2
+    },
+    {
+      "file": "Moonstone small export.jpg",
+      "before_identity": "Moonstone",
+      "after_identity": "Moonstone",
+      "history_citations": 2
+    },
+    {
+      "file": "Moonstone Character Sheet (1).png",
+      "before_identity": "Moonstone",
+      "after_identity": "Moonstone",
+      "history_citations": 1
+    },
+    {
+      "file": "Opalstone Chibi.png",
+      "before_identity": "Corestone",
+      "after_identity": "Corestone",
+      "history_citations": 1
+    },
+    {
+      "file": "Moonstone Character Sheet.png",
+      "before_identity": "Moonstone",
+      "after_identity": "Moonstone",
+      "history_citations": 2
+    },
+    {
+      "file": "Cloverstone Character Sheet.png",
+      "before_identity": "Cloverstone",
+      "after_identity": "Cloverstone",
+      "history_citations": 0
+    },
+    {
+      "file": "Cloudstone Armory Sheet.png",
+      "before_identity": "Cloudstone",
+      "after_identity": "Cloudstone",
+      "history_citations": 0
+    },
+    {
+      "file": "Wishstone Wallpaper.png",
+      "before_identity": "Wishstone",
+      "after_identity": "Wishstone",
+      "history_citations": 0
+    },
+    {
+      "file": "Heart Touchstone.png",
+      "before_identity": "Heartstone",
+      "after_identity": "Heartstone",
+      "history_citations": 0
+    },
+    {
+      "file": "Heart Corestone Crystal.png",
+      "before_identity": "",
+      "after_identity": "",
+      "history_citations": 0
+    },
+    {
+      "file": "render_17.png",
+      "before_identity": "",
+      "after_identity": "",
+      "history_citations": 1
+    },
+    {
+      "file": "Melody Character Sheet.png",
+      "before_identity": "",
+      "after_identity": "Musicstone",
+      "history_citations": 1
+    },
+    {
+      "file": "Beat Character Sheet.png",
+      "before_identity": "",
+      "after_identity": "Musicstone",
+      "history_citations": 1
+    }
+  ],
+  "organization_groups": [
+    {
+      "label": "Heartstone",
+      "assets": 2
+    },
+    {
+      "label": "Moonstone",
+      "assets": 2
+    },
+    {
+      "label": "Corestone",
+      "assets": 1
+    },
+    {
+      "label": "Cloverstone",
+      "assets": 1
+    },
+    {
+      "label": "Cloudstone",
+      "assets": 1
+    },
+    {
+      "label": "Wishstone",
+      "assets": 1
+    },
+    {
+      "label": "Crystal",
+      "assets": 1
+    },
+    {
+      "label": "CareRail UI / Design",
+      "assets": 1
+    },
+    {
+      "label": "Musicstone",
+      "assets": 2
+    }
+  ],
+  "save_plan_kind": "inspection_snapshot",
+  "physical_changes_from_import": false
+}

@@ -88,7 +88,7 @@
     const failed = data.files.filter(item => item.status === "failed").length;
     const message = complete + " exports indexed · " + data.unique_messages.toLocaleString() + " distinct messages · " +
       data.referenced_assets.toLocaleString() + " named assets · " + data.attachment_records.toLocaleString() +
-      " attachment references · " + queued + " queued · " + failed + " failed";
+      " attachment references · " + (data.text_index?.indexed_messages || 0).toLocaleString() + " searchable messages · " + queued + " queued · " + failed + " failed";
     status("history-status", data.files.length ? message + (queued ? " · " + Math.round(scanned / 1048576) + " MiB examined" : "") :
       "No local conversation archive has been indexed for this inspection.");
     const details = $("history-files");

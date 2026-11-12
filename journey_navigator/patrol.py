@@ -57,6 +57,8 @@ class Patrol:
             self.conn.execute("UPDATE patrol_tasks SET status='pending' WHERE status='running'")
             self.conn.execute("INSERT OR IGNORE INTO patrol_tasks(destination,kind,status) SELECT id,'reconcile','pending' FROM destinations")
         self.guided = Guided(app)
+        from journey_navigator.duplicates import DuplicatePatrol
+        self.duplicates = DuplicatePatrol(self)
         self.stewardship = Stewardship(self)
         from journey_navigator.capabilities import Capabilities
         from journey_navigator.watch import DriftWatch
@@ -80,6 +82,7 @@ class Patrol:
                         (saved['id'], self.signature(saved['job'], include_history=False), self.app.history.change_cursor(saved['job'])))
         self.worker = Thread(target=self._run, name='Journey foreground Patrol', daemon=False)
         self.worker.start()
+        self.wake.set()
 
     def close(self):
         if self.closed:
@@ -94,6 +97,7 @@ class Patrol:
         for thread in self.approval_threads:
             thread.join(timeout=5)
         with self.lock:
+            self.duplicates.grants.clear();self.duplicates.watches.clear();self.duplicates.pending_audits.clear()
             self.stewardship.clear()
             self.watch.stop()
             with self.conn:
@@ -127,7 +131,7 @@ class Patrol:
             self.conn.execute('INSERT INTO destinations(id,job,objective,why,success,max_files,max_seconds) VALUES(?,?,?,?,?,?,?)',
                               (destination,job,objective.strip(),why.strip(),success.strip(),max_files,max_seconds))
             self.conn.executemany("INSERT INTO patrol_tasks(destination,kind,status) VALUES(?,?,'pending')",
-                                  [(destination,kind) for kind in ('inspect','reconcile','assess')])
+                                  [(destination,kind) for kind in ('inspect','duplicates','reconcile','assess')])
         return self.status(destination)
 
     def list(self):
@@ -168,6 +172,8 @@ class Patrol:
         with self.conn:
             self.conn.execute("UPDATE destinations SET state='Paused',reason='Patrol paused by the operator.' WHERE state IN ('Inspecting','Assessing','Working','Verifying')")
             self.app.history.pause()
+        self.duplicates.pending_audits.clear()
+        self.duplicates.watches.clear()
         self.watch.stop('paused')
         self.app.pause()
         return self.status(destination)
@@ -313,7 +319,7 @@ class Patrol:
         if entries>row['max_files']:
             self._state(destination,'Partially completed','Inspection entry budget reached. Resume for another bounded cycle.')
             return
-        task=self.conn.execute("SELECT * FROM patrol_tasks WHERE destination=? AND status='pending' ORDER BY CASE kind WHEN 'inspect' THEN 0 WHEN 'reconcile' THEN 1 ELSE 2 END LIMIT 1",(destination,)).fetchone()
+        task=self.conn.execute("SELECT * FROM patrol_tasks WHERE destination=? AND status='pending' ORDER BY CASE kind WHEN 'inspect' THEN 0 WHEN 'duplicates' THEN 1 WHEN 'reconcile' THEN 2 ELSE 3 END LIMIT 1",(destination,)).fetchone()
         checkpoint = self.conn.execute('SELECT base FROM patrol_evidence_checkpoint WHERE destination=?', (destination,)).fetchone()
         if checkpoint and row['signature'] != self.signature(row['job']) and not (task and task['kind'] == 'inspect'):
             self._reset_assessment(destination)
@@ -324,6 +330,13 @@ class Patrol:
             if not coverage['pending'] and not coverage['pending_folders']:
                 with self.conn:
                     self.conn.execute("UPDATE patrol_tasks SET status='complete' WHERE destination=? AND kind='inspect'",(destination,))
+            return
+        if task and task['kind']=='duplicates':
+            self._state(destination,'Assessing','Auditing exact duplicates before organization. No deletion permission is implied.')
+            if self.duplicates.audit_step(row['job']):
+                result=self.duplicates.status(row['job'])['audit']
+                with self.conn:self.conn.execute("UPDATE patrol_tasks SET status='complete',reason=? WHERE destination=? AND kind='duplicates'",
+                    (f"{result['proposed_removals']} exact redundant-copy candidates; near variants retained for review.",destination))
             return
         if task and task['kind']=='reconcile':
             profile = self.app.project_registry.profile(row['job'])
@@ -369,19 +382,22 @@ class Patrol:
     def _run(self):
         while not self.stop.is_set():
             deadlines = ([self.watch.due] if self.watch.target else []) + ([self.app.history.monitor_due, max(self.history_due, monotonic() + 1)] if self.app.history.monitor else [])
+            if self.duplicates.watches:deadlines.append(self.duplicates.due)
             self.wake.wait(timeout=max(0, min(deadlines) - monotonic()) if deadlines else None)
             self.wake.clear()
             while not self.stop.is_set():
                 with self.lock:
                     rows=self.conn.execute("SELECT id FROM destinations WHERE state IN ('Inspecting','Assessing','Working','Verifying')").fetchall()
                     self.watch.tick()
+                    self.duplicates.tick()
                     self.app.history.monitor_tick()
+                    auditing = self.duplicates.advance()
                     reading = self.capabilities.history_step()
                     try:
                         self._background_history()
                     except (OSError, ValueError):
                         self.app.history.monitor_stop()
-                    if not rows and not reading:
+                    if not rows and not reading and not auditing:
                         break
                     for row in rows:
                         if self.stop.is_set():
@@ -501,9 +517,34 @@ class Patrol:
             page['reason']='The inventory is refreshing. Review this group after the current assessment finishes.'
         return page
 
+    def authorize_duplicate_permission(self, job, automatic=False):
+        if any(t.is_alive() for t in self.approval_threads) or self.guided.conn.execute("SELECT 1 FROM guided_batches WHERE status='authorizing'").fetchone():
+            raise ValueError('Finish the current account approval first.')
+        binding,description=self.duplicates.grant_preview(job,automatic)
+        def request():
+            try:
+                consent=self.approver.verify(binding,description)
+                with self.lock:
+                    if self.stop.is_set():raise PermissionError('Navigator closed; scope permission was discarded.')
+                    self.duplicates.activate(binding,consent)
+            except (OSError,ValueError) as error:
+                with self.lock:
+                    self.duplicates.revoke(job);self.duplicates.audit_errors[job]=str(error)
+        thread=Thread(target=request,name='Journey scoped duplicate permission',daemon=False)
+        self.approval_threads.append(thread);thread.start()
+        return {'state':'awaiting_account_permission','scope':self.app.job(job)['root']}
+
+    def duplicate_destination(self, job):
+        self.duplicates.scope(job)
+        row=self.conn.execute('SELECT id FROM destinations WHERE job=? ORDER BY updated DESC LIMIT 1',(job,)).fetchone()
+        if row:return row[0]
+        return self.create(job,'Maintain exact duplicates in this approved collection',
+            'Reduce redundant copies while preserving distinct assets and known dependencies',
+            'Reviewed recoverable cleanup and a current duplicate inventory')['id']
+
     def authorize(self,destination,batch):
         row=self.row(destination)
-        if self.guided.conn.execute("SELECT 1 FROM guided_batches WHERE status='authorizing'").fetchone():
+        if any(t.is_alive() for t in self.approval_threads) or self.guided.conn.execute("SELECT 1 FROM guided_batches WHERE status='authorizing'").fetchone():
             raise ValueError('An account approval is already open. Finish or cancel that Windows dialog first.')
         if self.guided.row(batch)['job']!=row['job']:
             raise PermissionError('This batch belongs to another Destination.')
