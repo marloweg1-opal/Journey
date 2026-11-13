@@ -17,6 +17,7 @@ class IconStudioTests(TestCase):
         a=self.library.new('Folder master','Folder',master=True);original=self.library.svg(a).read_bytes()
         one=self.library.copy(a,'Jade clover');root=safe_svg(self.library.svg(one).read_bytes())
         body=root.find('.//*[@id="studio-body"]');body.set('transform','translate(3 2) rotate(2 128 128)')
+        root.find('.//*[@id="studio-symbol"]').set('transform','matrix(.9,0,0,.9,12,15)')
         ET.SubElement(root,tag('circle'),{'id':'personally-added-object','cx':'50','cy':'50','r':'8','fill':'#ee5522'})
         self.library.svg(one).write_bytes(ET.tostring(root))
         before=self.library.svg(one).read_bytes()
@@ -25,6 +26,7 @@ class IconStudioTests(TestCase):
         modified=safe_svg(self.library.svg(two).read_bytes())
         self.assertEqual(modified.find('.//*[@id="studio-body"]').get('transform'),body.get('transform'))
         self.assertIsNotNone(modified.find('.//*[@id="personally-added-object"]'))
+        self.assertEqual(modified.find('.//*[@id="studio-symbol"]').get('transform'),'matrix(.9,0,0,.9,12,15)')
         for p in (one,two):
             out=self.library.export(p);self.assertTrue(out['report']['verification']['verified'])
             with Image.open(out['ico']) as icon:
@@ -32,7 +34,7 @@ class IconStudioTests(TestCase):
                     frame=icon.ico.getimage((size,size));self.assertEqual(frame.size,(size,size));self.assertEqual(frame.getextrema()[3][0],0)
         self.assertNotEqual(self.library.inspect(one)['hash'],self.library.inspect(two)['hash'])
     def test_svg_and_bitmap_imports_leave_originals_intact_and_embed_the_bitmap(self):
-        source=self.root/'original.svg';source.write_text(make('Drive'))
+        source=self.root/'original.svg';source.write_text(make('Drive'),encoding='utf-8')
         png=self.root/'original.png';Image.new('RGBA',(400,200),(12,120,83,140)).save(png)
         before={p:(p.read_bytes(),p.stat().st_mtime_ns) for p in (source,png)}
         vector=self.library.import_file(source);bitmap=self.library.import_file(png)

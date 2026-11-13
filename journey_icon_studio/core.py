@@ -163,7 +163,11 @@ class Library:
             # Only tagged paints are modified; arbitrary new objects are preserved.
         by_id['studio-surface'].set('stroke',accent);by_id['studio-surface'].set('stroke-width',str(border))
         by_id['studio-body'].set('opacity',str(opacity))
-        group=by_id['studio-emblem'];old=by_id['studio-symbol'];index=list(group).index(old);group.remove(old);group.insert(index,symbol(glyph,accent))
+        group=by_id['studio-emblem'];old=by_id['studio-symbol'];index=list(group).index(old)
+        replacement=symbol(glyph,accent)
+        for key in ('transform','opacity'):
+            if key in old.attrib:replacement.set(key,old.get(key))
+        group.remove(old);group.insert(index,replacement)
         overlay=by_id['studio-texture-layer']
         for e in overlay:e.set('opacity','0' if texture=='None' else '.6')
         pattern=by_id['studio-texture'];pattern.clear();pattern.attrib.update(id='studio-texture',width='12',height='12',patternUnits='userSpaceOnUse')
@@ -203,7 +207,7 @@ class Library:
         fitted=output.parent/('.render-'+uuid4().hex+'.svg');atomic(fitted,encode(root))
         executable=self.engine.with_suffix('.com') if os.name=='nt' and self.engine.with_suffix('.com').exists() else self.engine
         flags={'creationflags':subprocess.CREATE_NO_WINDOW} if os.name=='nt' else {}
-        result=subprocess.run([str(executable),str(fitted),'--export-area-page','--export-background-opacity=0',f'--export-width={size}',f'--export-height={size}',f'--export-filename={output}'],
+        result=subprocess.run([str(executable),'--app-id-tag=journey-icon-render',str(fitted),'--export-area-page','--export-background-opacity=0',f'--export-width={size}',f'--export-height={size}',f'--export-filename={output}'],
             env=self.environment(),capture_output=True,timeout=90,**flags)
         fitted.unlink(missing_ok=True)
         if result.returncode or not output.is_file():raise RuntimeError('Inkscape could not render this saved project. '+result.stderr.decode(errors='replace')[-700:])
@@ -245,9 +249,11 @@ class Library:
         args=[str(self.engine),'--with-gui','--app-id-tag=journey-icon-studio',str(source)]
         allowed={'Fill and stroke':'FillStroke','Layers and objects':'Objects','Align and distribute':'AlignDistribute',
             'Transform':'Transformation','Symbols':'Symbols','Filters and lighting':'FilterEffects','Document size':'DocumentProperties','Trace bitmap':'Trace'}
+        actions=['window-set-geometry:0,0,1280,900']
         if dialog:
             if dialog not in allowed:raise ValueError('Choose an editor tool in Studio.')
-            args+=['--actions=dialog-open:'+allowed[dialog]]
+            actions.append('dialog-open:'+allowed[dialog])
+        args+=['--actions='+(';'.join(actions))]
         self.editors=[p for p in self.editors if p.poll() is None]
         self.editors.append(subprocess.Popen(args,env=self.environment(),stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL))
         return source

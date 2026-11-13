@@ -21,6 +21,9 @@ class Studio:
         self.root=root;self.library=library;self.current=None;self.items=[];self.photos=[];self.busy=False;self.results=queue.Queue();self.preview_generation=0;self.last_hash=None
         root.title('Journey Icon Studio · Design, keep, remix');root.geometry('1370x940');root.minsize(1080,780);root.configure(bg=BG)
         self.style();self.build();self.seed();self.refresh();root.after(100,self.poll);root.after(1600,self.watch)
+        def select_all(event):
+            event.widget.selection_range(0,'end');event.widget.icursor('end');return 'break'
+        root.bind_class('TEntry','<Control-a>',select_all)
     def style(self):
         style=ttk.Style();style.theme_use('clam')
         style.configure('.',background=BG,foreground=INK,font=(FONT,10),bordercolor=EDGE)
