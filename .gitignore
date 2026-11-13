@@ -32,3 +32,6 @@ ARK_EXECUTION_DISABLED.flag
 private/
 *.sqlite
 docs/SHADOW_RUN_*.md
+
+# Private supplied design references are added only to the personal delivery.
+journey_icon_studio/assets/references/
