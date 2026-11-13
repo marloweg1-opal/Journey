@@ -18,7 +18,7 @@ if (ASSETS/'references').is_dir():ASSETS=ASSETS/'references'
 
 class Studio:
     def __init__(self,root,library):
-        self.root=root;self.library=library;self.current=None;self.items=[];self.photos=[];self.busy=False;self.results=queue.Queue();self.preview_generation=0;self.last_hash=None
+        self.root=root;self.library=library;self.current=None;self.items=[];self.photos=[];self.busy=False;self.results=queue.Queue();self.preview_generation=0;self.last_hash=None;self.preview_requested=False
         root.title('Journey Icon Studio · Design, keep, remix');root.geometry('1370x940');root.minsize(1080,780);root.configure(bg=BG)
         self.style();self.build();self.seed();self.refresh();root.after(100,self.poll);root.after(1600,self.watch)
         def select_all(event):
@@ -153,14 +153,18 @@ class Studio:
             done,value,error=self.results.get_nowait();self.busy=False;self.root.configure(cursor='')
             if error:self.guard(lambda:(_ for _ in ()).throw(error))
             else:self.guard(lambda:done(value))
+            if self.preview_requested:
+                self.preview_requested=False
+                if self.current:self.guard(self.reload)
         except queue.Empty:pass
         self.root.after(100,self.poll)
     def reload(self):
         project=dict(self.need());generation=self.preview_generation=self.preview_generation+1
-        if self.busy:self.preview_generation-=1;return
+        if self.busy:
+            self.preview_generation-=1;self.preview_requested=True;return
         def done(paths):
             if generation!=self.preview_generation or not self.current or project['id']!=self.current['id']:return
-            self.frame_paths=paths;self.last_hash=self.library.inspect(project)['hash']
+            self.frame_paths=paths;self.last_hash=paths[512].name.rsplit('-',1)[0]
             with Image.open(paths[512]) as im:self.large=im.convert('RGBA').copy()
             self.redraw_large();self.redraw_sizes();self.status.set('Preview ready · all seven saved-source frames rendered. Ctrl+S in Inkscape updates this workspace automatically.')
         self.work('Rendering saved SVG at seven Windows sizes and 512 px…',lambda:self.library.preview(project),done)

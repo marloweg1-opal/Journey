@@ -70,4 +70,21 @@ class IconStudioTests(TestCase):
         with self.assertRaisesRegex(ValueError,'restructured'):self.library.variation(p,'Variation',body='#00ff00',accent='#ffffff',glyph='Star')
         self.assertEqual(self.library.svg(p).read_bytes(),before)
 
+
+    def test_export_uses_one_saved_snapshot_when_an_editor_saves_during_rendering(self):
+        p=self.library.new('Concurrent editing','Folder');original=self.library.svg(p).read_bytes()
+        render=self.library.render;calls=[]
+        def save_during_render(project,size,target,**kwargs):
+            result=render(project,size,target,**kwargs);calls.append(size)
+            if len(calls)==1:self.library.svg(project).write_text(make('Drive'),encoding='utf-8')
+            return result
+        self.library.render=save_during_render
+        out=self.library.export(p)
+        self.assertEqual(Path(out['svg']).read_bytes(),original)
+        self.assertEqual(out['report']['source_sha256'],sha256(original).hexdigest())
+        self.assertEqual(self.library.inspect(p)['template'],'Drive')
+        self.assertTrue(out['report']['verification']['verified'])
+        self.assertEqual(len(calls),8)
+
 if __name__=='__main__':main()
+

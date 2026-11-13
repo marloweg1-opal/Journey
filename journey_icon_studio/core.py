@@ -189,9 +189,9 @@ class Library:
                 if changed!=e.text:e.text=changed;count+=1
         if not count:raise ValueError('That color is absent from this saved SVG. Choose a color from its palette.')
         return self.create(title,encode(root),parent=project['id'],assignment=project['assignment'],source=project.get('source'))
-    def render(self,project,size,output):
+    def render(self,project,size,output,*,source_bytes=None):
         if size not in (*SIZES,512):raise ValueError('Choose a supported preview size.')
-        source=self.svg(project);root=safe_svg(source.read_bytes());output=self._owned(output)
+        source=self.svg(project);root=safe_svg(source.read_bytes() if source_bytes is None else source_bytes);output=self._owned(output)
         # Icon canvases are square; fit the saved artboard proportionally rather than stretch it.
         if not root.get('viewBox'):
             dimensions=[]
@@ -214,15 +214,17 @@ class Library:
         with Image.open(output) as image:
             if image.size!=(size,size):raise ValueError('The renderer returned unexpected dimensions.')
         return output
-    def preview(self,project):
-        info=self.inspect(project);cache=Path(project['folder'])/'.preview';self._owned(cache);cache.mkdir(exist_ok=True)
+    def preview(self,project,*,source_bytes=None):
+        raw=self.svg(project).read_bytes() if source_bytes is None else source_bytes
+        digest=sha256(encode(safe_svg(raw))).hexdigest()
+        cache=Path(project['folder'])/'.preview';self._owned(cache);cache.mkdir(exist_ok=True)
         for size in (*SIZES,512):
-            target=cache/f'{info["hash"]}-{size}.png'
-            if not target.exists():self.render(project,size,target)
-        return {size:cache/f'{info["hash"]}-{size}.png' for size in (*SIZES,512)}
+            target=cache/f'{digest}-{size}.png'
+            if not target.exists():self.render(project,size,target,source_bytes=raw)
+        return {size:cache/f'{digest}-{size}.png' for size in (*SIZES,512)}
     def export(self,project):
-        frames=self.preview(project);directory=Path(project['folder'])/'Exports'/timestamp().replace(':','-');self._owned(directory);directory.mkdir(parents=True)
         source=self.svg(project);raw=source.read_bytes();safe_svg(raw)
+        frames=self.preview(project,source_bytes=raw);directory=Path(project['folder'])/'Exports'/timestamp().replace(':','-');self._owned(directory);directory.mkdir(parents=True)
         svg=directory/(name(project['name'])+'.svg');atomic(svg,raw)
         png=directory/(project['name']+'.png');shutil.copyfile(frames[256],png)
         frame_dir=directory/'PNG sizes';frame_dir.mkdir()
