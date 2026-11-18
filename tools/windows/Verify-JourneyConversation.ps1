@@ -23,12 +23,17 @@ try {
     if ($expectedCommit -notmatch '^[a-f0-9]{40}$') { throw 'Missing source commit in BUILD.txt.' }
     Add-Check 'Package commit' $expectedCommit
     $manifest = [System.IO.File]::ReadAllText($manifestPath) | ConvertFrom-Json
-    foreach ($relative in @('app/journey_navigator/capabilities.py', 'app/journey_navigator/conversation.py', 'app/journey_navigator/__main__.py')) {
-        $file = Join-Path $root $relative
-        $actual = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
-        $expected = $manifest.PSObject.Properties[$relative].Value
-        if (-not $expected -or $actual -ne $expected) { throw ('Selected candidate file integrity failed: ' + $relative) }
-    }
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        foreach ($relative in @('app/journey_navigator/capabilities.py', 'app/journey_navigator/conversation.py', 'app/journey_navigator/__main__.py')) {
+            $file = [System.IO.File]::OpenRead((Join-Path $root $relative))
+            try {
+                $actual = [BitConverter]::ToString($sha256.ComputeHash($file)).Replace('-', '').ToLowerInvariant()
+            } finally { $file.Dispose() }
+            $expected = $manifest.PSObject.Properties[$relative].Value
+            if (-not $expected -or $actual -ne $expected) { throw ('Selected candidate file integrity failed: ' + $relative) }
+        }
+    } finally { $sha256.Dispose() }
     Add-Check 'Selected integration-file integrity' '3 declared SHA-256 hashes matched; this is not a complete package audit.'
     Write-Progress -Activity 'Journey read-only verification' -Status 'Checking authenticated running candidate' -PercentComplete 40
     $recordPath = Join-Path $DataDir 'navigator-session.dat'

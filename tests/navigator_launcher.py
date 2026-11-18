@@ -82,11 +82,10 @@ def inspection(record, action, **body):
         return json.load(reply)
 
 
-def verify_conversation_diagnostic(package, checkpoint, record, env):
+def verify_conversation_diagnostic(package, record, env):
     result = subprocess.run([
         'powershell.exe', '-NoProfile', '-NonInteractive', '-Sta', '-File',
-        str(package / 'Verify Journey conversation.ps1'), '-CandidateRoot', str(package),
-        '-DataDir', str(checkpoint),
+        str(package / 'Verify Journey conversation.ps1'),
     ], env=env, capture_output=True, timeout=45)
     output = (result.stdout + result.stderr).decode(errors='replace')
     session_token = parse_qs(urlsplit(record['url']).fragment)['session'][0]
@@ -97,6 +96,30 @@ def verify_conversation_diagnostic(package, checkpoint, record, env):
                      'LOCAL_RUNTIME_ACCEPTANCE_PENDING', 'FINISHED SUCCESS'):
         assert required in output, 'Missing diagnostic check: ' + required
     print('Packaged read-only diagnostic verified the authenticated fixture build and clipboard report.')
+
+
+def verify_isolated_demo(package, fixture_root, env, normal_record):
+    portable = fixture_root / 'Portable trial with spaces'
+    shutil.copytree(package, portable)
+    session_file = portable / 'Conversation checkpoint' / 'navigator-session.dat'
+    command = [env['COMSPEC'], '/d', '/c', 'call', 'Start isolated conversation demo.cmd']
+    subprocess.run(command, cwd=portable, env=env, check=True, timeout=20,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    trial = manifest(session_file)
+    try:
+        assert Path(trial['location']).samefile(portable)
+        assert trial['commit'] == normal_record['commit'] and trial['session'] != normal_record['session']
+        verify_conversation_diagnostic(portable, trial, env)
+        assert inspection(trial, 'jobs')['items'] == []
+        normal_session = fixture_root / 'Journey' / 'Navigator Inspection' / 'navigator-session.dat'
+        assert manifest(normal_session)['session'] == normal_record['session']
+    finally:
+        stop(trial)
+        deadline = monotonic() + 30
+        while session_file.exists() and monotonic() < deadline:
+            sleep(.1)
+    assert not session_file.exists(), 'The trial still owns its private checkpoint after closing.'
+    print('Isolated demo command opened and closed its own checkpoint while the normal fixture session kept its identity.')
 
 
 def main():
@@ -113,7 +136,7 @@ def main():
         record=None
         try:
             record=manifest(path)
-            verify_conversation_diagnostic(args.application.resolve().parent, path.parent, record, env)
+            verify_isolated_demo(args.application.resolve().parent, root, env, record)
             second=subprocess.run([str(args.application.resolve())],env=env,timeout=30)
             assert second.returncode==0
             assert manifest(path)['session']==record['session']
