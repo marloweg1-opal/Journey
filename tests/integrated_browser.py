@@ -49,11 +49,23 @@ def exercise(url, base):
         expect(page.locator("#watch-status")).to_contain_text("off")
         page.locator(".journey-tools").get_by_role("button", name="Destination", exact=True).click()
         page.get_by_label("Why this matters", exact=True).fill("Reopen and understand the collection without sorting by hand.")
+        # Hold only this save so the operator can open Talk before its real response.
+        save_pattern = "**/api/inspect/destination-create"
+        saves = []
+        page.route(save_pattern, lambda route: saves.append(route))
         page.get_by_role("button", name="Save Destination", exact=True).click()
         page.locator(".journey-tools").get_by_role("button", name="Talk", exact=True).click()
         goal = page.get_by_label("Message", exact=True)
         goal.fill("Find render_a.png")
-        page.get_by_role("button", name="Ask Journey", exact=True).click()
+        ask = page.get_by_role("button", name="Ask Journey", exact=True)
+        expect(ask).to_be_disabled()
+        assert len(saves) == 1
+        saves[0].continue_()
+        expect(page.locator("#journey-alert")).to_have_text("Destination saved.")
+        expect(ask).to_be_enabled()
+        expect(goal).to_have_value("Find render_a.png")
+        page.unroute(save_pattern)
+        ask.click()
         expect(page.locator("#stewardship-results")).to_contain_text("LOCAL REFERENCE HISTORY")
         goal.fill("Organize the selected folder.")
         page.get_by_role("button", name="Ask Journey", exact=True).click()

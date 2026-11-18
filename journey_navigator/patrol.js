@@ -7,6 +7,7 @@
   let imageRequest=0, statusRequest=0, renderedSnapshot='', pollAgain=false;
   let stewardshipScope = null, stewardshipReview = null, retirementDecision = "", talkRequest = null;
   let evidenceScope = null;
+  let destinationSave = null, destinationSelection = 0;
   const destinationJobs = new Map();
   const selections={'.patrol-asset':new Set(),'.patrol-name':new Set()};
   const clearSelections=()=>Object.values(selections).forEach(values=>values.clear());
@@ -50,6 +51,9 @@
   const readable = value => String(value ?? "").replaceAll("_", " ").toLowerCase();
   const retirementAssets = () => [...document.querySelectorAll(".stewardship-asset:checked")].map(input => Number(input.value));
   const selectedJob = () => sessionStorage.getItem("journey-current-inspection") || null;
+  function updateTalkSubmit() {
+    talkSubmit.disabled = Boolean(talkRequest || (destinationSave && destinationSave.job === selectedJob()));
+  }
   const talkDestination = job => job && destinationJobs.get(destination) === job ? destination : null;
   const matchesTalkSelection = scope => scope.job === selectedJob() && scope.destination === talkDestination(scope.job);
   const isTalkCurrent = scope => scope === stewardshipScope && matchesTalkSelection(scope);
@@ -59,12 +63,13 @@
     stewardshipReview = null;
     retirementDecision = "";
     talkRequest = null;
-    talkSubmit.disabled = false;
+    updateTalkSubmit();
     $("stewardship-results").replaceChildren();
     stewardshipStatus(message);
   }
 
   function clearStaleTalk() {
+    updateTalkSubmit();
     if (evidenceScope && !matchesTalkSelection(evidenceScope)) {
       evidenceScope = null;
       talkForm.elements.share_evidence.checked = false;
@@ -75,6 +80,7 @@
   }
 
   function chooseDestination(id) {
+    destinationSelection++;
     if (destination === id) return;
     destination = id;
     evidenceScope = null;
@@ -325,12 +331,31 @@
 
   $("destination-form").addEventListener('submit', async event => {
     event.preventDefault();
+    if (destinationSave) return;
+    const form = event.currentTarget;
+    const submit = form.querySelector('button[type="submit"]');
+    const job = selectedJob(), selection = destinationSelection;
+    destinationSave = {job};
+    submit.disabled = true;
+    updateTalkSubmit();
+    notify('Saving Destination…');
     try {
-      const data = Object.fromEntries(new FormData(event.target));
-      const result = await api('destination-create', {...data,job:sessionStorage.getItem('journey-current-inspection'),max_files:Number(data.max_files),max_seconds:Number(data.max_seconds)});
+      const data = Object.fromEntries(new FormData(form));
+      const result = await api('destination-create', {...data,job,max_files:Number(data.max_files),max_seconds:Number(data.max_seconds)});
+      if (!result.id || result.job !== job) throw new Error(result.error || 'Journey could not confirm the saved Destination.');
       destinationJobs.set(result.id, result.job);
-      chooseDestination(result.id); clearSelections(); renderedSnapshot=''; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status();
+      notify('Destination saved.');
+      if (selectedJob() !== job || destinationSelection !== selection) return;
+      chooseDestination(result.id);
+      clearSelections(); renderedSnapshot=''; batchId=''; collection=''; questionMembers=null; offset=0;
+      if (form.closest('[data-panel]').classList.contains('active')) setMode('patrol');
+      await status();
     } catch (error) { failure(error); }
+    finally {
+      destinationSave = null;
+      submit.disabled = false;
+      updateTalkSubmit();
+    }
   });
   $("patrol-save-preview").onclick = async () => {
     try {
@@ -390,7 +415,7 @@
   talkForm.onsubmit = async event => {
     event.preventDefault();
     clearStaleTalk();
-    if (talkRequest) return;
+    if (talkSubmit.disabled) return;
     const job = selectedJob();
     const scope = {job, destination: talkDestination(job)};
     const {instruction, use_model, share_evidence, read_references} = talkForm.elements;
@@ -423,7 +448,7 @@
       clearTimeout(waiting);
       if (talkRequest === scope) {
         talkRequest = null;
-        talkSubmit.disabled = false;
+        updateTalkSubmit();
       }
     }
   };
