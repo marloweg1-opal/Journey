@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$CandidateRoot = $PSScriptRoot,
+    [string]$CandidateRoot = '',
     [string]$DataDir = ''
 )
 $ErrorActionPreference = 'Stop'
@@ -12,6 +12,12 @@ function Add-Check([string]$Name, $Value) {
 }
 try {
     Write-Progress -Activity 'Journey read-only verification' -Status 'Checking candidate files' -PercentComplete 10
+    if (-not $CandidateRoot) {
+        $scriptPath = $MyInvocation.MyCommand.Path
+        if (-not $scriptPath) { $scriptPath = $PSCommandPath }
+        if (-not $scriptPath) { throw 'Open the saved diagnostic script from the extracted Journey Navigator folder.' }
+        $CandidateRoot = [System.IO.Path]::GetDirectoryName($scriptPath)
+    }
     $root = (Resolve-Path -LiteralPath $CandidateRoot).Path
     if (-not $DataDir) { $DataDir = Join-Path $root 'Conversation checkpoint' }
     $buildPath = Join-Path $root 'BUILD.txt'
@@ -45,10 +51,11 @@ try {
     $record = [System.Text.Encoding]::UTF8.GetString($bytes) | ConvertFrom-Json
     $port = [int]$record.port
     if ($port -lt 1 -or $port -gt 65535) { throw 'Invalid local session port.' }
-    $process = Get-Process -Id ([int]$record.process.pid)
-    if ($process.Path -ne $record.process.executable -or $process.StartTime.ToFileTimeUtc() -ne [long]$record.process.created) { throw 'Session process identity did not match the current process.' }
+    $process = [System.Diagnostics.Process]::GetProcessById([int]$record.process.pid)
+    $actualExecutable = $process.MainModule.FileName
+    if ($actualExecutable -ne $record.process.executable -or $process.StartTime.ToFileTimeUtc() -ne [long]$record.process.created) { throw 'Session process identity did not match the current process.' }
     $executables = @((Join-Path $root 'runtime\pythonw.exe'), (Join-Path $root 'runtime\python.exe'))
-    if ($process.Path -notin $executables) { throw 'The running process belongs to a different candidate folder.' }
+    if ($actualExecutable -notin $executables) { throw 'The running process belongs to a different candidate folder.' }
     $origin = 'http://127.0.0.1:' + $port
     $controlHeaders = @{ Origin = $origin; 'X-Journey-Control' = [string]$record.control }
     $running = Invoke-RestMethod -Uri ($origin + '/api/session/status') -Method Post -ContentType 'application/json' -Headers $controlHeaders -Body '{}' -TimeoutSec 5
@@ -76,7 +83,7 @@ try {
     $report.Status = 'SUCCESS'
 } catch {
     $passed = $false
-    $report.Issues += $_.Exception.Message
+    $report.Issues += ('Check at script line ' + $_.InvocationInfo.ScriptLineNumber + ' failed. ' + $_.Exception.Message)
 } finally {
     Write-Progress -Activity 'Journey read-only verification' -Completed
 }
