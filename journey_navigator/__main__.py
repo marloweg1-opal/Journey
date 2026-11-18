@@ -324,10 +324,15 @@ class Handler(BaseHTTPRequestHandler):
             provider = self.server.local_models.status()
         elif request_kind == "interpret":
             provider = self.server.local_models.interpret(prompt, context, before_send=still_current)
+        elif request_kind == "advice":
+            provider = self.server.local_models.review(prompt, context, members=members, before_send=still_current,
+                                                       adaptive=True)
         else:
             provider = self.server.local_models.review(prompt, context, members=members, before_send=still_current)
-        metrics = dict(provider.get("metrics", {"calls": 0, "retries": 0})) | {
-            "level": 3 if request_kind == "council" else 2 if request_kind == "perspective" else 0 if request_kind == "models" else 1,
+        usage = provider.get("metrics", {"calls": 0, "retries": 0})
+        metrics = usage | {
+            "level": usage["calls"] if request_kind == "advice" else
+                     {"models": 0, "council": 3, "perspective": 2}.get(request_kind, 1),
             "elapsed_seconds": round(monotonic() - started, 3), "evidence_sharing_authorized": share_evidence}
         metrics["shared_evidence_excerpts"] = bool(request_kind != "models" and metrics.get("calls", 0) and any(
             item["kind"] in ("inspected_asset", "imported_history_excerpt") for item in context["evidence"]))

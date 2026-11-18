@@ -397,7 +397,10 @@
     const body = {job, instruction: instruction.value, use_model: use_model.checked,
       share_evidence: use_model.checked && share_evidence.checked, read_references: read_references.checked};
     if (scope.destination) body.destination = scope.destination;
+    use_model.checked = false;
     share_evidence.checked = false;
+    share_evidence.disabled = true;
+    read_references.checked = false;
     evidenceScope = null;
     resetStewardship();
     stewardshipScope = talkRequest = scope;

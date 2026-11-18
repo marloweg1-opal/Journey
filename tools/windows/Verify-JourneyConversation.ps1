@@ -20,6 +20,7 @@ try {
     $buildText = [System.IO.File]::ReadAllText($buildPath)
     if ($buildText.Length -gt 4096) { throw 'BUILD.txt exceeds the expected metadata size.' }
     $expectedCommit = ($buildText -split "`r?`n")[0] -replace '^Journey source commit ', ''
+    if ($expectedCommit -notmatch '^[a-f0-9]{40}$') { throw 'Missing source commit in BUILD.txt.' }
     Add-Check 'Package commit' $expectedCommit
     $manifest = [System.IO.File]::ReadAllText($manifestPath) | ConvertFrom-Json
     foreach ($relative in @('app/journey_navigator/capabilities.py', 'app/journey_navigator/conversation.py', 'app/journey_navigator/__main__.py')) {
@@ -41,10 +42,12 @@ try {
     if ($port -lt 1 -or $port -gt 65535) { throw 'Invalid local session port.' }
     $process = Get-Process -Id ([int]$record.process.pid)
     if ($process.Path -ne $record.process.executable -or $process.StartTime.ToFileTimeUtc() -ne [long]$record.process.created) { throw 'Session process identity did not match the current process.' }
+    $executables = @((Join-Path $root 'runtime\pythonw.exe'), (Join-Path $root 'runtime\python.exe'))
+    if ($process.Path -notin $executables) { throw 'The running process belongs to a different candidate folder.' }
     $origin = 'http://127.0.0.1:' + $port
     $controlHeaders = @{ Origin = $origin; 'X-Journey-Control' = [string]$record.control }
     $running = Invoke-RestMethod -Uri ($origin + '/api/session/status') -Method Post -ContentType 'application/json' -Headers $controlHeaders -Body '{}' -TimeoutSec 5
-    if ($running.session -ne $record.session -or $running.commit -ne $expectedCommit) { throw 'The authenticated running session does not match this package.' }
+    if ($running.application -ne 'Journey.Navigator' -or $running.location -ne $root -or $running.session -ne $record.session -or $running.commit -ne $expectedCommit -or $running.build -ne $record.build) { throw 'The authenticated running session does not match this package.' }
     Add-Check 'Authenticated running build' ([ordered]@{ Commit = $running.commit; Build = $running.build; ProcessId = $process.Id })
     $fragment = ([uri]$running.url).Fragment.TrimStart('#')
     $sessionToken = ([regex]::Match($fragment, '(?:^|&)session=([^&]+)')).Groups[1].Value
@@ -72,13 +75,14 @@ try {
 } finally {
     Write-Progress -Activity 'Journey read-only verification' -Completed
 }
-$text = $report | ConvertTo-Json -Depth 10
-Write-Output $text
 try {
-    Set-Clipboard -Value $text
+    Set-Clipboard -Value ($report | ConvertTo-Json -Depth 10)
     Write-Host '[CLIPBOARD] Report copied. Session and control tokens excluded.'
 } catch {
     $passed = $false
-    Write-Host '[CLIPBOARD] Copy failed. The report is printed above.'
+    $report.Status = 'FAILED'
+    $report.Issues += 'Windows could not copy the report to the clipboard.'
+    Write-Host '[CLIPBOARD] Copy failed. The report follows.'
 }
+Write-Output ($report | ConvertTo-Json -Depth 10)
 if ($passed) { Write-Host 'FINISHED SUCCESS' } else { Write-Host 'FINISHED FAILED'; exit 1 }

@@ -82,6 +82,23 @@ def inspection(record, action, **body):
         return json.load(reply)
 
 
+def verify_conversation_diagnostic(package, checkpoint, record, env):
+    result = subprocess.run([
+        'powershell.exe', '-NoProfile', '-NonInteractive', '-Sta', '-File',
+        str(package / 'Verify Journey conversation.ps1'), '-CandidateRoot', str(package),
+        '-DataDir', str(checkpoint),
+    ], env=env, capture_output=True, timeout=45)
+    output = (result.stdout + result.stderr).decode(errors='replace')
+    session_token = parse_qs(urlsplit(record['url']).fragment)['session'][0]
+    if any(secret in output for secret in (record['control'], session_token)):
+        raise AssertionError('The fixture diagnostic exposed a session credential.')
+    assert result.returncode == 0, output[-4000:]
+    for required in (record['commit'], 'Authenticated running build', '[CLIPBOARD] Report copied',
+                     'LOCAL_RUNTIME_ACCEPTANCE_PENDING', 'FINISHED SUCCESS'):
+        assert required in output, 'Missing diagnostic check: ' + required
+    print('Packaged read-only diagnostic verified the authenticated fixture build and clipboard report.')
+
+
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--application',required=True,type=Path)
     args=parser.parse_args()
@@ -96,6 +113,7 @@ def main():
         record=None
         try:
             record=manifest(path)
+            verify_conversation_diagnostic(args.application.resolve().parent, path.parent, record, env)
             second=subprocess.run([str(args.application.resolve())],env=env,timeout=30)
             assert second.returncode==0
             assert manifest(path)['session']==record['session']

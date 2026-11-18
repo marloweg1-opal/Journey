@@ -73,7 +73,7 @@ class FakeModels:
         return {"state": "INTERPRETED", "intent": self.intent, "term": self.term, "family": self.family,
                 "model": MODEL_IDS["Qwen"], "metrics": self._metrics(("Qwen",))}
 
-    def review(self, prompt, context, *, members=None, before_send=None):
+    def review(self, prompt, context, *, members=None, before_send=None, adaptive=False):
         selected = tuple(members) if members is not None else tuple(MODEL_IDS)
         self._record("review", prompt, context, selected)
         sample = {"Qwen": ("finding", ["inventory"] if any(e["id"] == "inventory" for e in context["evidence"])

@@ -1,6 +1,7 @@
 """Real Navigator plus loopback-provider fixtures exercise the new trust seams."""
 
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -78,6 +79,189 @@ class ConversationBoundaryTests(unittest.TestCase):
                 self.assertEqual(result['state'], 'NEEDS_SCOPE')
                 self.assertEqual(len([row for row in calls if row[0] == 'POST']), 3)
 
+    def test_ordinary_advice_stops_for_a_supported_finding_or_no_addition(self):
+        def chat(body):
+            prompt = json.loads(body['messages'][1]['content'])['instruction']
+            output = (contribution('finding', ('inventory',)) if prompt.startswith('Summarize') else
+                      contribution('no_addition', ()))
+            return envelope(body['model'], output, prompt_eval_count=18, eval_count=9)
+
+        with ollama_fixture(chat=chat) as (port, calls):
+            with running_navigator(self.base / 'Checkpoint', LocalModels(port=port)) as server:
+                job = select(server, self.collection)
+                inspect(server, job)
+                for prompt, reason in [('Summarize the saved inspection.', 'sufficient_finding'),
+                                       ('Advise on the collection.', 'no_addition')]:
+                    with self.subTest(reason=reason):
+                        result = converse(server, prompt, job=job, use_model=True)
+                        self.assertEqual(result['state'], 'REVIEW_REQUIRED')
+                        self.assertEqual(result['council']['assessment']['continuation'],
+                                         {'decision': 'stopped', 'reason': reason})
+                        self.assertEqual([(row['member'], row['state']) for row in result['council']['members']],
+                                         [('Qwen', 'ADVISORY'), ('Phi', 'NOT_CONSULTED'), ('Gemma', 'NOT_CONSULTED')])
+                        metrics = result['metrics']
+                        self.assertEqual((metrics['level'], metrics['calls'], metrics['tag_calls'], metrics['retries']),
+                                         (1, 1, 1, 0))
+                        self.assertEqual(metrics['models'][0]['eval_count'], 9)
+        self.assertEqual([path for _, path, _ in calls], ['/api/tags', '/api/chat'] * 2)
+
+    def test_insufficient_advice_reports_saved_coverage_without_reading_more(self):
+        def chat(body):
+            return envelope(body['model'], contribution('insufficient_evidence', ()))
+
+        with ollama_fixture(chat=chat) as (port, calls):
+            with running_navigator(self.base / 'Checkpoint', LocalModels(port=port)) as server:
+                job = select(server, self.collection)
+                inspect(server, job)
+                import_history(server, job, self.exports, self.pack)
+                with patch.object(server.workbench, 'step') as step, \
+                        patch.object(server.workbench.history, 'text_search') as search_history:
+                    result = converse(server, 'Advise about "CareRail".', job=job, use_model=True)
+                    step.assert_not_called()
+                    search_history.assert_not_called()
+        self.assertEqual(result['metrics']['calls'], 1)
+        self.assertEqual([path for _, path, _ in calls], ['/api/tags', '/api/chat'])
+        self.assertFalse(result['metrics']['shared_evidence_excerpts'])
+        continuation = result['council']['assessment']['continuation']
+        self.assertEqual((continuation['decision'], continuation['reason']), ('stopped', 'insufficient_evidence'))
+        self.assertIn('Search history', continuation['next_review'])
+        self.assertEqual(set(continuation['observation_ids']), {'knowledge', 'inventory'})
+        observations = {row['id']: row['value'] for row in result['evidence']}
+        self.assertEqual(observations['inventory']['analyzed'], 10)
+        self.assertEqual(observations['knowledge']['history_messages'], 3)
+
+    def test_scoped_objection_gets_one_independent_review_on_identical_input(self):
+        def chat(body):
+            payload = json.loads(body['messages'][1]['content'])
+            evidence = payload['context']['evidence']
+            if 'CareRail' in payload['instruction']:
+                entry = next(row for row in evidence if row['kind'] == 'imported_history_excerpt')
+                conclusion = 'The prior "interface layout" points to a different design.'
+            else:
+                entry = next(row for row in evidence
+                             if row['kind'] == 'inspected_asset' and row['value']['status'] == 'analyzed')
+                conclusion = f"The digest {entry['value']['sha256']} identifies a different revision."
+            kind = 'objection' if body['model'].startswith('qwen') else 'finding'
+            output = {**contribution(kind, (entry['id'],)), 'conclusion': conclusion if kind == 'objection'
+                      else 'The same record could still fit the current design.'}
+            return envelope(body['model'], output, prompt_eval_count=24, eval_count=11)
+
+        with ollama_fixture(chat=chat) as (port, calls):
+            with running_navigator(self.base / 'Checkpoint', LocalModels(port=port)) as server:
+                job = select(server, self.collection)
+                inspect(server, job)
+                import_history(server, job, self.exports, self.pack)
+                for prompt in ('Advise about "CareRail".', 'Advise on the asset revision.'):
+                    with self.subTest(prompt=prompt):
+                        calls.clear()
+                        result = converse(server, prompt, job=job, use_model=True, share_evidence=True)
+                        self.assertEqual(result['state'], 'REVIEW_REQUIRED')
+                        metrics = result['metrics']
+                        self.assertEqual((metrics['level'], metrics['calls'], metrics['tag_calls'], metrics['retries']),
+                                         (2, 2, 1, 0))
+                        self.assertTrue(metrics['shared_evidence_excerpts'])
+                        self.assertEqual([path for _, path, _ in calls], ['/api/tags', '/api/chat', '/api/chat'])
+                        first, second = [body for method, _, body in calls if method == 'POST']
+                        self.assertEqual((first['model'], second['model']), ('qwen3:4b', 'phi4-mini:latest'))
+                        self.assertEqual(first['messages'], second['messages'])
+                        self.assertEqual([body['keep_alive'] for body in (first, second)], [0, 0])
+                        self.assertEqual([row['state'] for row in result['council']['members']],
+                                         ['ADVISORY', 'ADVISORY', 'NOT_CONSULTED'])
+                        assessment = result['council']['assessment']
+                        self.assertFalse(assessment['authority'])
+                        self.assertTrue(assessment['human_review_required'])
+                        continuation = assessment['continuation']
+                        self.assertEqual((continuation['decision'], continuation['reason']),
+                                         ('independent_review', 'scoped_material_objection'))
+                        self.assertIn('human review', continuation['next_review'])
+
+    def test_advice_cannot_escalate_on_metadata_unknown_refs_or_a_model_request(self):
+        def chat(body):
+            payload = json.loads(body['messages'][1]['content'])
+            prompt = payload['instruction']
+            refs = ['inventory'] if 'metadata' in prompt else ['history-9'] if 'unknown' in prompt else ['history-0']
+            conclusion = 'The prior "interface layout" points to a different design.'
+            if 'model request' in prompt:
+                refs = ['history-0']
+                conclusion = 'Ask Phi to review "interface layout".'
+            elif 'bad schema' in prompt:
+                return envelope(body['model'], {**contribution('objection', ('history-0',)), 'next_member': 'Phi'})
+            return envelope(body['model'], {**contribution('objection', refs), 'conclusion': conclusion})
+
+        with ollama_fixture(chat=chat) as (port, calls):
+            with running_navigator(self.base / 'Checkpoint', LocalModels(port=port)) as server:
+                job = select(server, self.collection)
+                inspect(server, job)
+                import_history(server, job, self.exports, self.pack)
+                for topic, sharing, reason in [('metadata', True, 'objection_lacks_substantive_support'),
+                                               ('no excerpts', False, 'unknown_evidence'),
+                                               ('unknown citations', True, 'unknown_evidence'),
+                                               ('model request', True, 'objection_lacks_substantive_support'),
+                                               ('bad schema', True, 'invalid_contribution')]:
+                    with self.subTest(topic=topic):
+                        calls.clear()
+                        result = converse(server, f'Advise on {topic} about "CareRail".', job=job,
+                                          use_model=True, share_evidence=sharing)
+                        self.assertEqual([path for _, path, _ in calls], ['/api/tags', '/api/chat'])
+                        assessment = result['council']['assessment']
+                        self.assertEqual(assessment['continuation']['reason'], reason)
+                        self.assertEqual(result['metrics']['shared_evidence_excerpts'], sharing)
+                        self.assertTrue(all(row['state'] == 'NOT_CONSULTED' for row in result['council']['members'][1:]))
+
+    def test_scope_revocation_blocks_a_qualified_independent_review(self):
+        entered, release = Event(), Event()
+
+        def chat(body):
+            entered.set()
+            if not release.wait(5):
+                raise AssertionError('Fixture release timed out')
+            return envelope(body['model'], {**contribution('objection', ('history-0',)),
+                                           'conclusion': 'The prior "interface layout" points to a different design.'})
+
+        with ollama_fixture(chat=chat) as (port, calls):
+            with running_navigator(self.base / 'Checkpoint', LocalModels(port=port)) as server:
+                job = select(server, self.collection)
+                inspect(server, job)
+                import_history(server, job, self.exports, self.pack)
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    pending = pool.submit(converse, server, 'Advise about "CareRail".', job=job,
+                                          use_model=True, share_evidence=True, timeout=10)
+                    try:
+                        self.assertTrue(entered.wait(3))
+                        request(server, 'revoke', job=job, scope=str(self.collection), permission='inspect')
+                    finally:
+                        release.set()
+                    result = pending.result(5)
+        self.assertEqual([path for _, path, _ in calls], ['/api/tags', '/api/chat'])
+        self.assertEqual(result['state'], 'STALE_CONTEXT')
+        self.assertEqual((result['metrics']['level'], result['metrics']['calls']), (1, 1))
+        self.assertNotIn('council', result)
+        self.assertNotIn('evidence', result)
+
+    def test_authority_guidance_stays_with_the_human_even_with_a_scoped_objection(self):
+        def chat(body):
+            return envelope(body['model'], {**contribution('objection', ('history-0',)),
+                                           'conclusion': 'The prior "interface layout" points to a different design.'})
+
+        with ollama_fixture(chat=chat) as (port, calls):
+            with running_navigator(self.base / 'Checkpoint', LocalModels(port=port)) as server:
+                job = select(server, self.collection)
+                inspect(server, job)
+                import_history(server, job, self.exports, self.pack)
+                authority = converse(server, 'What permissions do you have?', job=job, use_model=True)
+                self.assertEqual(authority['metrics']['calls'], 0)
+                self.assertFalse(authority['authority']['source_mutation_via_conversation'])
+                self.assertIn('fresh Windows-account approval', authority['authority']['approval'])
+                result = converse(server, 'Recommend whether to delete the draft about "CareRail".', job=job,
+                                  use_model=True, share_evidence=True)
+        self.assertEqual([path for _, path, _ in calls], ['/api/tags', '/api/chat'])
+        assessment = result['council']['assessment']
+        self.assertFalse(assessment['authority'])
+        self.assertTrue(assessment['human_review_required'])
+        continuation = assessment['continuation']
+        self.assertEqual((continuation['decision'], continuation['reason']), ('stopped', 'human_authority_review'))
+        self.assertIn('fresh Windows-account approval', continuation['next_review'])
+
     def test_held_archives_and_inference_disabled_images_are_not_sent_to_models(self):
         def chat(body):
             return envelope(body['model'], {'kind': 'no_addition', 'conclusion': '', 'evidence_ids': []})
@@ -90,7 +274,7 @@ class ConversationBoundaryTests(unittest.TestCase):
                 self.assertTrue(permitted['results'])
                 protected_image = self.collection / 'Beat Character Sheet.png'
                 policy = self.base / 'Policy.sqlite'
-                with sqlite3.connect(policy) as conn:
+                with closing(sqlite3.connect(policy)) as conn, conn:
                     conn.executescript('CREATE TABLE media_source_holds(scope TEXT); CREATE TABLE perception_policy_events(id INTEGER PRIMARY KEY,scope TEXT,mode TEXT,permissions_json TEXT,purposes_json TEXT);')
                     conn.execute('INSERT INTO media_source_holds VALUES(?)', (str(self.exports),))
                     conn.execute('INSERT INTO perception_policy_events VALUES(1,?,?,?,?)',
@@ -139,7 +323,7 @@ class ConversationBoundaryTests(unittest.TestCase):
                 self.assertEqual(len(status['files']), 3)
                 self.assertTrue(all(row['status'] == 'complete' for row in status['files']))
                 policy = self.base / 'Holds.sqlite'
-                with sqlite3.connect(policy) as conn:
+                with closing(sqlite3.connect(policy)) as conn, conn:
                     conn.execute('CREATE TABLE media_source_holds(scope TEXT)')
                     conn.execute('INSERT INTO media_source_holds VALUES(?)', (str(self.exports),))
                 server.workbench.policy.hold_store = policy
@@ -164,7 +348,7 @@ class ConversationBoundaryTests(unittest.TestCase):
                     preview = server.workbench.select(None, job_id=job, link_id=row['id'])
                     server.workbench.approve(preview['ticket'])
                 policy = self.base / 'Holds.sqlite'
-                with sqlite3.connect(policy) as conn:
+                with closing(sqlite3.connect(policy)) as conn, conn:
                     conn.execute('CREATE TABLE media_source_holds(scope TEXT)')
                     conn.execute('INSERT INTO media_source_holds VALUES(?)', (str(target),))
                 server.workbench.policy.hold_store = policy

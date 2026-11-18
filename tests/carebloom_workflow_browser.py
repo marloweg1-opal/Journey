@@ -15,6 +15,18 @@ def snapshot(paths):
     return {str(path): (sha256(path.read_bytes()).hexdigest(), path.stat().st_mtime_ns) for path in paths}
 
 
+def ask_in_talk(page, instruction, expected):
+    page.locator('.journey-tools').get_by_role('button', name='Talk', exact=True).click()
+    page.get_by_label('Message', exact=True).fill(instruction)
+    page.get_by_role('button', name='Ask Journey', exact=True).click()
+    result = page.locator('#stewardship-results')
+    expect(result).to_contain_text(expected, timeout=30000)
+    expect(page.locator('#stewardship-status')).to_have_text('Completed.')
+    metrics = result.locator('details').filter(has=page.get_by_text('Request metrics', exact=True))
+    metrics.get_by_text('Request metrics', exact=True).click()
+    expect(metrics.get_by_text('calls', exact=True).locator('xpath=following-sibling::dd[1]')).to_have_text('0')
+
+
 def exercise(browser, runtime, base):
     collection, exports, pack = make_demo(base / 'Demonstration')
     protected = [*collection.iterdir(), *exports.iterdir(), pack]
@@ -25,6 +37,8 @@ def exercise(browser, runtime, base):
         errors = []
         page.on('pageerror', lambda error: errors.append(str(error)))
         page.goto(url)
+        ask_in_talk(page, 'Who are you?', 'Journey.Navigator')
+        page.locator('.journey-tools').get_by_role('button', name='Inspect', exact=True).click()
         page.get_by_label('Keep a local checkpoint', exact=False).check()
         page.get_by_label('Suggest names and draft a plan', exact=True).check()
         page.get_by_label('Folder or shortcut path').fill(str(collection))
@@ -42,6 +56,16 @@ def exercise(browser, runtime, base):
         page.get_by_role('button', name='Preview archive selection', exact=True).click()
         page.get_by_role('button', name='Import these reviewed exports', exact=True).click()
         expect(page.locator('#history-status')).to_contain_text('2 exports indexed · 3 distinct messages', timeout=30000)
+        ask_in_talk(page, 'Inspect the selected folder.', 'current inventory and analysis queue')
+        local_ai = page.get_by_label('Allow local AI when needed')
+        local_ai.check()
+        page.get_by_label('Include scoped evidence excerpts', exact=False).check()
+        ask_in_talk(page, 'Find Moonstone', 'Moonstone Character Sheet.png')
+        expect(local_ai).not_to_be_checked()
+        expect(page.get_by_label('Include scoped evidence excerpts', exact=False)).to_be_disabled()
+        ask_in_talk(page, 'Search history for CareRail', 'CareRail interface layout')
+        expect(page.locator('#stewardship-results')).to_contain_text('conversations-00')
+        page.locator('.journey-tools').get_by_role('button', name='Inspect', exact=True).click()
         expect(page.locator('#collection-flow-next')).to_have_text('Review interpretations')
         page.locator('#collection-flow-next').click()
         for filename, content in [('Beat Character Sheet.png', 'Musicstone'),
@@ -86,6 +110,7 @@ def exercise(browser, runtime, base):
         page.get_by_role('button', name='Open saved inspection', exact=True).click()
         expect(page.locator('[data-count="analyzed"]')).to_have_text('10')
         expect(page.locator('#collection-flow-next')).to_have_text('Review interpretations', timeout=30000)
+        ask_in_talk(page, 'Search history for CareRail', 'CareRail interface layout')
         page.close()
     assert snapshot(protected) == before
     print('CareBloomOS guided workflow passed: select, inspect, explicit pack/history grants, contextual review, virtual organization, saved preview and checkpoint reopening; source hashes and mtimes preserved.')
