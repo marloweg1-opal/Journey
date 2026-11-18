@@ -272,6 +272,9 @@ class ConversationBoundaryTests(unittest.TestCase):
                 import_history(server, job, self.exports, self.pack)
                 permitted = converse(server, 'Search history for CareRail', job=job)
                 self.assertTrue(permitted['results'])
+                self.assertEqual(permitted['history']['indexed_files'], 2)
+                self.assertEqual(permitted['history']['unique_messages'], 3)
+                self.assertTrue(permitted['history']['last_indexed'])
                 protected_image = self.collection / 'Beat Character Sheet.png'
                 policy = self.base / 'Policy.sqlite'
                 with closing(sqlite3.connect(policy)) as conn, conn:
@@ -283,13 +286,24 @@ class ConversationBoundaryTests(unittest.TestCase):
                 server.workbench.policy.perception_store = policy
                 blocked = converse(server, 'Search history for CareRail', job=job)
                 self.assertEqual(blocked['results'], [])
+                self.assertEqual(blocked['history'], {'indexed_files': 0, 'unique_messages': 0, 'last_indexed': None,
+                                                      'text_index': {'indexed_messages': 0, 'truncated_records': 0}})
+                coverage = converse(server, 'Show history coverage', job=job)
+                self.assertEqual(coverage['history'], blocked['history'])
+                knowledge = converse(server, 'What do you know?', job=job)['knowledge']
+                self.assertEqual((knowledge['history_state'], knowledge['history_files'], knowledge['history_messages']),
+                                 ('no_indexed_history', 0, 0))
                 result = converse(server, 'Ask Phi about "CareRail".', job=job, use_model=True, share_evidence=True)
                 self.assertEqual(result['state'], 'REVIEW_REQUIRED')
                 body = next(body for method, _, body in calls if method == 'POST')
                 context = json.loads(body['messages'][-1]['content'])['context']
                 serialized = json.dumps(context)
-                for hidden in ('interface layout', 'conversations-001.json', 'conversations-002.json', protected_image.name):
+                for hidden in ('interface layout', 'conversations-001.json', 'conversations-002.json',
+                               'Corestone is Opalstone', 'incremental', 'monitor', protected_image.name):
+                    self.assertNotIn(hidden, json.dumps(blocked))
                     self.assertNotIn(hidden, serialized)
+                self.assertEqual(context['knowledge'], knowledge)
+                self.assertEqual(next(row['value'] for row in context['evidence'] if row['id'] == 'knowledge'), knowledge)
                 self.assertFalse(any(row['kind'] == 'imported_history_excerpt' for row in context['evidence']))
 
     def test_session_only_duplicate_status_and_unavailable_discovery_are_explicit(self):
@@ -305,7 +319,10 @@ class ConversationBoundaryTests(unittest.TestCase):
                 self.assertEqual(result['metrics']['tag_calls'], 1)
 
     def test_held_overlapping_sources_do_not_hide_authorized_history_matches(self):
-        with ollama_fixture(tags=[], chat=None) as (port, _):
+        def chat(body):
+            return envelope(body['model'], contribution('no_addition', ()))
+
+        with ollama_fixture(chat=chat) as (port, calls):
             with running_navigator(self.base / 'Checkpoint', LocalModels(port=port)) as server:
                 job = select(server, self.collection)
                 inspect(server, job)
@@ -322,6 +339,8 @@ class ConversationBoundaryTests(unittest.TestCase):
                     sleep(.02)
                 self.assertEqual(len(status['files']), 3)
                 self.assertTrue(all(row['status'] == 'complete' for row in status['files']))
+                coverage = converse(server, 'Show history coverage', job=job)['history']
+                self.assertEqual((coverage['indexed_files'], coverage['unique_messages']), (3, 3))
                 policy = self.base / 'Holds.sqlite'
                 with closing(sqlite3.connect(policy)) as conn, conn:
                     conn.execute('CREATE TABLE media_source_holds(scope TEXT)')
@@ -330,6 +349,16 @@ class ConversationBoundaryTests(unittest.TestCase):
                 result = converse(server, 'Search history for CareRail', job=job)
                 self.assertTrue(result['results'])
                 self.assertTrue(all(row['name'] == allowed.name for row in result['results']))
+                coverage = result['history']
+                self.assertEqual((coverage['indexed_files'], coverage['unique_messages']), (1, 1))
+                self.assertEqual(coverage['text_index'], {'indexed_messages': 1, 'truncated_records': 0})
+                self.assertNotIn(allowed.name, json.dumps(coverage))
+                converse(server, 'Advise on local history coverage.', job=job, use_model=True)
+                body = next(body for method, _, body in calls if method == 'POST')
+                context = json.loads(body['messages'][-1]['content'])['context']
+                self.assertEqual((context['knowledge']['history_files'], context['knowledge']['history_messages']), (1, 1))
+                self.assertFalse(any(row['kind'] == 'imported_history_excerpt' for row in context['evidence']))
+                self.assertNotIn(allowed.name, json.dumps(context))
                 with server.lock:
                     claims = server.workbench.history.find(job, 'render_17')
                 self.assertTrue(claims)

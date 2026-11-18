@@ -129,7 +129,7 @@ class Capabilities:
             except ProtectedPath:
                 permissions = {"scopes": [], "reason": "Inspection permission is inactive or the source changed."}
             if active and self.app.project_registry.profile(job):
-                history = self.app.history.status(job)
+                history = self.app.history.read_coverage(job)
         authority = {"inspection": "selected_scope_only" if active else "not_granted",
                      "source_mutation_via_conversation": False,
                      "approval": "Separate exact reviewed batch and fresh Windows-account approval; existing holds still apply.",
@@ -156,7 +156,7 @@ class Capabilities:
         knowledge = {"source": "This runtime's selected inspection and explicitly imported local history.",
                      "retained_checkpoint": bool(self.app.retains), "conversation_transcript": "not_saved",
                      "history_state": "indexed" if history and history["unique_messages"] else "no_indexed_history",
-                     "history_files": len(history["files"]) if history else 0,
+                     "history_files": history["indexed_files"] if history else 0,
                      "history_messages": history["unique_messages"] if history else 0,
                      "truncated_history_records": history["text_index"]["truncated_records"] if history else 0,
                      "project_profile": bool(active and self.app.project_registry.profile(job)),
@@ -274,9 +274,9 @@ class Capabilities:
         if intent == "history":
             if not self.app.project_registry.profile(job):
                 return self._response(intent, "No project profile is active for local historical evidence. Work's access to archives does not import them into Journey.", state="HISTORY_NOT_CONFIGURED", evidence=evidence)
-            status = self.app.history.status(job)
+            status = self.app.history.read_coverage(job)
             results = self.app.history.text_search(job, term) if term else []
-            return self._response(intent, f"Journey has {status['unique_messages']} indexed messages in this project. Conversation dates and import dates are reported separately.", history=status, results=results, evidence=evidence)
+            return self._response(intent, f"Journey has {status['unique_messages']} readable indexed messages in this project. Conversation dates and import dates are reported separately.", history=status, results=results, evidence=evidence)
         if intent == "duplicates":
             if not self.app.retains:
                 return self._response(intent, "Keep a local checkpoint before using Duplicate Patrol.", state="NEEDS_CHECKPOINT")

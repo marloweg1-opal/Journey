@@ -4,6 +4,7 @@ from hashlib import sha256
 import json
 import os
 from pathlib import Path
+import re
 import tempfile
 
 from playwright.sync_api import expect, sync_playwright
@@ -32,6 +33,7 @@ def exercise(browser, runtime, base):
     protected = [*collection.iterdir(), *exports.iterdir(), pack]
     before = snapshot(protected)
     data = base / 'Review checkpoint'
+    history_excerpt = re.compile(r'`render_17\.png` is a (?:\[CareRail\]|CareRail) interface layout\.')
     with running_navigator(runtime, data, base) as url:
         page = browser.new_page(viewport={'width': 1100, 'height': 900})
         errors = []
@@ -63,8 +65,11 @@ def exercise(browser, runtime, base):
         ask_in_talk(page, 'Find Moonstone', 'Moonstone Character Sheet.png')
         expect(local_ai).not_to_be_checked()
         expect(page.get_by_label('Include scoped evidence excerpts', exact=False)).to_be_disabled()
-        ask_in_talk(page, 'Search history for CareRail', 'CareRail interface layout')
-        expect(page.locator('#stewardship-results')).to_contain_text('conversations-00')
+        ask_in_talk(page, 'Search history for CareRail', history_excerpt)
+        match = page.locator('#stewardship-results .inspection-entry').filter(
+            has=page.get_by_role('paragraph').filter(has_text=history_excerpt))
+        source = match.get_by_text('source', exact=True).locator('xpath=following-sibling::dd[1]')
+        expect(source).to_have_text(re.compile(r'^conversations-00[12]\.json$'))
         page.locator('.journey-tools').get_by_role('button', name='Inspect', exact=True).click()
         expect(page.locator('#collection-flow-next')).to_have_text('Review interpretations')
         page.locator('#collection-flow-next').click()
@@ -110,7 +115,7 @@ def exercise(browser, runtime, base):
         page.get_by_role('button', name='Open saved inspection', exact=True).click()
         expect(page.locator('[data-count="analyzed"]')).to_have_text('10')
         expect(page.locator('#collection-flow-next')).to_have_text('Review interpretations', timeout=30000)
-        ask_in_talk(page, 'Search history for CareRail', 'CareRail interface layout')
+        ask_in_talk(page, 'Search history for CareRail', history_excerpt)
         page.close()
     assert snapshot(protected) == before
     print('CareBloomOS guided workflow passed: select, inspect, explicit pack/history grants, contextual review, virtual organization, saved preview and checkpoint reopening; source hashes and mtimes preserved.')

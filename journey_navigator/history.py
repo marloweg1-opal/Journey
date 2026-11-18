@@ -700,6 +700,23 @@ class ArchiveHistory:
             allowed.append(row['id'])
         return allowed
 
+    def read_coverage(self, job):
+        """Report indexed coverage from currently readable archives for this inspection."""
+        _, profile = self.context(job)
+        sources = self.readable_sources(job, self.project(profile))
+        unique, indexed, truncated, finished = 0, 0, 0, None
+        if sources:
+            marks = ','.join('?' for _ in sources)
+            unique, = self.conn.execute(f"SELECT count(DISTINCT message) FROM history_messages WHERE source IN ({marks})",
+                                        sources).fetchone()
+            indexed, truncated = self.conn.execute(f"""SELECT count(DISTINCT message),
+                count(DISTINCT CASE WHEN truncated<>0 THEN message END) FROM history_text WHERE source IN ({marks})""",
+                sources).fetchone()
+            finished, = self.conn.execute(f"SELECT max(finished) FROM history_sources WHERE id IN ({marks})",
+                                          sources).fetchone()
+        return {"indexed_files": len(sources), "unique_messages": unique, "last_indexed": finished,
+                "text_index": {"indexed_messages": indexed, "truncated_records": truncated}}
+
     def text_search(self, job, query, limit=12):
         _, profile = self.context(job)
         sources = self.readable_sources(job, self.project(profile))
