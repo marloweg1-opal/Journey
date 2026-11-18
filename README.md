@@ -193,3 +193,5 @@ Created and maintained by **Junior Gilmore**. Developed with material collaborat
 **Journey helps the system remain in relation without pretending that relation grants authority.**
 
 Development candidate: [Duplicate Patrol, conversation search and canon-preserving enrichment](docs/DUPLICATE_PATROL.md). The isolated housekeeping demonstration and its execution safeguards are documented separately from production installation.
+
+Development candidate: [Talk to Journey through its existing scoped capabilities](docs/CONVERSATION_INTEGRATION.md). Includes deterministic inspection/search/history access and optional bounded local advisory perspectives. Fixture acceptance does not establish live HEXSEED operation or real-model quality.

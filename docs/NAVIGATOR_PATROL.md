@@ -138,14 +138,9 @@ rule blocks a proposed rename.
 
 ### Review a retirement
 
-1. Inspect the project and open a saved **Destination → Review**. Open
-   **Talk to Journey about retirement** and enter one instruction naming the
+1. Inspect the project, open its saved Destination, then open **Talk**. Enter one instruction naming the
    design family. A quoted family makes the intended scope clear.
-2. **Interpret this instruction with local Qwen3** sends only that live prompt
-   to the existing Ollama service at loopback. It returns a candidate family
-   phrase. Navigator keeps the source inventory, history, paths, and execution
-   authority on its side of the interface. Explicit retirement instructions
-   also work with the built-in parser. Draft instructions stay in the session.
+2. Explicit retirement instructions work with the built-in parser. **Allow local AI when needed** permits a bounded interpretation through the existing loopback service when parsing is insufficient. The default model context contains the live instruction and capability/coverage metadata. Retained filenames or history excerpts require the separate sharing choice. Navigator retains execution authority and validates model output. Draft instructions stay in the session.
 3. Optionally enable **Read scoped documentation and configuration references**.
    Review candidate files, exact copies at other paths, historical records,
    existing protections, and dependency evidence. A limited or empty search

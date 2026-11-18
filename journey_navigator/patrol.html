@@ -30,25 +30,34 @@
           <h3>Work and remaining decisions</h3><div id="patrol-work"></div>
         </div>
       </section>
+      <section class="panel" data-panel="talk" aria-label="Talk">
+        <div class="inspection-card" id="stewardship">
+            <h2>Talk to Journey</h2>
+            <div class="inspection-bar" role="group" aria-label="Example questions and requests">
+              <button type="button" data-talk-example>Who are you?</button>
+              <button type="button" data-talk-example>What can you do?</button>
+              <button type="button" data-talk-example>What permission do you have?</button>
+              <button type="button" data-talk-example>Inspect the selected folder.</button>
+              <button type="button" data-talk-example>Search history for Heartstone</button>
+              <button type="button" data-talk-example>Ask the Council to review this inspection.</button>
+            </div>
+            <form id="stewardship-plan">
+              <label>Message <textarea name="instruction" rows="3" maxlength="2000" required></textarea></label>
+              <div class="inspection-options">
+                <label><input type="checkbox" name="use_model"> Allow local AI when needed</label>
+                <label><input type="checkbox" name="share_evidence" disabled> Include scoped evidence excerpts in this local consultation</label>
+                <label><input type="checkbox" name="read_references"> Read scoped documentation and configuration references</label>
+              </div>
+              <button type="submit">Ask Journey</button>
+            </form>
+            <p id="stewardship-status" role="status" aria-live="polite"></p>
+            <div id="stewardship-results"></div>
+        </div>
+      </section>
       <section class="panel" data-panel="review" aria-label="Review">
         <div class="inspection-card"><h2>Review what changes the outcome</h2>
           <p>Inspect the evidence and select the images a decision applies to. One correction can address a related group.</p>
           <div id="patrol-questions"></div>
-          <details id="stewardship">
-            <summary>Talk to Journey about your work</summary>
-            <p>Ask to find a term, organize the selected scope, or retire a named design. Journey will show the evidence or prepare a review.</p>
-            <form id="stewardship-plan">
-              <label>Stewardship instruction <textarea name="instruction" rows="3" maxlength="2000" required placeholder='Retire “Design Family” assets.'></textarea></label>
-              <div class="inspection-options">
-                <label><input type="checkbox" name="use_model"> Interpret this instruction with local Qwen3</label>
-                <label><input type="checkbox" name="read_references"> Read scoped documentation and configuration references</label>
-              </div>
-              <p>Local Qwen3 can interpret this one instruction. Archive contents stay in Journey's local index. No model or additional agent is required for Find, Organize, or supported retirement commands.</p>
-              <button type="submit">Inspect instruction</button>
-            </form>
-            <p id="stewardship-status" role="status" aria-live="polite"></p>
-            <div id="stewardship-results"></div>
-          </details>
           <details><summary>Classify selected assets together</summary><div id="patrol-review-images" class="inspection-gallery"></div>
             <form id="patrol-answer"><div class="inspection-bar">
               <label>Decision <select name="decision"><option value="confirm">Confirm identity</option><option value="reject">Reject identity</option><option value="purpose">Record purpose</option></select></label>

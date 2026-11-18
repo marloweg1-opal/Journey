@@ -12,6 +12,7 @@ from uuid import uuid4
 from core.file_paths import safe_metadata, signature
 from core.project_registry import _claims, _matches, _messages, _source, _texts, _words, asset_name, key_for
 from journey_navigator.context import asset_families
+from journey_navigator.links import ProtectedPath
 from journey_planner.catalog import absolute_path, check_local_drive
 
 
@@ -687,21 +688,41 @@ class ArchiveHistory:
                 " " + _words(item["name"]) + " " in text or
                 stem.startswith(_words(item["value"]["entity"]) + " ") or stem == _words(item["value"]["entity"])]
 
+    def readable_sources(self, job, project):
+        """Apply current origin policy before search ranking, deduplication or limits."""
+        self.app.policy.refresh()
+        allowed = []
+        for row in self.conn.execute("SELECT id,path FROM history_sources WHERE job=? AND project=? AND status='complete'", (job, project)):
+            try:
+                self.app.project_registry._archive_access(Path(row['path']))
+            except ProtectedPath:
+                continue
+            allowed.append(row['id'])
+        return allowed
+
     def text_search(self, job, query, limit=12):
         _, profile = self.context(job)
+        sources = self.readable_sources(job, self.project(profile))
         words = re.findall(r"[^\W_]+", query[:200], re.UNICODE)[:12]
-        if not words:
+        if not words or not sources:
             return []
         expression = ' AND '.join('"' + word + '"' for word in words)
-        rows = self.conn.execute("""SELECT t.message,t.authored,t.imported,t.role,t.conversation,t.title,s.name,
+        marks = ','.join('?' for _ in sources)
+        rows = self.conn.execute(f"""SELECT t.source,t.message,t.authored,t.imported,t.role,t.conversation,t.title,s.name,s.path AS source_path,
             snippet(history_fts,3,'[',']',' … ',24) AS excerpt,t.truncated
             FROM history_fts JOIN history_text t ON t.source=history_fts.source AND t.message=history_fts.message
             JOIN history_sources s ON s.id=t.source WHERE history_fts MATCH ? AND s.job=? AND s.project=?
-            AND s.status='complete' ORDER BY t.authored DESC LIMIT ?""",
-            (expression,job,self.project(profile),min(limit,50)*8))
+            AND s.status='complete' AND s.id IN ({marks}) ORDER BY t.authored DESC LIMIT ?""",
+            (expression,job,self.project(profile),*sources,min(limit,50)*8))
         result=[];seen=set()
         for row in rows:
-            item=dict(row);key=(item['message'],item['excerpt'])
+            item=dict(row)
+            source_path = item.pop('source_path')
+            try:
+                self.app.project_registry._archive_access(Path(source_path))
+            except ProtectedPath:
+                continue
+            key=(item['message'],item['excerpt'])
             if key not in seen:
                 result.append(item);seen.add(key)
             if len(result)>=min(limit,50):break
@@ -712,11 +733,22 @@ class ArchiveHistory:
         terms = search_words(query[:200])
         if not profile or not terms:
             return []
-        rows = self.conn.execute("""SELECT c.record FROM history_claims c JOIN history_sources s ON s.id=c.source
+        sources = self.readable_sources(job, self.project(profile))
+        if not sources:
+            return []
+        marks = ','.join('?' for _ in sources)
+        rows = self.conn.execute(f"""SELECT c.record,s.path AS source_path FROM history_claims c JOIN history_sources s ON s.id=c.source
             WHERE c.job=? AND c.project=? AND s.status='complete' AND c.name_key<>'' AND
-            (instr(c.name_key,?)>0 OR instr(c.match_key,?)>0) GROUP BY c.name_key,c.kind
-            ORDER BY c.name_key LIMIT ?""", (job, self.project(profile), query[:200].casefold(), terms, limit))
-        return [json.loads(row[0]) for row in rows]
+            (instr(c.name_key,?)>0 OR instr(c.match_key,?)>0) AND s.id IN ({marks}) GROUP BY c.name_key,c.kind
+            ORDER BY c.name_key LIMIT ?""", (job, self.project(profile), query[:200].casefold(), terms, *sources, limit))
+        result = []
+        for row in rows:
+            try:
+                self.app.project_registry._archive_access(Path(row['source_path']))
+            except ProtectedPath:
+                continue
+            result.append(json.loads(row['record']))
+        return result
 
     def status(self, job):
         current, profile = self.context(job)
