@@ -305,6 +305,33 @@ class ConversationIntegrationTests(unittest.TestCase):
                 self.assertNotIn("evidence", result)
                 self.assertEqual(self.models.sends[before:], [("review", "Qwen" if ask_council else "Phi")])
 
+    def test_retirement_review_reaches_talk_with_candidates_references_and_empty_results(self):
+        asset = self.other / "Heartfield Desk.png"
+        history = self.other / "Heartfield Desk history.md"
+        copyfile(self.collection / ASSET, asset)
+        history.write_text("Earlier design: Heartfield Desk.png", encoding="utf-8")
+        before = snapshot(self.other)
+        with self.navigator() as server:
+            job = select(server, self.other)
+            inspect(server, job)
+            key = destination(server, job)
+            prompt = "Anything containing “Heartfield Desk” is 92 Carecycles past its expiration date. Retire it from active use."
+            review = converse(server, prompt, job=job, destination=key, read_references=True)
+            self.assertEqual((review["intent"], review["state"]), ("retire", "AWAITING_REVIEW"))
+            self.assertTrue(review["message"])
+            self.assertTrue(review["binding"])
+            self.assertEqual({Path(row["path"]).name: row["group"] for row in review["entries"]},
+                             {asset.name: "asset_candidate", history.name: "historical_reference"})
+            self.assertEqual(review["dependencies"]["state"], "CHECKED_WITHIN_SCOPE")
+            empty = converse(server, "Retire “Absent Design” from active use.", job=job, destination=key)
+            self.assertEqual(empty["state"], "INSUFFICIENT_EVIDENCE")
+            self.assertTrue(empty["message"])
+            self.assertEqual(empty["entries"], [])
+            self.assertEqual(request(server, "patrol-status", destination=key)["batches"], [])
+        self.assertEqual(self.models.calls, [])
+        self.assertEqual(self.approval.calls, [])
+        self.assertEqual(snapshot(self.other), before)
+
     def test_negated_and_hypothetical_requests_create_no_work_or_retirement_plan(self):
         before = snapshot(self.fixture)
         with self.navigator() as server:

@@ -262,7 +262,9 @@ class Stewardship:
             self.plans.pop(next(iter(self.plans)))
         self.plans[binding] = {"destination": destination, "job": job["id"], "basis": basis,
                                "result": result, "at": monotonic(), "read_references": read_references}
-        return result | {"binding": binding}
+        reason = ("Review the matching assets, historical references and dependency evidence before selecting a retirement."
+                  if entries or archives else "No matching records are available for retirement review in this scope.")
+        return result | {"binding": binding, "reason": reason}
 
     def _visible_copy(self, path):
         try:
