@@ -23,10 +23,13 @@ from journey_vision.observe import IMAGE_FORMATS
 MAX_CANDIDATES = 60
 MAX_SELECTION = 20
 PLAN_SECONDS = 600
-REFERENCE_ENTRIES = 1800
-REFERENCE_FILES = 60
-REFERENCE_BYTES = 512_000
-REFERENCE_SECONDS = 2
+# Keep the reference check bounded, but able to traverse a medium-sized
+# image-heavy collection (including CareBloomOS's 5,360 scanned files).
+# Exceeding any bound still reports INSUFFICIENT_EVIDENCE and blocks removal.
+REFERENCE_ENTRIES = 20000
+REFERENCE_FILES = 300
+REFERENCE_BYTES = 8_000_000
+REFERENCE_SECONDS = 20
 DOCS = frozenset({".md", ".txt"})
 HISTORY = ("history", "historical", "reference", "comparison", "archive", "archived", "retired", "quarantine")
 SCHEMA = """
