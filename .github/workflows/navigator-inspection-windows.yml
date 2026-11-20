@@ -42,6 +42,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Policy store diagnostics failed.' }
           python -B -m unittest discover -s tests -p 'test_duplicate_policy_schema.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Production protection schema compatibility failed.' }
+          python -B -m unittest discover -s tests -p 'test_large_scope_references.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Large-scope reference scan regression failed.' }
       - name: Test conversation integration and advisory boundaries
         run: |
           python -B -m unittest discover -s tests -p 'test_conversation_providers.py' -v
