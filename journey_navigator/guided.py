@@ -118,8 +118,8 @@ class Guided:
 
     def require_unprotected(self, path):
         registry = self.workbench.policy.perception_store
-        for query, table in (("SELECT path FROM protected_paths", 'protected_paths'),
-                             ("SELECT canonical_path FROM file_dependents WHERE active=1", 'file_dependents')):
+        for query, table in (("SELECT path_prefix FROM protected_paths", 'protected_paths'),
+                             ("SELECT canonical_path FROM file_dependents WHERE status='active'", 'file_dependents')):
             for protected, in self.workbench.policy._rows(registry, query, table, optional_table=True):
                 if path == Path(protected) or (table == 'protected_paths' and path.is_relative_to(protected)):
                     raise PermissionError('An existing Journey protection or active dependency blocks this path.')

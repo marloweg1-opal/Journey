@@ -5,14 +5,17 @@
   const notify = value => { $("inspect-notice").textContent = value; const alert=$("journey-alert"); if (alert) alert.textContent=value; };
   let destination = "", current = null, offset = 0, polling = false, collection = "", questionMembers = null, batchId = "";
   let imageRequest=0, statusRequest=0, renderedSnapshot='', pollAgain=false;
-  let stewardshipReview = null, retirementDecision = "";
+  let stewardshipScope = null, stewardshipReview = null, retirementDecision = "", talkRequest = null;
+  let evidenceScope = null;
+  let destinationSave = null, destinationSelection = 0;
+  const destinationJobs = new Map();
   const selections={'.patrol-asset':new Set(),'.patrol-name':new Set()};
   const clearSelections=()=>Object.values(selections).forEach(values=>values.clear());
   const client = crypto.randomUUID();
   const toolbar = document.createElement("nav");
   toolbar.className = "inspection-bar journey-tools";
   toolbar.setAttribute("aria-label", "Journey tools");
-  toolbar.innerHTML = ["Destination", "Inspect", "Patrol", "Find", "Review", "Manage"].map(name =>
+  toolbar.innerHTML = ["Talk", "Destination", "Inspect", "Patrol", "Find", "Review", "Manage"].map(name =>
     `<button type="button" data-select="${name.toLowerCase()}">${name}</button>`).join("");
   document.querySelector(".quick").after(toolbar);
   const alert=document.createElement('p'); alert.id='journey-alert'; alert.setAttribute('role','status'); alert.setAttribute('aria-live','polite'); toolbar.after(alert);
@@ -42,46 +45,164 @@
     }
   });
   const failure = error => notify(error.error || error.message || String(error));
+  const talkForm = $("stewardship-plan");
+  const talkSubmit = talkForm.querySelector('button[type="submit"]');
   const stewardshipStatus = value => { $("stewardship-status").textContent = value; };
-  const readable = value => String(value || "").replaceAll("_", " ").toLowerCase();
+  const readable = value => String(value ?? "").replaceAll("_", " ").toLowerCase();
   const retirementAssets = () => [...document.querySelectorAll(".stewardship-asset:checked")].map(input => Number(input.value));
+  const selectedJob = () => sessionStorage.getItem("journey-current-inspection") || null;
+  function updateTalkSubmit() {
+    talkSubmit.disabled = Boolean(talkRequest || (destinationSave && destinationSave.job === selectedJob()));
+  }
+  const talkDestination = job => job && destinationJobs.get(destination) === job ? destination : null;
+  const matchesTalkSelection = scope => scope.job === selectedJob() && scope.destination === talkDestination(scope.job);
+  const isTalkCurrent = scope => scope === stewardshipScope && matchesTalkSelection(scope);
 
-  function resetStewardship() {
+  function resetStewardship(message = "") {
+    stewardshipScope = null;
     stewardshipReview = null;
     retirementDecision = "";
+    talkRequest = null;
+    updateTalkSubmit();
     $("stewardship-results").replaceChildren();
-    stewardshipStatus("");
+    stewardshipStatus(message);
   }
 
-  function showStewardship(result) {
-    const slot = $("stewardship-results");
-    if (!result.binding) {
-      stewardshipStatus(`${readable(result.state)} · ${result.reason} · Local interpreter ${readable(result.provider)}`);
-      if (result.intent === "find") {
-        slot.innerHTML = result.results.map(item => `<p><strong>${esc(item.title)}</strong> · ${esc(item.group)}<br>
-          <small>${esc(item.details)}</small></p>`).join("") || "<p>No references or local files matched inside the selected inspection.</p>";
-      } else if (result.intent === "organize") {
-        slot.innerHTML = `<p>${esc(result.scope)}</p><ol>${result.steps.map(step => `<li>${esc(step)}</li>`).join("")}</ol>
-          <p>Patrol will update virtual groups and report review decisions. Physical changes use a separate exact batch.</p>
-          <button type="button" id="start-goal-patrol">Start this scoped plan</button>`;
-        $("start-goal-patrol").onclick = async () => {
-          try { await api("patrol-begin", {destination}); setMode("patrol"); poll(); }
-          catch (error) { failure(error); }
-        };
-      } else slot.replaceChildren();
-      return;
+  function clearStaleTalk() {
+    updateTalkSubmit();
+    if (evidenceScope && !matchesTalkSelection(evidenceScope)) {
+      evidenceScope = null;
+      talkForm.elements.share_evidence.checked = false;
     }
+    if (stewardshipScope && !isTalkCurrent(stewardshipScope)) {
+      resetStewardship("Selection changed. Ask Journey again for the current scope.");
+    }
+  }
+
+  function chooseDestination(id) {
+    destinationSelection++;
+    if (destination === id) return;
+    destination = id;
+    evidenceScope = null;
+    talkForm.elements.share_evidence.checked = false;
+    if (stewardshipScope) resetStewardship("Selection changed. Ask Journey again for the current scope.");
+  }
+
+  function addTalkText(parent, tag, value) {
+    const element = document.createElement(tag);
+    if (value != null) element.textContent = value;
+    parent.append(element);
+    return element;
+  }
+
+  function addTalkValue(parent, value) {
+    if (Array.isArray(value)) {
+      const items = addTalkText(parent, "ul");
+      for (const item of value) addTalkValue(addTalkText(items, "li"), item);
+    } else if (value && typeof value === "object") {
+      const fields = addTalkText(parent, "dl");
+      for (const [label, item] of Object.entries(value)) {
+        addTalkText(fields, "dt", readable(label));
+        addTalkValue(addTalkText(fields, "dd"), item);
+      }
+    } else {
+      parent.append(document.createTextNode(value == null ? "—" : String(value)));
+    }
+  }
+
+  function addTalkSection(parent, heading, value, collapsed = false) {
+    if (value == null || (typeof value === "object" && !Object.keys(value).length)) return;
+    const section = addTalkText(parent, collapsed ? "details" : "div");
+    section.className = "inspection-entry";
+    addTalkText(section, collapsed ? "summary" : "h3", heading);
+    addTalkValue(section, value);
+  }
+
+  function showStewardship(result, scope) {
+    const slot = $("stewardship-results");
+    const state = readable(result.state);
+    stewardshipStatus(state === "complete" || state === "completed" ? "Completed." :
+      state.charAt(0).toUpperCase() + state.slice(1) + ".");
+    if (result.message) addTalkText(slot, "p", result.message);
+    if (result.reason && result.reason !== result.message) addTalkText(slot, "p", result.reason);
+    addTalkSection(slot, "Identity", result.identity);
+    addTalkSection(slot, "Authority", result.authority);
+    addTalkSection(slot, "Knowledge", result.knowledge);
+    addTalkSection(slot, "Inspection coverage", result.summary, true);
+    addTalkSection(slot, "History coverage", result.history, true);
+    addTalkSection(slot, "Duplicate audit", result.audit, true);
+    addTalkSection(slot, "Local models", result.models);
+    if (result.provider && typeof result.provider === "object") addTalkSection(slot, "Local interpretation", result.provider);
+    if (result.capabilities?.length) {
+      addTalkText(slot, "h3", "Capabilities");
+      for (const {id, ...capability} of result.capabilities) addTalkSection(slot, readable(id), capability);
+    }
+    if (result.results?.length) {
+      addTalkText(slot, "h3", "Matches");
+      for (const item of result.results) {
+        const match = addTalkText(slot, "div");
+        match.className = "inspection-entry";
+        addTalkText(match, "strong", item.title || item.name || "History excerpt");
+        if (item.excerpt != null) {
+          addTalkText(match, "p", item.excerpt);
+          addTalkValue(match, {source: item.name, role: item.role, conversation: item.conversation, message: item.message,
+            conversation_timestamp: item.authored, imported: item.imported, truncated: Boolean(item.truncated)});
+        } else {
+          if (item.group) addTalkText(match, "p", item.group);
+          addTalkText(match, "p", item.details || item.summary);
+        }
+      }
+    }
+    if (result.evidence?.length) {
+      const evidence = addTalkText(slot, "details");
+      addTalkText(evidence, "summary", `Evidence (${result.evidence.length})`);
+      for (const {id, kind, value} of result.evidence) addTalkSection(evidence, `${id} · ${readable(kind)}`, value);
+    }
+    if (result.council) {
+      addTalkText(slot, "h3", "Council");
+      if (result.council.state) addTalkText(slot, "p", readable(result.council.state));
+      for (const {member, ...consultation} of result.council.members || []) addTalkSection(slot, member, consultation);
+      addTalkSection(slot, "Council assessment", result.council.assessment);
+      addTalkSection(slot, "Council metrics", result.council.metrics, true);
+    }
+    addTalkSection(slot, "Request metrics", result.metrics, true);
+
+    if (result.binding) {
+      const review = addTalkText(slot, "div");
+      showRetirementReview(review, result);
+    } else if (result.intent === "organize" && result.state === "AWAITING_REVIEW" && scope.destination && result.steps?.length) {
+      addTalkText(slot, "h3", "Organization plan");
+      if (result.scope) addTalkText(slot, "p", result.scope);
+      const steps = addTalkText(slot, "ol");
+      for (const step of result.steps) addTalkText(steps, "li", step);
+      addTalkText(slot, "p", "Patrol will update virtual groups and report review decisions. Physical changes use a separate exact batch.");
+      const begin = addTalkText(slot, "button", "Start this scoped plan");
+      begin.type = "button";
+      begin.id = "start-goal-patrol";
+      begin.onclick = async () => {
+        if (!isTalkCurrent(scope)) { clearStaleTalk(); return; }
+        begin.disabled = true;
+        try {
+          const started = await api("patrol-begin", {destination: scope.destination});
+          if (started.error) throw started;
+          if (isTalkCurrent(scope)) { setMode("patrol"); poll(); }
+        } catch (error) { if (isTalkCurrent(scope)) stewardshipStatus(`Plan failed. ${error.error || error.message || error}`); }
+        finally { begin.disabled = !isTalkCurrent(scope); }
+      };
+    }
+  }
+
+  function showRetirementReview(slot, result) {
     const {entries, dependencies} = result;
     const candidates = entries.filter(item => item.group === "asset_candidate");
     const rest = entries.filter(item => item.group !== "asset_candidate");
-    stewardshipStatus(`${readable(result.state)} · ${result.family} · Qwen3 ${readable(result.provider)}`);
     const sources = entry => entry.evidence.map(item => `<p><small>${esc(item.source.role)} · ${esc(item.source.archive)} · ${esc(item.source.message)}</small></p>`).join("");
-    slot.innerHTML = `<p><strong>Review scope</strong> · ${esc(result.scope)}</p>
-      <p>${result.withheld_or_changed} matches withheld or changed. ${dependencies.files_checked} reference files checked · ${esc(readable(dependencies.state))}.</p>
+    slot.innerHTML = `<h3>Retirement review for ${esc(result.family)}</h3><p><strong>Review scope</strong> · ${esc(result.scope)}</p>
+      <p>${esc(result.withheld_or_changed)} matches withheld or changed. ${esc(dependencies.files_checked)} reference files checked · ${esc(readable(dependencies.state))}.</p>
       <details><summary>What Journey checked</summary><dl>${Object.entries(result.questions).map(([question, state]) =>
         `<dt>${esc(readable(question))}</dt><dd>${esc(readable(state))}</dd>`).join("")}</dl></details>
       <h4>Asset candidates</h4>${candidates.map(item => `<div class="inspection-entry">
-        <label><input class="stewardship-asset" type="checkbox" value="${item.id}"> ${esc(item.path)}</label>
+        <label><input class="stewardship-asset" type="checkbox" value="${esc(item.id)}"> ${esc(item.path)}</label>
         ${item.physical_blocker ? `<p>Archive hold · ${esc(item.physical_blocker)}</p>` : ""}
         ${item.copy_paths.map(path => `<p>Identical content at a separate path · ${esc(path)}</p>`).join("")}
         ${sources(item)}</div>`).join("") || "<p>Review references and scope before recording a retirement.</p>"}
@@ -101,11 +222,13 @@
 
   async function list() {
     const {items} = await api("destinations");
+    for (const row of items) destinationJobs.set(row.id, row.job);
     $("destination-list").innerHTML = items.map(row => `<div class="inspection-entry"><strong>${esc(row.objective)}</strong>
       <p>${esc(row.coverage.root)} · ${esc(row.state)}</p><button type="button" data-destination="${esc(row.id)}">Open Destination</button></div>`).join("");
     const job = sessionStorage.getItem("journey-current-inspection");
     $("destination-scope").textContent = job ? "The current Inspect selection supplies the scope and its granted permissions." : "Select a project in Inspect first.";
     if (!destination && items.length) destination = items[0].id;
+    clearStaleTalk();
   }
 
   async function images() {
@@ -159,6 +282,8 @@
       $("patrol-names").innerHTML='';
     }
     current=value;
+    destinationJobs.set(value.id, value.job);
+    clearStaleTalk();
     const approving=current.batches.some(batch => batch.status === 'authorizing');
     const pill=document.querySelector('.status-pill');
     pill.innerHTML=`<span class="status-dot"></span>${esc(current.state)}`;
@@ -206,11 +331,31 @@
 
   $("destination-form").addEventListener('submit', async event => {
     event.preventDefault();
+    if (destinationSave) return;
+    const form = event.currentTarget;
+    const submit = form.querySelector('button[type="submit"]');
+    const job = selectedJob(), selection = destinationSelection;
+    destinationSave = {job};
+    submit.disabled = true;
+    updateTalkSubmit();
+    notify('Saving Destination…');
     try {
-      const data = Object.fromEntries(new FormData(event.target));
-      const result = await api('destination-create', {...data,job:sessionStorage.getItem('journey-current-inspection'),max_files:Number(data.max_files),max_seconds:Number(data.max_seconds)});
-      destination = result.id; resetStewardship(); clearSelections(); renderedSnapshot=''; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status();
+      const data = Object.fromEntries(new FormData(form));
+      const result = await api('destination-create', {...data,job,max_files:Number(data.max_files),max_seconds:Number(data.max_seconds)});
+      if (!result.id || result.job !== job) throw new Error(result.error || 'Journey could not confirm the saved Destination.');
+      destinationJobs.set(result.id, result.job);
+      notify('Destination saved.');
+      if (selectedJob() !== job || destinationSelection !== selection) return;
+      chooseDestination(result.id);
+      clearSelections(); renderedSnapshot=''; batchId=''; collection=''; questionMembers=null; offset=0;
+      if (form.closest('[data-panel]').classList.contains('active')) setMode('patrol');
+      await status();
     } catch (error) { failure(error); }
+    finally {
+      destinationSave = null;
+      submit.disabled = false;
+      updateTalkSubmit();
+    }
   });
   $("patrol-save-preview").onclick = async () => {
     try {
@@ -249,42 +394,91 @@
       await status(); await viewBatch(batch.id);
     } catch(error) { failure(error); }
   };
-  $("stewardship-plan").onsubmit = async event => {
+  talkForm.elements.use_model.onchange = () => {
+    const share = talkForm.elements.share_evidence;
+    share.disabled = !talkForm.elements.use_model.checked;
+    if (share.disabled) {
+      share.checked = false;
+      evidenceScope = null;
+    }
+  };
+  talkForm.elements.share_evidence.onchange = () => {
+    const job = selectedJob();
+    evidenceScope = talkForm.elements.share_evidence.checked ? {job, destination: talkDestination(job)} : null;
+  };
+  for (const example of document.querySelectorAll("[data-talk-example]")) {
+    example.onclick = () => {
+      talkForm.elements.instruction.value = example.textContent;
+      talkForm.elements.instruction.focus();
+    };
+  }
+  talkForm.onsubmit = async event => {
     event.preventDefault();
-    const form = event.target, requested = destination;
-    const button = form.querySelector("button[type=submit]");
+    clearStaleTalk();
+    if (talkSubmit.disabled) return;
+    const job = selectedJob();
+    const scope = {job, destination: talkDestination(job)};
+    const {instruction, use_model, share_evidence, read_references} = talkForm.elements;
+    const body = {job, instruction: instruction.value, use_model: use_model.checked,
+      share_evidence: use_model.checked && share_evidence.checked, read_references: read_references.checked};
+    if (scope.destination) body.destination = scope.destination;
+    use_model.checked = false;
+    share_evidence.checked = false;
+    share_evidence.disabled = true;
+    read_references.checked = false;
+    evidenceScope = null;
     resetStewardship();
-    button.disabled = true;
-    stewardshipStatus("Inspecting the instruction and its scope.");
+    stewardshipScope = talkRequest = scope;
+    talkSubmit.disabled = true;
+    stewardshipStatus("Request started.");
+    const waiting = setTimeout(() => {
+      if (!isTalkCurrent(scope)) return;
+      stewardshipStatus(body.use_model ? "Waiting for Journey. Local consultation can take up to two and a half minutes." : "Waiting for Journey’s reply.");
+    }, 500);
     try {
-      const result = await api("goal-plan", {destination: requested, instruction: form.elements.instruction.value,
-        use_model: form.elements.use_model.checked, read_references: form.elements.read_references.checked});
-      if (destination !== requested) return;
+      const result = await api("conversation", body);
+      if (!isTalkCurrent(scope)) { clearStaleTalk(); return; }
+      if (!result?.state) throw new Error(result?.error || "Journey returned no request status.");
       stewardshipReview = result.binding ? result : null;
-      showStewardship(result);
-    } catch (error) { stewardshipStatus(error.error || error.message || String(error)); }
-    finally { button.disabled = false; }
+      showStewardship(result, scope);
+    } catch (error) {
+      if (isTalkCurrent(scope)) resetStewardship(`Request failed. ${error.error || error.message || error}`);
+      else clearStaleTalk();
+    } finally {
+      clearTimeout(waiting);
+      if (talkRequest === scope) {
+        talkRequest = null;
+        updateTalkSubmit();
+      }
+    }
   };
   $("stewardship-results").addEventListener("submit", async event => {
     event.preventDefault();
-    if (!stewardshipReview) return;
-    const request = {destination, binding: stewardshipReview.binding, assets: retirementAssets()};
+    clearStaleTalk();
+    if (!stewardshipReview || !stewardshipScope?.destination) return;
+    const scope = stewardshipScope;
+    const request = {destination: scope.destination, binding: stewardshipReview.binding, assets: retirementAssets()};
     const data = Object.fromEntries(new FormData(event.target));
     try {
       if (event.target.id === "stewardship-confirm") {
         const result = await api("stewardship-confirm", {...request, ...data});
-        if (destination !== request.destination || stewardshipReview?.binding !== request.binding) return;
+        if (!isTalkCurrent(scope) || stewardshipReview?.binding !== request.binding) return;
         retirementDecision = result.decision;
         $("stewardship-archive").hidden = stewardshipReview.dependencies.state !== "CHECKED_WITHIN_SCOPE";
         stewardshipStatus(`Recorded ${result.recorded} selected retirements in the registry.`);
         await status();
       } else {
         const batch = await api("stewardship-archive", {...request, ...data, decision: retirementDecision});
-        if (destination !== request.destination || stewardshipReview?.binding !== request.binding) return;
+        if (!isTalkCurrent(scope) || stewardshipReview?.binding !== request.binding) return;
         await viewBatch(batch.id);
+        if (!isTalkCurrent(scope)) return;
         stewardshipStatus("Exact archive batch prepared for account review.");
+        setMode("review");
+        $("patrol-batch-details").scrollIntoView({block:"center"});
       }
-    } catch (error) { stewardshipStatus(error.error || error.message || String(error)); }
+    } catch (error) {
+      if (isTalkCurrent(scope)) stewardshipStatus(error.error || error.message || String(error));
+    }
   });
   $("review-previous").onclick = async () => { clearSelections(); offset=Math.max(0,offset-24); await images(); };
   $("review-next").onclick = async () => { clearSelections(); offset+=24; await images(); };
@@ -292,7 +486,7 @@
     const button=event.target.closest('button');
     if (!button) return;
     try {
-      if (button.dataset.destination) { destination=button.dataset.destination; resetStewardship(); clearSelections(); renderedSnapshot=''; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status(); poll(); }
+      if (button.dataset.destination) { chooseDestination(button.dataset.destination); clearSelections(); renderedSnapshot=''; batchId=''; collection=''; questionMembers=null; offset=0; setMode('patrol'); await status(); poll(); }
       else if (button.dataset.collection) { clearSelections(); collection=button.dataset.collection; questionMembers=null; offset=0; setMode('review'); await images(); }
       else if (button.dataset.batch) await viewBatch(button.dataset.batch);
       else if (button.dataset.authorizeBatch) { await api('batch-authorize',{destination,batch:button.dataset.authorizeBatch}); notify('Complete account verification in the Journey Windows dialog.'); poll(); }
@@ -304,13 +498,15 @@
         questionMembers=members; collection=''; offset=0;
         await images();
         $('patrol-review-images').closest('details').open=true;
-      } else if (button.dataset.select === 'destination') await list();
+      } else if (button.dataset.select === 'talk') clearStaleTalk();
+      else if (button.dataset.select === 'destination') await list();
       else if (button.dataset.select === 'patrol') { await list(); await status(); poll(); }
       else if (button.dataset.select === 'review') { await list(); await status(); await images(); }
     } catch(error) { failure(error); }
   });
+  window.addEventListener('journey-project-ready', clearStaleTalk);
   window.addEventListener('journey-duplicate-batch', async event => {
-    try { destination=event.detail.destination; await list(); destination=event.detail.destination;
+    try { chooseDestination(event.detail.destination); await list(); chooseDestination(event.detail.destination);
       await status(); await viewBatch(event.detail.batch); document.querySelector('[data-select="review"]')?.click(); poll();
       $("patrol-batch-details").scrollIntoView({block:'center'});
     } catch(error) { failure(error); }

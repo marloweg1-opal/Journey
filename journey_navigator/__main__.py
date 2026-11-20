@@ -16,6 +16,7 @@ import webbrowser
 
 from core.circuit_breaker import OperationTooLarge
 from journey_navigator.conversation import LocalQwen, validate_prompt
+from journey_navigator.capabilities import Capabilities, FIND, ORGANIZE
 from journey_navigator.links import ProtectedPath
 from journey_navigator.ocr import find_local_ocr
 from journey_navigator.patrol import Patrol
@@ -28,6 +29,23 @@ MODULE = Path(__file__).resolve().parent
 APP = MODULE.parent
 WINDOW_LEASE_SECONDS = 150
 WINDOW_CLOSE_GRACE = 5
+
+
+def discarded_usage(metrics):
+    """Preserve expenditure after revocation without echoing model-supplied text."""
+    numeric = {key: value for key, value in metrics.items()
+               if type(value) in (int, float, bool) or value is None}
+    from journey_navigator.conversation import LOCAL_MEMBERS
+    known = {model for _, aliases in LOCAL_MEMBERS for model in aliases}
+    numeric["models"] = []
+    for row in metrics.get("models", []):
+        if not isinstance(row, dict):
+            continue
+        item = {key: value for key, value in row.items() if type(value) in (int, float) or value is None}
+        for key in ("requested_model", "observed_model"):
+            item[key] = row.get(key) if row.get(key) in known else None
+        numeric["models"].append(item)
+    return numeric
 
 
 def navigator_page():
@@ -84,7 +102,7 @@ def local_drives():
 class Navigator(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, workbench, port=0, *, owner=None, approver=None, interpreter=None):
+    def __init__(self, workbench, port=0, *, owner=None, approver=None, interpreter=None, local_models=None):
         super().__init__(("127.0.0.1", port), Handler)
         self.workbench = workbench
         self.temporary = Workbench(workbench.data_dir, ocr=workbench.ocr, temporary=True)
@@ -99,6 +117,8 @@ class Navigator(ThreadingHTTPServer):
         self.restore_checkpoint = None
         self.patrol = Patrol(workbench, self.lock, approver=approver)
         self.interpreter = interpreter or LocalQwen()
+        from journey_navigator.conversation import LocalModels
+        self.local_models = local_models if local_models is not None else LocalModels()
         self.host = f"127.0.0.1:{self.server_address[1]}"
         self.origin = f"http://{self.host}"
         self.static = {"/": ("text/html; charset=utf-8", navigator_page().encode("utf-8")),
@@ -232,12 +252,18 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(length))
             if not isinstance(body, dict):
                 raise ValueError("The Navigator request is invalid.")
+            if route == "/api/inspect/conversation":
+                return self._json(self._conversation(body))
             if route in ("/api/inspect/stewardship-plan", "/api/inspect/goal-plan"):
                 use_model = body.get("use_model", False)
                 if type(use_model) is not bool:
                     raise ValueError("Choose whether to use local Qwen3.")
                 body["provider"] = None
-                if use_model:
+                from journey_navigator.conversation import explicit_intent
+                deterministic = (route.endswith("goal-plan") and
+                                 (FIND.fullmatch(body.get("instruction", "")) or ORGANIZE.match(body.get("instruction", "")) or
+                                  explicit_intent(body.get("instruction", ""))))
+                if use_model and not deterministic:
                     prompt = validate_prompt(body["instruction"])
                     with self.server.lock:
                         if self.server.closing:
@@ -257,6 +283,86 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"error": "Journey could not save this review step. Reopen the saved inspection and retry."}, 503)
         except (OSError, ValueError, TypeError, KeyError, OperationTooLarge) as error:
             return self._json({"error": str(error)}, 400)
+
+    def _conversation(self, body):
+        """The model can advise or interpret; the host owns routes and authority."""
+        prompt = validate_prompt(body.get("instruction"))
+        job = body.get("job") or None
+        destination = body.get("destination") or None
+        if any(value is not None and (not isinstance(value, str) or len(value) > 100) for value in (job, destination)):
+            raise ValueError("Choose a current inspection and Destination.")
+        for flag in ("use_model", "share_evidence", "read_references"):
+            if type(body.get(flag, False)) is not bool:
+                raise ValueError("Choose explicit local AI, excerpt-sharing and reference-reading options.")
+        use_model = body.get("use_model", False)
+        share_evidence = body.get("share_evidence", False)
+        read_references = body.get("read_references", False)
+        app = self.server.review_store(job)
+        caps = self.server.patrol.capabilities if app is self.server.workbench else Capabilities(self.server.patrol, app=app)
+        with self.server.lock:
+            if self.server.closing:
+                raise ValueError("Navigator is closing after its safe checkpoint.")
+            result = caps.converse(job, prompt, self.server.info, destination=destination, read_references=read_references)
+            request_kind = result.pop("_model", None)
+            members = result.pop("_members", None)
+            if not request_kind or not use_model:
+                return result
+            binding, context = caps.conversation_binding(job, prompt, self.server.info, share_evidence=share_evidence)
+        # No Patrol/SQLite lock is held during local inference or model discovery.
+        def still_current():
+            with self.server.lock:
+                if self.server.closing:
+                    return False
+                try:
+                    fresh, _ = caps.conversation_binding(job, prompt, self.server.info, share_evidence=share_evidence)
+                    return fresh == binding
+                except (ProtectedPath, ValueError):
+                    return False
+
+        started = monotonic()
+        if request_kind == "models":
+            provider = self.server.local_models.status()
+        elif request_kind == "interpret":
+            provider = self.server.local_models.interpret(prompt, context, before_send=still_current)
+        elif request_kind == "advice":
+            provider = self.server.local_models.review(prompt, context, members=members, before_send=still_current,
+                                                       adaptive=True)
+        else:
+            provider = self.server.local_models.review(prompt, context, members=members, before_send=still_current)
+        usage = provider.get("metrics", {"calls": 0, "retries": 0})
+        metrics = usage | {
+            "level": usage["calls"] if request_kind == "advice" else
+                     {"models": 0, "council": 3, "perspective": 2}.get(request_kind, 1),
+            "elapsed_seconds": round(monotonic() - started, 3), "evidence_sharing_authorized": share_evidence}
+        metrics["shared_evidence_excerpts"] = bool(request_kind != "models" and metrics.get("calls", 0) and any(
+            item["kind"] in ("inspected_asset", "imported_history_excerpt") for item in context["evidence"]))
+        if request_kind == "models":
+            metrics["tag_calls"] = 1
+        with self.server.lock:
+            if self.server.closing:
+                raise ValueError("Navigator closed this consultation at its safe boundary.")
+            try:
+                current, _ = caps.conversation_binding(job, prompt, self.server.info, share_evidence=share_evidence)
+            except (ProtectedPath, ValueError):
+                current = None
+            if current != binding:
+                return caps._response("unknown", "The inspection, permissions or evidence changed during local inference. The old result was discarded; ask again against the current scope.", state="STALE_CONTEXT", metrics=discarded_usage(metrics))
+            if request_kind == "interpret":
+                result = caps.converse(job, prompt, self.server.info, destination=destination, provider=provider, read_references=read_references)
+                result.pop("_model", None)
+                result.pop("_members", None)
+            elif request_kind == "models":
+                result = caps._response("models", "This is the configured local model discovery result. Listing a model does not verify its reasoning quality.",
+                                        state="COMPLETE" if provider["state"] == "AVAILABLE" else provider["state"], models=provider)
+            else:
+                message = ("Local advisory perspectives are ready for review. References were checked; model conclusions do not establish truth, permission or approval."
+                           if provider["state"] == "REVIEW_REQUIRED" else
+                           "The requested local perspectives were unavailable. No model agreement, conclusion or approval is established.")
+                result = caps._response(request_kind,
+                    message,
+                    state=provider["state"], council=provider, evidence=context["evidence"])
+            result["metrics"] = metrics
+            return result
 
     def _run(self, action, body):
         job, offset = body.get("job"), body.get("offset", 0)

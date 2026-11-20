@@ -151,17 +151,26 @@ class Boundaries:
         except FileNotFoundError:
             return []
         except (OSError, ValueError) as error:
-            raise ProtectedPath("Journey could not verify its existing source policy.") from error
+            # Keep the actual storage path private, but distinguish unreadable
+            # policy evidence from a confirmed protection on a source file.
+            raise ProtectedPath("Journey cannot read its source-policy database metadata. No cleanup is authorized.") from error
         try:
-            conn = sqlite3.connect(store.as_uri() + "?mode=ro", uri=True, timeout=0.1)
+            # A brief writer transaction should not masquerade as a permanent
+            # policy denial. Still fail closed if the read cannot complete.
+            conn = sqlite3.connect(store.as_uri() + "?mode=ro", uri=True, timeout=2.0)
             try:
                 if optional_table and not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
                     return []
                 return conn.execute(query).fetchall()
             finally:
                 conn.close()
+        except sqlite3.OperationalError as error:
+            reason = str(error).casefold()
+            if "locked" in reason or "busy" in reason:
+                raise ProtectedPath("Journey's source-policy database is busy. Cleanup stays locked; retry policy verification after current work finishes.") from error
+            raise ProtectedPath("Journey cannot query its source-policy database. Cleanup stays locked; inspect policy-store health.") from error
         except (sqlite3.Error, ValueError) as error:
-            raise ProtectedPath("Journey could not verify its existing source policy.") from error
+            raise ProtectedPath("Journey cannot verify its source-policy database. Cleanup stays locked; inspect policy-store health.") from error
 
     def refresh(self):
         import json

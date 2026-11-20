@@ -57,11 +57,16 @@ def build(output, cache, wheel, zig):
         shutil.copyfile(ROOT / "docs/NAVIGATOR_PATROL.md", package / "START-HERE.md")
         shutil.copyfile(ROOT / "docs/INTEGRATED_PILOT.md", package / "INTEGRATED-PILOT.md")
         shutil.copyfile(ROOT / "docs/INCREMENTAL_HISTORY.md", package / "INCREMENTAL_HISTORY.md")
-        for document in ("COLLECTION_WORKFLOW.md", "COMPONENT_STATUS.md", "ACCESSIBILITY_AND_PARTICIPATION.md", "DUPLICATE_PATROL.md"):
+        for document in ("COLLECTION_WORKFLOW.md", "COMPONENT_STATUS.md", "ACCESSIBILITY_AND_PARTICIPATION.md", "DUPLICATE_PATROL.md", "CONVERSATION_INTEGRATION.md"):
             shutil.copyfile(ROOT / "docs" / document, package / document)
         sys.path.insert(0,str(ROOT))
         from tools.demo_duplicate_patrol import make_demo
         make_demo(package / "Housekeeping demonstration")
+        from tools.demo_carebloom_collection import make_demo as make_conversation_demo
+        make_conversation_demo(package / "Conversation demonstration")
+        shutil.copyfile(ROOT / "tools/windows/Verify-JourneyConversation.ps1", package / "Verify Journey conversation.ps1")
+        (package / "Start isolated conversation demo.cmd").write_text(
+            '@echo off\ncd /d "%~dp0"\nstart "Journey isolated conversation demonstration" "runtime\\pythonw.exe" -B -m journey_navigator --data-dir "%~dp0Conversation checkpoint"\n', encoding='ascii')
         (package / "Start isolated housekeeping demo.cmd").write_text(
             '@echo off\ncd /d "%~dp0"\nstart "Journey isolated housekeeping demonstration" "runtime\\pythonw.exe" -B -m journey_navigator --data-dir "%~dp0Housekeeping checkpoint"\n',encoding='ascii')
         shutil.copyfile(ROOT / "LICENSE", package / "LICENSE.txt")
