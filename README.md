@@ -6,7 +6,7 @@ Journey is an experimental, local-first tool designed to help you find, understa
 
 It is being developed in the open. **Journey is not yet a finished app for everyday use.** You can explore the prototype and the ideas behind it today.
 
-![Preview of Journey's local Navigator interface](docs/images/journey-repository-preview.svg)
+![Illustration of Journey: an orientation path connecting evidence, context, review, authority, action, and receipts](docs/images/journey-repository-preview.svg)
 
 ## Why Journey exists
 
