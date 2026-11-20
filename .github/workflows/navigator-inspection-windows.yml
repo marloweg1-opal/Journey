@@ -2,7 +2,7 @@ name: Navigator linked inspection acceptance
 
 on:
   push:
-    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol, work/navigator-provenance-naming, work/navigator-asset-registry, work/navigator-project-stewardship, work/journey-integrated-pilot, work/journey-incremental, work/journey-guided-workflow, work/journey-duplicate-patrol, work/journey-conversation-integration]
+    branches: [work/navigator-linked-inspection, work/navigator-context-evidence, work/navigator-operational-patrol, work/navigator-provenance-naming, work/navigator-asset-registry, work/navigator-project-stewardship, work/journey-integrated-pilot, work/journey-incremental, work/journey-guided-workflow, work/journey-duplicate-patrol, work/journey-conversation-integration, fix/duplicate-policy-diagnostics-2026-11-20]
 
 permissions:
   contents: read
@@ -36,6 +36,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Historical naming intelligence tests failed.' }
           python -B -m unittest discover -s tests -p 'test_housekeeping_workflow.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'Housekeeping end-to-end tests failed.' }
+      - name: Test policy schema compatibility and fail-closed diagnostics
+        run: |
+          python -B -m unittest discover -s tests -p 'test_policy_store_diagnostics.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Policy store diagnostics failed.' }
+          python -B -m unittest discover -s tests -p 'test_duplicate_policy_schema.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'Production protection schema compatibility failed.' }
       - name: Test conversation integration and advisory boundaries
         run: |
           python -B -m unittest discover -s tests -p 'test_conversation_providers.py' -v
