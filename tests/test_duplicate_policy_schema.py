@@ -1,4 +1,5 @@
 """Regression coverage for existing production protection-schema lookups."""
+from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -14,7 +15,7 @@ class DuplicatePolicySchemaTests(TestCase):
     def test_real_schema_columns_block_protected_paths_and_active_dependents(self):
         with TemporaryDirectory() as temp:
             store = Path(temp) / "ark.sqlite"
-            with sqlite3.connect(store) as connection:
+            with closing(sqlite3.connect(store)) as connection, connection:
                 connection.execute("CREATE TABLE protected_paths(path_prefix TEXT, reason TEXT)")
                 connection.execute("CREATE TABLE file_dependents(canonical_path TEXT, status TEXT)")
                 connection.execute("INSERT INTO protected_paths VALUES (?,?)", (str(Path(temp) / "protected"), "fixture"))
