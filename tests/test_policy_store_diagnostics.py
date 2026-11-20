@@ -1,4 +1,5 @@
 """Policy-store diagnostics: clear causes without expanding authority."""
+from contextlib import closing
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
@@ -12,7 +13,7 @@ class SourcePolicyDiagnosticsTests(TestCase):
     def test_readonly_policy_store_remains_readable(self):
         with TemporaryDirectory() as temp:
             store = Path(temp) / "policy.sqlite"
-            with sqlite3.connect(store) as conn:
+            with closing(sqlite3.connect(store)) as conn, conn:
                 conn.execute("CREATE TABLE source_entries (id INTEGER)")
                 conn.execute("INSERT INTO source_entries VALUES (7)")
             self.assertEqual(
